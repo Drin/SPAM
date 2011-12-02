@@ -3,7 +3,16 @@ package spam.gui;
 import spam.gui.listeners.clusterListeners.ClusterSingleListener;
 import spam.gui.listeners.dendogramListeners.DendogramListener;
 
+import spam.gui.listeners.rawHandlers.ComparePyrogramsListener;
+import spam.gui.listeners.rawHandlers.DisplayPyrogramListener;
+
+import spam.gui.listeners.xmlHandlers.CompareXMLPyrogramsListener;
+import spam.gui.listeners.xmlHandlers.DisplayXMLPyrogramListener;
+
+import spam.gui.listeners.SaveFileListener;
+
 import spam.dataTypes.ClusterDendogram;
+import spam.dataTypes.Pyrogram;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -20,6 +29,8 @@ import java.util.List;
 
 public class MainWindow extends JFrame {
    private JMenuBar mainMenuBar;
+   private boolean firstHistSet = false, secondHistSet = false;
+   private Pyrogram firstPyrogram = null, secondPyrogram = null;
    
    private List<ClusterDendogram> computedClusters = null;
    
@@ -145,5 +156,20 @@ public class MainWindow extends JFrame {
 
    public void saveState(List<ClusterDendogram> clustDends) {
       computedClusters = clustDends;
+   }
+
+   public void setPyrograms(Pyrogram first, Pyrogram second) {
+      firstPyrogram = first;
+      secondPyrogram = second;
+   }
+
+   public Pyrogram getPyrogram(int which) {
+      if (which == 0) {
+         return firstPyrogram;
+      }
+      else if (which == 1) {
+         return secondPyrogram;
+      }
+      return null;
    }
 }

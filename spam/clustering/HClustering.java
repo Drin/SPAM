@@ -1,4 +1,4 @@
-package spam;
+package spam.clustering;
 
 import spam.dataParser.IsolateFileParser;
 
@@ -15,7 +15,7 @@ import spam.dendogram.Dendogram;
 import spam.dendogram.DendogramNode;
 import spam.dendogram.DendogramLeaf;
 
-import spam.IsolateOutputWriter;
+import spam.dataWriter.IsolateOutputWriter;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;

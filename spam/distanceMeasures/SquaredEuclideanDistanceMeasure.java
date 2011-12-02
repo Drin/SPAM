@@ -1,4 +1,4 @@
-package TemporalHClustering.distanceMeasures;
+package spam.distanceMeasures;
 
 import java.util.List;
 

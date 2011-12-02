@@ -1,6 +1,6 @@
-package TemporalHIsolateing.dendogram;
+package spam.dendogram;
 
-import TemporalHIsolateing.dataTypes.Isolate;
+import spam.dataTypes.Isolate;
 
 import java.io.File;
 

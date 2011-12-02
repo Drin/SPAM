@@ -1,6 +1,6 @@
-package TemporalHClustering.dendogram;
+package spam.dendogram;
 
-import TemporalHClustering.dataTypes.Isolate;
+import spam.dataTypes.Isolate;
 
 import java.util.Map;
 import java.util.HashMap;

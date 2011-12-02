@@ -1,4 +1,4 @@
-package spam.guiListeners;
+package spam.gui.listeners;
 
 import spam.gui.MainWindow;
 import spam.gui.Pyrograph;

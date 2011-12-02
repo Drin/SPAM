@@ -1,4 +1,4 @@
-package TemporalHClustering.distanceMeasures;
+package spam.distanceMeasures;
 
 public class EuclideanDistanceMeasure extends SquaredEuclideanDistanceMeasure {
 	@Override

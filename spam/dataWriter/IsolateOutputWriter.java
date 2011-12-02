@@ -1,16 +1,18 @@
-package TemporalHClustering;
+package spam.dataWriter;
 
-import TemporalHClustering.dataTypes.Cluster;
-import TemporalHClustering.dataTypes.ClusterDendogram;
-import TemporalHClustering.dataTypes.Isolate;
+import spam.clustering.HClustering;
 
-import TemporalHClustering.dataStructures.IsolateSimilarityMatrix;
+import spam.dataTypes.Cluster;
+import spam.dataTypes.ClusterDendogram;
+import spam.dataTypes.Isolate;
 
-import TemporalHClustering.distanceMeasures.IsolateSimilarity;
+import spam.dataStructures.IsolateSimilarityMatrix;
 
-import TemporalHClustering.dendogram.Dendogram;
-import TemporalHClustering.dendogram.DendogramTree;
-import TemporalHClustering.dendogram.TreeNode;
+import spam.distanceMeasures.IsolateSimilarity;
+
+import spam.dendogram.Dendogram;
+import spam.dendogram.DendogramTree;
+import spam.dendogram.TreeNode;
 
 import java.io.File;
 import java.io.BufferedWriter;

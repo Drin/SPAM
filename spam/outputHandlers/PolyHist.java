@@ -1,4 +1,4 @@
-package polypyro.outputHandlers;
+package spam.outputHandlers;
 
 import java.io.File;
 import java.io.FileWriter;

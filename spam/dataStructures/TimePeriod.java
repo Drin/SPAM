@@ -1,4 +1,4 @@
-package TemporalHClustering.dataStructures;
+package spam.dataStructures;
 
 /*
  * This class represents a period of time corresponding to the experiment

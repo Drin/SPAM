@@ -2,6 +2,8 @@ package spam.gui.listeners.xmlHandlers;
 
 import spam.gui.MainWindow;
 
+import spam.gui.Pyrograph;
+
 import spam.dataParser.XMLParser.PolyPyroDriver;
 import spam.dataParser.Polyparse;
 import spam.dataParser.SequenceParser;

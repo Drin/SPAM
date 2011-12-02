@@ -1,9 +1,9 @@
-package TemporalHClustering.dendogram;
+package spam.dendogram;
 
-import TemporalHClustering.dendogram.TreeNode;
+import spam.dendogram.TreeNode;
 
-import TemporalHClustering.dataTypes.Isolate;
-import TemporalHClustering.dataTypes.Cluster;
+import spam.dataTypes.Isolate;
+import spam.dataTypes.Cluster;
 
 import java.util.List;
 import java.util.ArrayList;

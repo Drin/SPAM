@@ -1,6 +1,6 @@
-package TemporalHClustering.dataStructures;
+package spam.dataStructures;
 
-import TemporalHClustering.dataTypes.SampleMethod;
+import spam.dataTypes.SampleMethod;
 
 import java.util.List;
 import java.util.ArrayList;

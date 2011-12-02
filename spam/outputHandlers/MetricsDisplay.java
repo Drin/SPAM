@@ -1,4 +1,4 @@
-package polypyro.outputHandlers;
+package spam.outputHandlers;
 
 //TODO the data in this class must be cleared between comparisons because otherwise everytime pyrograms
 //are compared there is a "stacking" effect

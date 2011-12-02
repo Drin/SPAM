@@ -1,4 +1,4 @@
-package XMLParser.PyroMarkParser;
+package spam.dataParser.XMLParser.PyroMarkParser;
 
 import java.util.List;
 import java.util.HashMap;

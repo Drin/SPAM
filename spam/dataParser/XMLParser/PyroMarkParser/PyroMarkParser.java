@@ -1,4 +1,4 @@
-package XMLParser.PyroMarkParser;
+package spam.dataParser.XMLParser.PyroMarkParser;
 
 import java.io.File;
 import java.io.IOException;

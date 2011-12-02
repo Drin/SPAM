@@ -1,4 +1,4 @@
-package XMLParser.PyroMarkParser;
+package spam.dataParser.XMLParser.PyroMarkParser;
 
 public class PeakValue {
 	private int moment = 0;

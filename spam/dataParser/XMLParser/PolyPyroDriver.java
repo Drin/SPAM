@@ -1,6 +1,6 @@
 package spam.dataParser.XMLParser;
 
-import polypyro.dataTypes.Pyrogram;
+import spam.dataTypes.Pyrogram;
 
 import java.io.File;
 import java.util.HashMap;
@@ -88,7 +88,10 @@ public class PolyPyroDriver {
 
          //build pyrogram
          tmpSeq += well.getSubstance(peak.getMoment());
-         data.add(peakVals.get(dispNdx));
+
+         //normalized is dumb, grab peak heights
+         //data.add(peakVals.get(dispNdx));
+         data.add(peak.getSignalVal());
 
          //System.out.println("momentNdx: " + peak.getMoment());
       }

@@ -1,6 +1,6 @@
 package spam.dataTypes;
 
-import gui.dataParser.XMLParser.PyrogramParser.PyrogramParser;
+import spam.dataParser.XMLParser.PyrogramParser.PyrogramParser;
 
 import java.text.StringCharacterIterator;
 import java.util.ArrayList;

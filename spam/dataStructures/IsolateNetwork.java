@@ -1,4 +1,4 @@
-package TemporalHClustering.dataStructures;
+package spam.dataStructures;
 
 /*
  * This class represents a network of isolates.

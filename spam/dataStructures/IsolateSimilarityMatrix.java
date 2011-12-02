@@ -1,8 +1,8 @@
-package TemporalHClustering.dataStructures;
+package spam.dataStructures;
 
-import TemporalHClustering.dataTypes.IsolateRegion;
-import TemporalHClustering.dataTypes.Isolate;
-import TemporalHClustering.dataTypes.IsolateCorrelation;
+import spam.dataTypes.IsolateRegion;
+import spam.dataTypes.Isolate;
+import spam.dataTypes.IsolateCorrelation;
 
 import java.util.List;
 import java.util.ArrayList;

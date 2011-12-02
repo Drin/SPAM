@@ -1,13 +1,13 @@
 FILES=Main.java
 JAVADOC=documentation
 
-compile: clean Main.class
+compile: clean SpamGUI
 
 run:
-	java polypyro/Main
+	java spam/gui/SpamGUI
 
-Main.class:
-	javac -deprecation polypyro/Main.java
+SpamGUI:
+	javac -deprecation spam/gui/SpamGUI.java
 
 parseXML:
 	java XMLParser/ParseMain ${XMLDIR}
@@ -15,39 +15,39 @@ parseXML:
 xmlParser: ParseMain.class
 
 ParseMain.class:
-	javac -deprecation XMLParser/ParseMain.java
+	javac -deprecation spam/dataParser/XMLParser/ParseMain.java
 
 xmlTester: PyroMarkTest.class
 
 PyroMarkTest.class:
-	javac -deprecation XMLParser/PyroMarkTest.java #-d bin
+	javac -deprecation spam/dataParser/XMLParser/PyroMarkTest.java #-d bin
 
 testXML:
-	java XMLParser/PyroMarkTest sampleData/pyroruns/QualityControlRuns/plates_5-8/
+	java spam/dataParser/XMLParser/PyroMarkTest data/pyroprints/pyroruns/QualityControlRuns/plates_5-8/
 
 pyroMarkParser: PyroMarkParser.class
 
 PyroMarkParser.class:
-	javac -deprecation XMLParser/PyroMarkParser/PyroMarkParser.java # -d xmlClasses
+	javac -deprecation spam/dataParser/XMLParser/PyroMarkParser/PyroMarkParser.java # -d xmlClasses
 
-clean: cleanPyro cleanXML
+dataParser:
+	javac spam/dataParser/ParserDriver.java
 
-document: docPolyPyro docXMLParser
+parseData: dataParser
+	java spam/dataParser/ParserDriver data/PilotCorrelation.csv
 
-docPolyPyro:
+clean: cleanPyro
 
-docXMLParser:
-	javadoc -d ${JAVADOC} XMLParser/PyroMarkParser/PyroMarkParser.java -link http://download.oracle.com/javase/6/docs/api
+document: docSpam
+
+docSpam:
+	javadoc -d ${JAVADOC} spam/dataParser/XMLParser/PyroMarkParser/PyroMarkParser.java -link http://download.oracle.com/javase/6/docs/api
 
 cleanPyro:
-	rm -f polypyro/*.class
-	rm -f polypyro/*/*.class
-	rm -f src/polypyro/*.class
-	rm -f src/polypyro/*/*.class
-
-cleanXML:
-	rm -f XMLParser/*.class
-	rm -f XMLParser/*/*.class
+	rm -rf spam/*.class
+	rm -rf spam/*/*.class
+	rm -rf spam/*/*/*.class
+	rm -rf spam/*/*/*/*.class
 
 cleanDocs:
 	rm -rf ${JAVADOC}/*

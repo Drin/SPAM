@@ -1,8 +1,8 @@
-package TemporalHClustering.distanceMeasures;
+package spam.distanceMeasures;
 
-import TemporalHClustering.dataStructures.IsolateSimilarityMatrix;
-import TemporalHClustering.dataTypes.Isolate;
-import TemporalHClustering.dataTypes.SampleMethod;
+import spam.dataStructures.IsolateSimilarityMatrix;
+import spam.dataTypes.Isolate;
+import spam.dataTypes.SampleMethod;
 
 public class IsolateSimilarity {
 

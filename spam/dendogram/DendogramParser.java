@@ -1,7 +1,7 @@
-package TemporalHClustering.dendogram;
+package spam.dendogram;
 
-import TemporalHClustering.dataTypes.Isolate;
-import TemporalHClustering.dendogram.DendogramTree;
+import spam.dataTypes.Isolate;
+import spam.dendogram.DendogramTree;
 
 import java.io.File;
 import java.io.IOException;

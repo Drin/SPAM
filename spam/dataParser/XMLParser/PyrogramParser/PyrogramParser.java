@@ -1,4 +1,4 @@
-package XMLParser.PyrogramParser;
+package spam.dataParser.XMLParser.PyrogramParser;
 
 import java.io.File;
 import java.io.IOException;
