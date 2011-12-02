@@ -1,0 +1,22 @@
+#This is a file that is used to define the sample methods and
+#how they relate to each other. This defines a structural hierarchy
+#that should be representative of the experiement conducted
+
+#format:
+#<abbrev>:<method name>:<distance value>
+
+#the abbrev is used in the data files where the full method name would be too
+#tedious to include
+
+#the full method name is for purposes of output, and should be reflective of
+#the sampling method's name as referred to by other sources
+
+#the distance value is used to determine what sampling methods are closer
+#chronologically to other sampling methods. Essentially it is this value that
+#establishes the structural hierarchy of the clustering. Be sure the values
+#will yield the desired ordering of groups
+
+f:fecal:0
+i:immediate:1
+l:later:3
+d:deep:7
