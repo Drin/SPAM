@@ -55,7 +55,7 @@ public class MainWindow extends JFrame {
        
       //Items that will go into the File menu
       JMenuItem importDendogram = new JMenuItem("View dendogram file");
-      //JMenuItem importPyrogram = new JMenuItem("Open Pyrogram file");
+      //JMenuItem importPyrogram = new JMenuItem("Open Pyroprint file");
       JMenuItem saveFile = new JMenuItem("Save As...");
       JMenuItem exitProgram = new JMenuItem("Exit");
        
@@ -66,12 +66,12 @@ public class MainWindow extends JFrame {
       JMenuItem thresholdDendogram = new JMenuItem("Apply dendogram threshold");
 
       //Items that will go into the Library menu
-      JMenuItem libDisplay = new JMenuItem("Display pyrograms");
-      JMenuItem libCompare = new JMenuItem("Compare Pyrograms");
+      JMenuItem libDisplay = new JMenuItem("Display Pyroprints");
+      JMenuItem libCompare = new JMenuItem("Compare Pyroprints");
        
       //Items that will go into the PyroSequencing menu
-      JMenuItem pyroDisplay = new JMenuItem("Display pyrograms");
-      JMenuItem pyroCompare = new JMenuItem("Compare Pyrograms");
+      JMenuItem pyroDisplay = new JMenuItem("Display Pyroprints");
+      JMenuItem pyroCompare = new JMenuItem("Compare Pyroprints");
        
       //Listener for exit menu item
       exitProgram.addActionListener(new ActionListener() {

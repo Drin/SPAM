@@ -3,7 +3,6 @@ package spam;
 import spam.dataTypes.Pyrogram;
 import spam.outputHandlers.MetricsDisplay;
 
-import spam.dataParser.Polyparse;
 import spam.dataParser.XMLParser.PolyPyroDriver;
 
 import java.io.File;

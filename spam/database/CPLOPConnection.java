@@ -1,3 +1,5 @@
+package spam.database;
+
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -112,60 +114,6 @@ public class CPLOPConnection {
       }
 
       return isoIdMap;
-   }
-
-   /**
-    * Retrieve each isolate and its associated pyroprint.
-    *
-    * @return A mapping of pyroprint ids to isolate ids.
-    *  The map is keyed by pyroprint ID (Integer) and value mappings are
-    *  isolate ids (String).
-    *
-    * @throws SQLException if the query fails.
-    */
-   public Map<String, Integer> getIsolatePyroprints() throws SQLException {
-      Map<String, Integer> isoPyroMap = new HashMap<String, Integer>();
-      Statement statement = null;
-      ResultSet results = null;
-
-      String query = "SELECT isoID, pyroID" + 
-       " FROM Isolates i JOIN Pyroprints p USING(isoID)" + 
-       " WHERE pyroID IN (SELECT DISTINCT(pyroID) FROM Histograms)" +
-       " GROUP BY isoID" +
-       " ORDER BY isoID";
-
-      try {
-         statement = conn.createStatement();
-
-         results = statement.executeQuery(query);
-
-         while (results.next()) {
-            //TODO make this a LIST of pyroIDs so that there is no collision of
-            //values
-            String isoID = results.getString(1);
-            Integer pyroID = new Integer(results.getInt(2));
-
-            isoPyroMap.put(isoID, pyroID);
-         }
-      }
-
-      catch (SQLException sqlEx) {
-         //Rethrow the exception
-         throw sqlEx;
-      }
-
-      finally {
-
-         if (results != null) {
-            results.close();
-         }
-
-         if (statement != null) {
-            statement.close();
-         }
-      }
-
-      return isoPyroMap;
    }
 
    /**
@@ -360,8 +308,8 @@ public class CPLOPConnection {
                regThrMap.put(regionName, new HashMap<String, Double>());
             }
 
-            regionThrMap.get(regionName).put(alphaThreshold, alphaVal);
-            regionThrMap.get(regionName).put(betaThreshold, betaVal);
+            regThrMap.get(regionName).put(alphaThreshold, alphaVal);
+            regThrMap.get(regionName).put(betaThreshold, betaVal);
          }
       }
 
@@ -382,6 +330,64 @@ public class CPLOPConnection {
       }
 
       return regThrMap;
+   }
+
+   /**
+    * Retrieves all isolates from the database.
+    *
+    * @return A list of hashes representing isolate attributes.
+    *  Each item is a Map that maps attribute names to values.
+    *  'id' -> isolate's id (Integer).
+    *  'name' -> common name of E. coli host. (String).
+    *  'host' -> id of host, differentiating between hosts of the same species (Integer).
+    *  'sample' -> id of E. coli culture sample for the given host (String).
+    *  'stored' -> date that the isolate was stored in the database (String).
+    *  'pyroprinted' -> date that the isolate was pyroprinted (String).
+    *
+    * @throws SQLException if the query fails.
+    */
+   public List<Map<String, Object>> getIsolateDataSet() throws SQLException {
+      List<Map<String, Object>> isolateMap = new ArrayList<Map<String, Object>>();
+      Statement statement = null;
+      ResultSet results = null;
+
+      String query = "SELECT isoID, commonName, hostID, sampleID, " +
+                     "dateStored, pyroprintDate " +
+                     "FROM Isolates ";
+
+      try {
+         statement = conn.createStatement();
+         results = statement.executeQuery(query);
+
+         while (results.next()) {
+            Map<String, Object> tuple = new HashMap<String, Object>();
+
+            tuple.put("id", new Integer(results.getInt(1)));
+            tuple.put("name", results.getString(2));
+            tuple.put("host", new Integer(results.getInt(3)));
+            tuple.put("sample", new Integer(results.getInt(4)));
+            tuple.put("stored", results.getString(5));
+            tuple.put("pyroprinted", results.getString(6));
+
+            isolateMap.add(tuple);
+         }
+      }
+
+      catch (SQLException sqlEx) {
+         throw sqlEx;
+      }
+
+      finally {
+         if (results != null) {
+            results.close();
+         }
+
+         if (statement != null) {
+            statement.close();
+         }
+      }
+
+      return isolateMap;
    }
 
    /**

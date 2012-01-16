@@ -2,6 +2,7 @@ package spam.dataParser;
 
 public class SequenceParser {
    private String sequence;
+   private boolean debug = false;
    
    public SequenceParser(String seq) {
       sequence = seq;
@@ -9,7 +10,7 @@ public class SequenceParser {
    
    //returns null on error
    public String getExpandedSequence() {
-      System.out.println("getting expanded form of " + sequence);
+      if (debug) { System.out.println("getting expanded form of " + sequence); }
       //repeat is true if in a parenthetic area e.g. 23(ATG..) false if not e.g. ATGC..
       //permRegion is true if (ATCG) has been found, representing permutations of ATCG,
       //false if permutations should not be inserted
@@ -22,14 +23,15 @@ public class SequenceParser {
       //for using (ATCG) inside of a repeating region i.e. 23((ATCG))
       //by leaving the (ATCG) intact, we can get 23 repetitions and
       //SequenceFinder will handle the correct permutation replacement
-      for (char c : sequence.toLowerCase().toCharArray()) {
-         System.out.println("expandedSeq: " + expandedSeq);
+      for (char seqChar : sequence.toLowerCase().toCharArray()) {
+         if (debug) { System.out.println("expandedSeq: " + expandedSeq); }
+
          //expand repeatSeq and add to expandedSeq, reset variables
-         if (c == ')') {
+         if (seqChar == ')') {
             if (permRegion) {
                permRegion = false;
-               if (repeat) repeatSeq += c;
-               else expandedSeq += c;
+               if (repeat) repeatSeq += seqChar;
+               else expandedSeq += seqChar;
                continue;
             }
             if (repeat) {
@@ -42,39 +44,40 @@ public class SequenceParser {
             }
          }
          //begin using repeatSeq
-         else if (c == '(') {
+         else if (seqChar == '(') {
             if(!repeat && repeatNum != 0) {
                repeat = true;
                continue;
             }
             else {
                permRegion = true;
-               if (repeat) repeatSeq += c;
-               else expandedSeq += c;
+               if (repeat) repeatSeq += seqChar;
+               else expandedSeq += seqChar;
             }
          }
          //adjust repeatNum
-         else if ((c >= '0' && c <= '9')) {
-            repeatNum = (10 * repeatNum) +  (c - '0');
+         else if ((seqChar >= '0' && seqChar <= '9')) {
+            repeatNum = (10 * repeatNum) +  (seqChar - '0');
          }
          
          //add to repeatSeq or expandedSeq depending on
-         //if you are in a parenthetic region
-         else if (c == 'a' || c == 't' || c == 'c' || c == 'g') {
-            if (repeat) repeatSeq += c;
-            else expandedSeq += c;
+         //if you are in a parenthetiseqChar region
+         else if (seqChar == 'a' || seqChar == 't' || seqChar == 'c' || seqChar == 'g') {
+            if (repeat) repeatSeq += seqChar;
+            else expandedSeq += seqChar;
          }
-         else if (c == ' ') continue;
+
+         else if (seqChar == ' ') continue;
          
          //not a valid nucleotide, not a '(' or ')' and not a number.. invalid.
          else {
-            System.out.println("Error while parsing sequence." +
-               "Invalid character '" + c + "'.");
+            System.err.println("Error while parsing sequence." +
+               "Invalid character '" + seqChar + "'.");
             return null;
          }
+
       }
-      //System.out.println("expanded Seq: " + expandedSeq);
-      //if the parenthesis was never closed then invalid sequence
+
       return repeat ? null : expandedSeq.toUpperCase();
    }
    

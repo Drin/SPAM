@@ -1,7 +1,6 @@
 package spam.dataTypes;
 
 import spam.dataTypes.SampleMethod;
-//import spam.distanceMeasures.IsolateDistance;
 
 import java.io.File;
 
@@ -9,9 +8,6 @@ import java.util.Map;
 import java.util.List;
 import java.util.LinkedList;
 
-//TODO trying to migrate similarity matrix to
-//dataStructures.IsolateSimilarityMatrix. as such I have commented out old
-//code.
 public class Isolate {
    private String mIsolateName;
    private String mTechnician;
@@ -23,28 +19,9 @@ public class Isolate {
    private static int TECH_NDX = 0, GRP_NDX = 1, DAY_NDX = 2;
 
    public Isolate(String name) {
-
-      /*
-       * wtf was i thinking? they should be separate so just keep the initial letter.
-       * change how everything does it's calculations
-       * super short term hack. Will try to put these into "namespaces" of
-       * sorts
-      if (name.charAt(0) == 'a' ||
-          name.charAt(0) == 'b' ||
-          name.charAt(0) == 'c') {
-         name = name.substring(1);
-      }
-       */
-
-
       mIsolateName = name;
       mTechnician = String.valueOf(name.charAt(TECH_NDX));
       mGroup = SampleMethod.getMethod(mIsolateName.charAt(GRP_NDX));
-      /*
-       * grabs the integer that is between the method encoding (f | i | l) and
-       * the '-' character, this is necessary since the day the sample was taken
-       * is of variable length (depending on the sampling time frame)
-       */
       day = Integer.parseInt(mIsolateName.substring(DAY_NDX, mIsolateName.indexOf('-')));
       //mCorrMap = null;
       

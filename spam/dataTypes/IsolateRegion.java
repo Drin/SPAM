@@ -1,22 +1,6 @@
 package spam.dataTypes;
-/*
- * This enum represents the different methods for sampling E.Coli
- * in Emily's data.
- * fecal represents a sampling during the event
- * immediate represents a sampling immediately following the event
- * later represents a sampling some hours after the event
- */
+
 public enum IsolateRegion {
-   /*
-    * fecal value = 0
-    * immediate value = 1
-    * later value = 3
-    * deep value = 7;
-    * These values are used to represent temporal proximity
-    * between the different sampling methods.
-    * fecal and immediate are closest to each other
-    * while later is closest only to immediate
-    */
    ITS_16_23("16s-23s"), ITS_23_5("23s-5s");
 
    private String mRegion;
