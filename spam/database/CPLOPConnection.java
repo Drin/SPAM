@@ -337,9 +337,9 @@ public class CPLOPConnection {
     *
     * @return A list of hashes representing isolate attributes.
     *  Each item is a Map that maps attribute names to values.
-    *  'id' -> isolate's id (Integer).
+    *  'id' -> isolate's id (String).
     *  'name' -> common name of E. coli host. (String).
-    *  'host' -> id of host, differentiating between hosts of the same species (Integer).
+    *  'host' -> id of host, differentiating between hosts of the same species (String).
     *  'sample' -> id of E. coli culture sample for the given host (String).
     *  'stored' -> date that the isolate was stored in the database (String).
     *  'pyroprinted' -> date that the isolate was pyroprinted (String).
@@ -362,9 +362,9 @@ public class CPLOPConnection {
          while (results.next()) {
             Map<String, Object> tuple = new HashMap<String, Object>();
 
-            tuple.put("id", new Integer(results.getInt(1)));
+            tuple.put("id", results.getString(1));
             tuple.put("name", results.getString(2));
-            tuple.put("host", new Integer(results.getInt(3)));
+            tuple.put("host", results.getString(3));
             tuple.put("sample", new Integer(results.getInt(4)));
             tuple.put("stored", results.getString(5));
             tuple.put("pyroprinted", results.getString(6));
@@ -388,6 +388,67 @@ public class CPLOPConnection {
       }
 
       return isolateMap;
+   }
+
+   /**
+    * Retrieve the data for all pyroprints in the databse.
+    *
+    * @return A list of hashes representing the pyroprints.
+    *  Each row is a Map that maps attribute names to values.
+    *  'pyroprint' -> pyroprint's id (Integer).
+    *  'isolate' -> id of isolate which the pyroprint represents (String).
+    *  'region' -> unique identifier for the region. (String).
+    *  'forwardPrimer' -> unique identifier for the forward primer (String).
+    *  'reversePrimer' -> unique identifier for the reverse primer (String).
+    *  'sequencePrimer' -> unique identifier for the sequence primer (String).
+    *  'dispensation' -> unique identifier for the dispensation sequence (String).
+    *  'well' -> well location of pyroprint in pyromark plate (String).
+    *
+    * @throws SQLException if the query fails.
+    */
+   public List<Map<String, Object>> getPyroprintDataSet() throws SQLException {
+      List<Map<String, Object>> rtn = new ArrayList<Map<String, Object>>();
+      Statement stmt = null;
+      ResultSet results = null;
+
+      String query = String.format("SELECT pyroID, isoID, appliedRegion, " +
+                                   "dsName, forPrimer, revPrimer, seqPrimer, " +
+                                   "wellID " +
+                                   "FROM Pyroprints");
+      try {
+         stmt = conn.createStatement();
+         results = stmt.executeQuery(query);
+
+         while (results.next()) {
+            Map<String, Object> tuple = new HashMap<String, Object>();
+            tuple.put("pyroprint", new Integer(results.getInt(1))); 
+            tuple.put("isolate", results.getString(2));
+            tuple.put("region", results.getString(3)); 
+            tuple.put("dispensation", results.getString(4)); 
+            tuple.put("forwardPrimer", results.getString(5)); 
+            tuple.put("reversePrimer", results.getString(6)); 
+            tuple.put("sequencePrimer", results.getString(7)); 
+            tuple.put("well", results.getString(8));
+
+            rtn.add(tuple);
+         }
+      }
+
+      catch (SQLException sqlEx) {
+         throw sqlEx;
+      }
+
+      finally {
+         if (results != null) {
+            results.close();
+         }
+
+         if (stmt != null) {
+            stmt.close();
+         }
+      }
+
+      return rtn;
    }
 
    /**

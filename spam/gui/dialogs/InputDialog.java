@@ -3,6 +3,7 @@ package spam.gui.dialogs;
 //import spam.gui.MainWindow;
 
 import spam.database.CPLOPConnection;
+import spam.gui.listeners.DataQueryButtonListener;
 
 import java.awt.Component;
 import java.awt.ComponentOrientation;
@@ -42,7 +43,7 @@ public class InputDialog extends JDialog {
    /*
     * CONSTANTS
     */
-   private final int DIALOG_HEIGHT = 400, DIALOG_WIDTH = 415;
+   private final int DIALOG_HEIGHT = 400, DIALOG_WIDTH = 500;
    private final String[] DATA_TYPE_VALUES = new String[] {"Isolates",
                                                            "Pyroprints",
                                                            "Experiments"};
@@ -129,7 +130,7 @@ public class InputDialog extends JDialog {
 
       dataSetField.add(dataTypeOptions);
       dataSetField.add(dataField);
-      dataSetField.add(prepareDataQueryButton(dataTypeOptions));
+      dataSetField.add(prepareDataQueryButton(dataField, dataTypeOptions));
 
       return dataSetField;
    }
@@ -145,7 +146,7 @@ public class InputDialog extends JDialog {
       return dataHierarchyField;
    }
 
-   private JButton prepareDataQueryButton(final JComboBox dataTypeOptions) {
+   private JButton prepareDataQueryButton(JTextField dataSetField, JComboBox dataTypeOptions) {
       final JButton dataQueryButton = new JButton("Choose " + dataTypeOptions.getSelectedItem());
 
       dataTypeOptions.addItemListener(new ItemListener() {
@@ -156,84 +157,8 @@ public class InputDialog extends JDialog {
          }
       });
 
-      dataQueryButton.addActionListener(new ActionListener() {
-         public void actionPerformed(ActionEvent e) {
-            List<Map<String, Object>> isolates = null;
-
-            try {
-               CPLOPConnection cplopConn = new CPLOPConnection();
-               isolates = cplopConn.getIsolateDataSet();
-            }
-
-            catch (java.sql.SQLException sqlErr) {
-               System.out.println("SQLException\nExiting...");
-               System.exit(1);
-            }
-
-            catch (CPLOPConnection.DriverException driveErr) {
-               System.out.println("Driver Exception:\n" + driveErr + "\nExiting...");
-               driveErr.printStackTrace();
-               System.exit(1);
-            }
-
-            //String dataType = (String) dataTypeOptions.getSelectedItem();
-
-            /*
-             * use the CPLOPConnection class to retrieve all isolates.
-             * Use the isolates retrieved to populate a JTable
-             */
-            Object[][] tableData = new Object[isolates.size()][];
-            Object[] columns = new Object[] {"id", "name", "host", "sample",
-                                             "stored", "pyroprinted"};
-
-            for (int rowNdx = 0; rowNdx < isolates.size(); rowNdx++) {
-               Map<String, Object> isoTuple = isolates.get(rowNdx);
-               Object[] tupleData = new Object[isoTuple.size()];
-
-               for (int colNdx = 0; colNdx < columns.length; colNdx++) {
-                  tupleData[colNdx] = isoTuple.get((String) columns[colNdx]);
-               }
-
-               tableData[rowNdx] = tupleData;
-            }
-
-            /*
-             * Prepare the dialog window which displays isolate data the user
-             * will choose from
-             */
-            final JDialog isolateDataWindow = new JDialog(mDialog, "Isolate Data");
-            isolateDataWindow.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-
-            Container isolatePane = isolateDataWindow.getContentPane();
-            isolatePane.setLayout(new BoxLayout(isolatePane, BoxLayout.Y_AXIS));
-            //isolatePane.setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
-
-            /*
-             * Prepare a JTable to be used in a dialog window
-             */
-            JTable isolateTable = new JTable(tableData, columns);
-            JScrollPane isolateScrollPane = new JScrollPane(isolateTable);
-
-            isolateTable.setAutoCreateRowSorter(true);
-            isolateTable.setFillsViewportHeight(true);
-
-            /*
-             * Prepare a cancel button
-             */
-            JButton cancelButton = new JButton("Cancel");
-            cancelButton.addActionListener(new ActionListener() {
-               public void actionPerformed(ActionEvent e) {
-                  isolateDataWindow.dispose();
-               }
-            });
-
-            isolatePane.add(isolateScrollPane);
-            isolatePane.add(cancelButton);
-            isolatePane.validate();
-
-            isolateDataWindow.setVisible(true);
-         }
-      });
+      dataQueryButton.addActionListener(
+       new DataQueryButtonListener(dataSetField, dataTypeOptions));
 
       return dataQueryButton;
    }
