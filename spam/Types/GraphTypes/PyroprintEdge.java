@@ -1,4 +1,6 @@
-package spam.dataTypes;
+package spam.Types.GraphTypes;
+
+import spam.Types.IsolateRegion;
 
 public class PyroprintEdge {
    private IsolateRegion mRegion = null;

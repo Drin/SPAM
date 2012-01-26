@@ -1,4 +1,4 @@
-package spam.dataTypes;
+package spam.Types;
 /*
  * This enum represents the different methods for sampling E.Coli
  * in Emily's data.

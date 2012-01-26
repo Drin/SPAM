@@ -1,6 +1,7 @@
-package spam.dataTypes;
+package spam.Types;
 
-import spam.dataTypes.Connectivity;
+import spam.Types.Connectivity;
+import spam.Types.Cluster.DIST_TYPE;
 
 import spam.dataStructures.IsolateSimilarityMatrix;
 
@@ -8,7 +9,7 @@ import java.util.Map;
 
 public class PyroRunData {
    private IsolateRegion mRegion;
-   private Cluster.distType mClusterDistType;
+   private DIST_TYPE mClusterDistType;
    private Map<Connectivity, IsolateSimilarityMatrix> mIsolateNetworks;
    private double mDistThreshold, mLowerThreshold, mUpperThreshold;
 
@@ -29,11 +30,11 @@ public class PyroRunData {
       return mRegion;
    }
 
-   public void setDistanceType(Cluster.distType distanceType) {
+   public void setDistanceType(DIST_TYPE distanceType) {
       mClusterDistType = distanceType;
    }
 
-   public Cluster.distType getDistanceType() {
+   public DIST_TYPE getDistanceType() {
       return mClusterDistType;
    }
 

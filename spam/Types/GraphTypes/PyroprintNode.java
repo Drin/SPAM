@@ -1,4 +1,7 @@
-package spam.dataTypes;
+package spam.Types.GraphTypes;
+
+import spam.Types.Pyroprint;
+import spam.Types.GraphTypes.PyroprintEdge;
 
 import java.util.Set;
 import java.util.Map;

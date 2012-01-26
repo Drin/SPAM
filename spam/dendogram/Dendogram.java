@@ -10,7 +10,6 @@ public interface Dendogram {
    public double getCorrelation();
    public Dendogram getLeft();
    public Dendogram getRight();
-   public Cluster toCluster(IsolateSimilarityMatrix matrix);
    public String getXML();
    public String toXML(String spacing);
    public String defaultStyle(String spacing);
