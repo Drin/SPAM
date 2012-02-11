@@ -9,8 +9,6 @@ import java.io.File;
 public class MetricsDisplay {
 	private static ArrayList<ArrayList<double[]>> comparisonMatrices = new ArrayList<ArrayList<double[]>>();
 	private static ArrayList<ArrayList<double[]>> revComparisonMatrices = new ArrayList<ArrayList<double[]>>();
-	private static ArrayList<ArrayList<int[]>> differenceMatrices = new ArrayList<ArrayList<int[]>>();
-	private static ArrayList<ArrayList<int[]>> revDifferenceMatrices = new ArrayList<ArrayList<int[]>>();
 	private static ArrayList<String> dispSeqs = new ArrayList<String>();
 	private static ArrayList<Double> forwardMin = new ArrayList<Double>();
 	private static ArrayList<Double> forwardMax = new ArrayList<Double>();
@@ -37,14 +35,6 @@ public class MetricsDisplay {
 		revComparisonMatrices.add(compMatrix);
 	}
 	
-	public static void storeDifferenceMatrix(ArrayList<int[]> diffMatrix) {
-		differenceMatrices.add(diffMatrix);
-	}
-	
-	public static void storeRevDifferenceMatrix(ArrayList<int[]> diffMatrix) {
-		revDifferenceMatrices.add(diffMatrix);
-	}
-	
 	public static void setDNAFiles(File[] files) {
 		dnaFiles = files;
 	}
@@ -59,7 +49,7 @@ public class MetricsDisplay {
 		//double forwardAverage = 0, reverseAverage = 0;
 		int strStart = 2;
 
-		String forwardData = calculateMetrics(comparisonMatrices, differenceMatrices, "forward");
+		String forwardData = calculateMetrics(comparisonMatrices, "forward");
 		
 		//add an extra comma to accomodate the "reverse" column
 		for (ArrayList<String> dispRow : dataPoints) {
@@ -69,7 +59,7 @@ public class MetricsDisplay {
 		//forwardAverage = totalSize/totalPearson;
 		totalSize = 0; totalPearson = 0;
 		
-		String reverseData = calculateMetrics(revComparisonMatrices, revDifferenceMatrices, "reverse");
+		String reverseData = calculateMetrics(revComparisonMatrices, "reverse");
 		//reverseAverage = totalSize/totalPearson;
 
 		//necessary strings for building the metrics for each dispensation at top of csv
@@ -154,13 +144,13 @@ public class MetricsDisplay {
 		return metricStrings;
 	}
 	
-	private static String calculateMetrics(ArrayList<ArrayList<double[]>> matrix,
-	 ArrayList<ArrayList<int[]>> diffMatrix, String dir) {
+	private static String calculateMetrics(ArrayList<ArrayList<double[]>> matrix, String dir) {
 		String output = "";
 		int dataRowOffset = dir.equals("forward") ? 0 : dataPoints.size();
 		
 		for (int matrixNdx = 0; matrixNdx < matrix.size(); matrixNdx++) {
-			double min = 0, max = 0, size = 0, total = 0, differences = 0;
+			double min = 0, max = 0, size = 0, total = 0;
+
 			if (matrixNdx + dataRowOffset >= dataPoints.size())
 				dataPoints.add(new ArrayList<String>());
 			ArrayList<double[]> corrMatrix = matrix.get(matrixNdx);
@@ -228,41 +218,6 @@ public class MetricsDisplay {
 					newLine + newLine, min, max, total/size);
 				*/
 			}
-			
-			ArrayList<int []> diffs = diffMatrix.get(matrixNdx);
-			
-			output += newLine;
-			for (int diffCol = 0; diffCol < diffs.size() && diffCol < dnaFiles.length; diffCol++) {
-				output += ", " + dnaFiles[diffCol].getName().replace(".txt", "");
-			}
-			output += newLine;
-			
-			for (int diffRow= 0; diffRow < diffs.size() && diffRow < dnaFiles.length; diffRow++) {
-				if (dnaFiles != null) {
-					String tmpFileName = dnaFiles[diffRow].getName().replace(".txt", "");
-					output += (tmpFileName + ", ");
-				}
-				else {
-					output += String.format("%3d | ", (diffRow + 1));
-				}
-				
-				for (int colNdx = 0; colNdx < diffs.get(diffRow).length; colNdx++) {
-					int tmpVal = (diffs.get(diffRow)[colNdx]);
-					                                  
-					if (colNdx < diffRow) {
-						output += String.format("%d, ", tmpVal);
-						//System.out.printf("  %.3f   ", tmpVal);
-
-						differences += tmpVal;
-					}
-				}
-				
-				output = output.substring(0, output.length() - 2);
-				output += newLine;
-			}
-			output += String.format(
-					newLine + "Total Differences: %.3f" +
-					newLine + newLine, differences);
 		}
 		//System.out.printf("Min: %.3f\nMax: %.3f\nMean: %.3f\n", min, max, total/size);
 

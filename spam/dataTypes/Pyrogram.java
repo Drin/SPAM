@@ -173,76 +173,28 @@ public class Pyrogram {
       mResiduals = calcResiduals(mData, mMean);
    }
 
-   //should return a double[][] where each row represents the comparisons for a
-   //particular length of pyrogram
-   //double[][] comparisonSteps
-   //foreach (row : double[][])
-   //   double[row][0] = correlation/comparisonValue;
-   //   double[row][1] = same/different;
-   public double[] compareTo(Pyrogram other, String comparisonType) {
-      double returnNum = 0;
-      int different = 0;
+   public double compareTo(Pyrogram other) {
+      double pearsonSum = 0, stdDevOne = 0, stdDevTwo = 0;
+      double pyroOneMean = calcMean(getData());
+      double pyroTwoMean = other.calcMean(other.getData());
+      double pearsonLen = 0;
       
-      //Pearson correlation preparation
-      double pyroOneMean = 0, pyroTwoMean = 0, pearsonSum = 0,
-       stdDevOne = 0, stdDevTwo = 0;
-      if (comparisonType.equals("Pearson Correlation")) {
-         pyroOneMean = calcMean(getData());
-         pyroTwoMean = other.calcMean(other.getData());
+      for (int dataNdx = 0; dataNdx < mData.size(); dataNdx++) {
+         double thisResidual = mData.get(dataNdx) - pyroOneMean;
+         double otherResidual = other.mData.get(dataNdx) - pyroTwoMean;
+
+         pearsonSum += thisResidual * otherResidual;
+
+         stdDevOne += thisResidual * thisResidual;
+         stdDevTwo += otherResidual * otherResidual;
+
+         pearsonLen++;
       }
+
+      stdDevOne = Math.sqrt(stdDevOne/pearsonLen);
+      stdDevTwo = Math.sqrt(stdDevTwo/pearsonLen);
       
-      else if (comparisonType.equals("Equality")) {
-         System.out.println("Basic comparison true...");
-         returnNum = 1;
-      }
-      
-      //actual comparison being made
-      for (int dataNdx = 0; dataNdx < Math.min(mData.size(),
-       other.getData().size()); dataNdx++) {
-         if (mData.get(dataNdx) != other.mData.get(dataNdx)) {
-            different = 1;
-         }
-            
-         if (comparisonType.equals("Pearson Correlation")) {
-            pearsonSum += (mData.get(dataNdx) - pyroOneMean) *
-             (other.mData.get(dataNdx) - pyroTwoMean);
-            stdDevOne += Math.pow((mData.get(dataNdx) - pyroOneMean), 2);
-            stdDevTwo += Math.pow((other.mData.get(dataNdx) - pyroTwoMean), 2);
-         }
-      
-         else if (comparisonType.equals("Euclidean")) {
-            //Euclidean distance
-            double dist = Math.sqrt(Math.pow(mData.get(dataNdx), 2) +
-             Math.pow(other.mData.get(dataNdx), 2));
-            returnNum += dist;
-            //corrCycle[dataNdx] = dist;
-         }
-            
-         else if (mData.get(dataNdx) != other.mData.get(dataNdx)) {
-            if (comparisonType.equals("Equality")) {
-               //direct equality comparison
-               System.out.println("Basic comparison false..");
-               //gonna have to change this 
-               returnNum = 0;
-            }
-            
-            else if (comparisonType.equals("Direct Comparison")) {
-               //number of differing locations
-               returnNum++;
-            }
-         }
-      }
-      
-      if (comparisonType.equals("Pearson Correlation")) {
-         returnNum = (pearsonSum) / (Math.sqrt(stdDevOne) * Math.sqrt(stdDevTwo));
-      }
-      
-      double[] diffVals = new double[2];
-      
-      diffVals[0] = returnNum;
-      diffVals[1] = different;
-      
-      return diffVals;
+      return pearsonSum / (pearsonLen * stdDevOne * stdDevTwo);
    }
 
    private boolean isDone(int[] iters) {

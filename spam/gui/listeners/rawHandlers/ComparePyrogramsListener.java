@@ -133,12 +133,9 @@ public class ComparePyrogramsListener implements java.awt.event.ActionListener {
       JLabel reverseLabel = new JLabel("Reverse Primer:");
       revPrimerComp = new JTextField();
       
-      //3 options for comparisons
-      //basic, moderate, advanced
-      //d1, d2, d3
       JLabel distanceLabel = new JLabel("Choose Comparison Type:");
       distanceOptions = new JComboBox(new String[] {
-            "Euclidean Distance", "Pearson Correlation", "Equality", "Direct Comparison"
+            "Pearson Correlation"
       });
       
       JLabel comparisonLabel = new JLabel("Choose Comparison Mode:");
@@ -146,7 +143,6 @@ public class ComparePyrogramsListener implements java.awt.event.ActionListener {
             "Forward", "Forward and Reverse"
       });
       
-      //cancel and okay buttons at bottom
       cancelButton = new JButton("Cancel");
       cancelButton.addActionListener(new ActionListener() {
          public void actionPerformed(ActionEvent e) {

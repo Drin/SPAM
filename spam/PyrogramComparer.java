@@ -157,8 +157,6 @@ public class PyrogramComparer {
          ArrayList<double[]> comparisonMatrix = new ArrayList<double[]>();
          //this matrix will not be populated if not building reverse pyrogram
          ArrayList<double[]> revComparisonMatrix = new ArrayList<double[]>();
-         ArrayList<int[]> diffMatrix = new ArrayList<int[]>();
-         ArrayList<int[]> revDiffMatrix = new ArrayList<int[]>();
       
          //compareNdx is the row, compareToNdx is the column for a comparison matrix
          for (int compareNdx = 0; compareNdx < pyrograms.size(); compareNdx++) {
@@ -167,43 +165,13 @@ public class PyrogramComparer {
             double[] matrixRow = new double[pyrograms.size()];
             //this array will not be populated if not building reverse pyrogram
             double[] revMatrixRow = new double[revPyrograms.size()];
-            int[] diffRow = new int[pyrograms.size()];
-            int[] revDiffRow = new int[revPyrograms.size()];
          
             for (int compareToNdx = 0; compareToNdx < pyrograms.size(); compareToNdx++) {
-               //index 0 is the comparison value (based on distance option)
-               //index 1 is the equality value between corresponding indices of the pyrogram
-               //TODO call a different compareTo that returns an array of results (for different lengths)
-               double[] compResults = pyrograms.get(compareNdx).compareTo(pyrograms.get(compareToNdx), comparisonType);
-               matrixRow[compareToNdx] = compResults[0] * 100;
-               diffRow[compareToNdx] = (int) compResults[1];
-
-               /* commenting out, pearson correlations seem to be correct
-               if (!PyrogramTester.checkPearson(pyrograms.get(compareNdx),
-                pyrograms.get(compareToNdx), compResults[0]))
-                  System.out.println("Unexpected Pearson");
-               */
-               
-               //have to make sure that only add to this array if reverse pyrogram is being built
-               /*TODO mode
-               if (mode.equals("Forward and Reverse")) {
-                  //index 0 is the comparison value, index 1 is the number of differences between pyrograms
-                  double[] revCompResults =
-                   revPyrograms.get(compareNdx).compareTo(revPyrograms.get(compareToNdx), comparisonType);
-                  revMatrixRow[compareToNdx] = revCompResults[0] * 100; //to return a percentage
-                  revDiffRow[compareToNdx] = (int) revCompResults[1];
-                  
-                  /* commenting out; pearson correlations seem to be correct
-                  if(!PyrogramTester.checkPearson(revPyrograms.get(compareNdx),
-                   revPyrograms.get(compareToNdx), revCompResults[0]))
-                     System.out.println("Unexpected reverse Pearson");
-               }
-            */
-               
+               double compResults = pyrograms.get(compareNdx).compareTo(pyrograms.get(compareToNdx));
+               matrixRow[compareToNdx] = compResults;
             }
             
             comparisonMatrix.add(matrixRow);
-            diffMatrix.add(diffRow);
             /*TODO mode
             if (mode.equals("Forward and Reverse")) {
                revComparisonMatrix.add(revMatrixRow);
@@ -214,9 +182,7 @@ public class PyrogramComparer {
          }
          
          comparisonMatrices.add(comparisonMatrix);
-         differenceMatrices.add(diffMatrix);
          MetricsDisplay.storeComparisonMatrix(comparisonMatrix);
-         MetricsDisplay.storeDifferenceMatrix(diffMatrix);
          
          /*TODO mode
          if (mode.equals("Forward and Reverse")) {
