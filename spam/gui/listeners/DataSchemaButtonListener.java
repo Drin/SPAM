@@ -16,15 +16,16 @@ import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 import javax.swing.JButton;
 import javax.swing.JTextField;
-import javax.swing.JComboBox;
-import javax.swing.JTable;
+import javax.swing.JTree;
 import javax.swing.BoxLayout;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.TreeSelectionModel;
 
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 
-public class DataQueryButtonListener implements ActionListener {
+public class DataSchemaButtonListener implements ActionListener {
    /*
     * CONSTANTS
     */
@@ -32,18 +33,14 @@ public class DataQueryButtonListener implements ActionListener {
 
    private JDialog mDialog = null;
    private Container mPane = null;
-   private JComboBox mDataTypeOptions = null;
-   private JTextField mDataSetField = null;
-   private JTable mTable = null;
-
-   private Object[][] mTableData = null;
-   private Object[] mTableDataColumns = null;
+   //private JTextField mDataSetField = null;
+   private JTree mDataPartitionTree = null;
+   private DefaultMutableTreeNode mListRoot = null;
 
    private CPLOPConnection mConn = null;
 
-   public DataQueryButtonListener(JTextField textField, JComboBox dataTypeOptions) {
-      mDataTypeOptions = dataTypeOptions;
-      mDataSetField = textField;
+   public DataSchemaButtonListener() {
+      //mDataSetField = textField;
 
       mDialog = new JDialog(mDialog);
       mDialog.setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
@@ -72,25 +69,9 @@ public class DataQueryButtonListener implements ActionListener {
 
    public void actionPerformed(ActionEvent e) {
       mPane.removeAll();
-      String dataType = (String) mDataTypeOptions.getSelectedItem();
 
-      if (dataType.equals("Isolates")) {
-         mDialog.setTitle("Isolate Data Set");
-         mPane.add(prepareIsolateDataView());
-      }
-
-      else if (dataType.equals("Pyroprints")) {
-         mDialog.setTitle("Pyroprint Data Set");
-         mPane.add(preparePyroprintDataView());
-      }
-
-      else if (dataType.equals("Experiments")) {
-      }
-
-      else {
-         System.out.println("Invalid dataType option.");
-         System.exit(1);
-      }
+      mDialog.setTitle("Data Organization");
+      mPane.add(prepareSchemaView());
 
       mPane.add(initControls());
       mPane.validate();
@@ -114,6 +95,7 @@ public class DataQueryButtonListener implements ActionListener {
 
       okayButton.addActionListener(new ActionListener() {
          public void actionPerformed(ActionEvent e) {
+            /*
             int[] selectedRows = mTable.getSelectedRows();
             List<String> isolateList = new ArrayList<String>();
 
@@ -131,6 +113,7 @@ public class DataQueryButtonListener implements ActionListener {
                mDataSetField.setText(
                 isolateListStr.substring(0, isolateListStr.length() - 2));
             }
+            */
 
             mDialog.dispose();
          }
@@ -150,50 +133,12 @@ public class DataQueryButtonListener implements ActionListener {
 
       return cancelButton;
    }
-
-   private JScrollPane preparePyroprintDataView() {
-      List<Map<String, Object>> pyroprints = null;
-
-      try {
-         pyroprints = mConn.getPyroprintDataSet();
-      }
-
-      catch (java.sql.SQLException sqlErr) {
-         System.out.println("SQLException:\nExiting...");
-         sqlErr.printStackTrace();
-         System.exit(1);
-      }
-
-      mTableData = new Object[pyroprints.size()][];
-      mTableDataColumns = new Object[] {"pyroprint", "isolate", "well", "region",
-                                        "dispensation", "forwardPrimer",
-                                        "reversePrimer", "sequencePrimer"};
-
-      for (int rowNdx = 0; rowNdx < pyroprints.size(); rowNdx++) {
-         Map<String, Object> isoTuple = pyroprints.get(rowNdx);
-         Object[] tupleData = new Object[isoTuple.size()];
-
-         for (int colNdx = 0; colNdx < mTableDataColumns.length; colNdx++) {
-            tupleData[colNdx] = isoTuple.get((String) mTableDataColumns[colNdx]);
-         }
-
-         mTableData[rowNdx] = tupleData;
-      }
-
-      mTable = new JTable(mTableData, mTableDataColumns);
-      JScrollPane pyroprintScrollPane = new JScrollPane(mTable);
-
-      mTable.setAutoCreateRowSorter(true);
-      mTable.setFillsViewportHeight(true);
-
-      return pyroprintScrollPane;
-   }
    
-   private JScrollPane prepareIsolateDataView() {
-      List<Map<String, Object>> isolates = null;
+   private JScrollPane prepareSchemaView() {
+      Map<String, List<String>> tableAttributes = null;
 
       try {
-         isolates = mConn.getIsolateDataSet();
+         tableAttributes = mConn.getCPLOPSchema();
       }
 
       catch (java.sql.SQLException sqlErr) {
@@ -202,27 +147,26 @@ public class DataQueryButtonListener implements ActionListener {
          System.exit(1);
       }
 
-      mTableData = new Object[isolates.size()][];
-      mTableDataColumns = new Object[] {"id", "name", "host", "sample",
-                                       "stored", "pyroprinted"};
+      mListRoot = new DefaultMutableTreeNode("Data Tables");
 
-      for (int rowNdx = 0; rowNdx < isolates.size(); rowNdx++) {
-         Map<String, Object> isoTuple = isolates.get(rowNdx);
-         Object[] tupleData = new Object[isoTuple.size()];
+      for (String tableName : tableAttributes.keySet()) {
+         List<String> tableCols = tableAttributes.get(tableName);
+         DefaultMutableTreeNode tableNode = new DefaultMutableTreeNode(tableName);
 
-         for (int colNdx = 0; colNdx < mTableDataColumns.length; colNdx++) {
-            tupleData[colNdx] = isoTuple.get((String) mTableDataColumns[colNdx]);
+         for (String colName : tableCols) {
+            DefaultMutableTreeNode colNode = new DefaultMutableTreeNode(colName);
+
+            tableNode.add(colNode);
          }
 
-         mTableData[rowNdx] = tupleData;
+         mListRoot.add(tableNode);
       }
 
-      mTable = new JTable(mTableData, mTableDataColumns);
-      JScrollPane isolateScrollPane = new JScrollPane(mTable);
+      mDataPartitionTree = new JTree(mListRoot);
+      mDataPartitionTree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
 
-      mTable.setAutoCreateRowSorter(true);
-      mTable.setFillsViewportHeight(true);
+      JScrollPane dataSchemaScrollPane = new JScrollPane(mDataPartitionTree);
 
-      return isolateScrollPane;
+      return dataSchemaScrollPane;
    }
 }

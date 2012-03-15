@@ -31,8 +31,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 
 public class DisplayPyrogramListener implements java.awt.event.ActionListener {
-   private MainWindow mainFrame;
-   private SpringLayout dialogLayout;
+   private MainWindow mMainFrame;
    private JDialog openDialog;
    private JTextField firstText, secondText, nucleOrder, numDisps, startPos;
    private JCheckBox enableSecond;
@@ -40,7 +39,7 @@ public class DisplayPyrogramListener implements java.awt.event.ActionListener {
    private String recentlyAccessedDir = "";
    
    public void setOwner(MainWindow parentFrame) {
-     this.mainFrame = parentFrame;
+     mMainFrame = parentFrame;
    }
    
    public void actionPerformed(java.awt.event.ActionEvent e) {
@@ -273,28 +272,10 @@ public class DisplayPyrogramListener implements java.awt.event.ActionListener {
              (int) firstDim.getHeight()));
             mainFrame.validate();
 
-            /*
-            //pyroGraphs.add(graphTwo, null);
-
-            /*
-            pyroGraphs.setPreferredSize(new Dimension(
-             (int) Math.max(firstDim.getWidth(), secondDim.getWidth()),
-             (int) Math.max(firstDim.getHeight(), secondDim.getHeight())));
-
-            pyroGraphs.validate();
-
-            */
-            
             openDialog.dispose();
          }
       });
 
-      /*
-       *
-       * Add the components to the dialog window then show the dialog window
-       *
-       */
-      
       openDialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
       openDialog.add(firstLabel);
       openDialog.add(firstText);
@@ -312,120 +293,6 @@ public class DisplayPyrogramListener implements java.awt.event.ActionListener {
       openDialog.add(numDisps);
       openDialog.add(cancelButton);
       openDialog.add(okayButton);
-      
-      //position of first file label relative to pane and browse button
-      dialogLayout.putConstraint(SpringLayout.WEST, firstLabel, 25,
-       SpringLayout.WEST, openDialog.getContentPane());
-      dialogLayout.putConstraint(SpringLayout.EAST, firstLabel, -10,
-       SpringLayout.WEST, firstBrowse);
-      dialogLayout.putConstraint(SpringLayout.SOUTH, firstLabel, -5,
-       SpringLayout.NORTH, firstText);
-      
-      //position of first textField relative to pane and browse button
-      dialogLayout.putConstraint(SpringLayout.WEST, firstText, 25,
-       SpringLayout.WEST, openDialog.getContentPane());
-      dialogLayout.putConstraint(SpringLayout.EAST, firstText, -10,
-       SpringLayout.WEST, firstBrowse);
-      dialogLayout.putConstraint(SpringLayout.NORTH, firstText, 25,
-       SpringLayout.NORTH, openDialog.getContentPane());
-      
-      //position of first browse Button relative to dialog pane
-      dialogLayout.putConstraint(SpringLayout.EAST, firstBrowse, -25,
-       SpringLayout.EAST, openDialog.getContentPane());
-      dialogLayout.putConstraint(SpringLayout.NORTH, firstBrowse, 25,
-       SpringLayout.NORTH, openDialog.getContentPane());
-
-      //position of enabling checkbox for second file relative to dialog pane
-      dialogLayout.putConstraint(SpringLayout.WEST, enableSecond, 5,
-       SpringLayout.WEST, openDialog.getContentPane());
-      dialogLayout.putConstraint(SpringLayout.NORTH, enableSecond, 5,
-       SpringLayout.SOUTH, firstText);
-      
-      //position of second file label relative to pane and browse button
-      dialogLayout.putConstraint(SpringLayout.WEST, secondLabel, 25,
-       SpringLayout.WEST, openDialog.getContentPane());
-      dialogLayout.putConstraint(SpringLayout.EAST, secondLabel, -10,
-       SpringLayout.WEST, secondBrowse);
-      dialogLayout.putConstraint(SpringLayout.SOUTH, secondLabel, -5,
-       SpringLayout.NORTH, secondText);
-      
-      //position of second textField relative to pane and browse button
-      dialogLayout.putConstraint(SpringLayout.WEST, secondText, 25,
-       SpringLayout.WEST, openDialog.getContentPane());
-      dialogLayout.putConstraint(SpringLayout.EAST, secondText, -10,
-       SpringLayout.WEST, secondBrowse);
-      dialogLayout.putConstraint(SpringLayout.NORTH, secondText, 25,
-       SpringLayout.SOUTH, enableSecond);
-      
-      //position second browse Button relative to dialog pane
-      dialogLayout.putConstraint(SpringLayout.EAST, secondBrowse, -25,
-       SpringLayout.EAST, openDialog.getContentPane());
-      dialogLayout.putConstraint(SpringLayout.NORTH, secondBrowse, 25,
-       SpringLayout.SOUTH, enableSecond);
-      
-      //position of label for nucleotide field relative to pane and browse button
-      dialogLayout.putConstraint(SpringLayout.WEST, nucleotideLabel, 25,
-       SpringLayout.WEST, openDialog.getContentPane());
-      dialogLayout.putConstraint(SpringLayout.NORTH, nucleotideLabel, 25,
-       SpringLayout.SOUTH, secondText);
-      
-      //position nucleOrder relative to pane and second textField
-      dialogLayout.putConstraint(SpringLayout.WEST, nucleOrder, 15,
-       SpringLayout.EAST, nucleotideLabel);
-      dialogLayout.putConstraint(SpringLayout.EAST, nucleOrder, 120,
-       SpringLayout.WEST, nucleOrder);
-      dialogLayout.putConstraint(SpringLayout.NORTH, nucleOrder, 25,
-       SpringLayout.SOUTH, secondText);
-      
-      //position sequence Browse button next to nucleOrder
-      dialogLayout.putConstraint(SpringLayout.WEST, sequenceBrowse, 15,
-       SpringLayout.EAST, nucleOrder);
-      dialogLayout.putConstraint(SpringLayout.EAST, sequenceBrowse, -20,
-       SpringLayout.EAST, openDialog.getContentPane());
-      dialogLayout.putConstraint(SpringLayout.NORTH, sequenceBrowse, 25,
-       SpringLayout.SOUTH, secondText);
-      dialogLayout.putConstraint(SpringLayout.SOUTH, sequenceBrowse, 25,
-       SpringLayout.NORTH, sequenceBrowse);
-      
-      //position of label for start position relative to pane and browse button
-      dialogLayout.putConstraint(SpringLayout.WEST, startLabel, 25,
-       SpringLayout.WEST, openDialog.getContentPane());
-      dialogLayout.putConstraint(SpringLayout.NORTH, startLabel, 25,
-       SpringLayout.SOUTH, nucleOrder);
-      
-      //position of startPos text field relative to pane and second textField
-      dialogLayout.putConstraint(SpringLayout.WEST, startPos, 15,
-       SpringLayout.EAST, startLabel);
-      dialogLayout.putConstraint(SpringLayout.EAST, startPos, 50,
-       SpringLayout.WEST, startPos);
-      dialogLayout.putConstraint(SpringLayout.NORTH, startPos, 25,
-       SpringLayout.SOUTH, nucleOrder);
-      
-      //position first textField for first Browse File relative to pane and browse button
-      dialogLayout.putConstraint(SpringLayout.WEST, lengthLabel, 25,
-       SpringLayout.EAST, startPos);
-      dialogLayout.putConstraint(SpringLayout.NORTH, lengthLabel, 25,
-       SpringLayout.SOUTH, nucleOrder);
-      
-      //position nucleOrder relative to pane and second textField
-      dialogLayout.putConstraint(SpringLayout.WEST, numDisps, 15,
-       SpringLayout.EAST, lengthLabel);
-      dialogLayout.putConstraint(SpringLayout.EAST, numDisps, 50,
-       SpringLayout.WEST, numDisps);
-      dialogLayout.putConstraint(SpringLayout.NORTH, numDisps, 25,
-       SpringLayout.SOUTH, nucleOrder);
-      
-      //Position Cancel button relative to dialog pane
-      dialogLayout.putConstraint(SpringLayout.EAST, cancelButton, -50,
-       SpringLayout.EAST, openDialog.getContentPane());
-      dialogLayout.putConstraint(SpringLayout.SOUTH, cancelButton, -25,
-       SpringLayout.SOUTH, openDialog.getContentPane());
-      
-      //Position okay button relative to dialog pane
-      dialogLayout.putConstraint(SpringLayout.WEST, okayButton, 50,
-       SpringLayout.WEST, openDialog.getContentPane());
-      dialogLayout.putConstraint(SpringLayout.SOUTH, okayButton, -25,
-       SpringLayout.SOUTH, openDialog.getContentPane());
       
       openDialog.setVisible(true);
    }

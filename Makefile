@@ -4,7 +4,7 @@ JAVADOC=documentation
 compile: clean SpamGUI
 
 run:
-	java spam/gui/SpamGUI
+	java spam.gui.SpamGUI
 
 SpamGUI:
 	javac -deprecation spam/gui/SpamGUI.java

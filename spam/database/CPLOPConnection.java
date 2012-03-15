@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -19,10 +20,11 @@ import java.sql.SQLException;
 public class CPLOPConnection {
    private static final String DB_DRIVER = "com.mysql.jdbc.Driver";
    private static final String DB_URL = "jdbc:mysql://abra.csc.calpoly.edu/cplop?autoReconnect=true";
+   private static final String DB_INFO_URL = "jdbc:mysql://abra.csc.calpoly.edu/information_schema?autoReconnect=true";
    private static final String DB_USER = "csc570";
    private static final String DB_PASS = "ilovedata570";
 
-   private Connection conn;
+   private Connection conn, schemaConn;
 
    /**
     * Test the connection.
@@ -52,10 +54,45 @@ public class CPLOPConnection {
          Class.forName(DB_DRIVER);
 
          conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASS);
+         //connect to information_schema database as well for selecting
+         //attributes for data organization
+         schemaConn = DriverManager.getConnection(DB_INFO_URL, DB_USER, DB_PASS);
       }
       catch (ClassNotFoundException classEx) {
          throw new DriverException("Unable to instantiate DB Driver: " + DB_DRIVER);
       }
+   }
+
+   public Map<String, List<String>> getCPLOPSchema() throws SQLException {
+      Map<String, List<String>> schemaMapping = new LinkedHashMap<String, List<String>>();
+      Statement statement = null;
+      ResultSet results = null;
+
+      String query = "SELECT TABLE_NAME, COLUMN_NAME" +
+       " FROM COLUMNS" +
+       " WHERE TABLE_SCHEMA = 'cplop'";
+
+      try {
+         statement = schemaConn.createStatement();
+         results = statement.executeQuery(query);
+
+         while (results.next()) {
+            String tableName = results.getString(1);
+            String attributeName = results.getString(2);
+
+            if (!schemaMapping.containsKey(tableName)) {
+               schemaMapping.put(tableName, new ArrayList<String>());
+            }
+
+            schemaMapping.get(tableName).add(attributeName);
+         }
+      }
+
+      catch (SQLException sqlEx) {
+         throw sqlEx;
+      }
+
+      return schemaMapping;
    }
 
    /**

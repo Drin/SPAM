@@ -4,6 +4,7 @@ package spam.gui.dialogs;
 
 import spam.database.CPLOPConnection;
 import spam.gui.listeners.DataQueryButtonListener;
+import spam.gui.listeners.DataSchemaButtonListener;
 
 import java.awt.Component;
 import java.awt.ComponentOrientation;
@@ -141,7 +142,7 @@ public class InputDialog extends JDialog {
       dataHierarchyField.setLayout(new FlowLayout(FlowLayout.LEADING));
 
       dataHierarchyField.add(dataHierarchy);
-      //dataHierarchyField.add(prepareHierarchyQueryButton("Choose Parameters"));
+      dataHierarchyField.add(prepareHierarchyQueryButton("Choose Parameters"));
 
       return dataHierarchyField;
    }
@@ -151,7 +152,7 @@ public class InputDialog extends JDialog {
 
       dataTypeOptions.addItemListener(new ItemListener() {
          public void itemStateChanged(ItemEvent e) {
-            String selectedItem = (String) e.getItem();
+            String selectedItem = String.valueOf(e.getItem());
 
             dataQueryButton.setText("Choose " + selectedItem);
          }
@@ -166,10 +167,7 @@ public class InputDialog extends JDialog {
    private JButton prepareHierarchyQueryButton(String buttonText) {
       JButton dataHierarchyButton = new JButton(buttonText);
 
-      dataHierarchyButton.addActionListener(new ActionListener() {
-         public void actionPerformed(ActionEvent e) {
-         }
-      });
+      dataHierarchyButton.addActionListener(new DataSchemaButtonListener());
 
       return dataHierarchyButton;
    }
