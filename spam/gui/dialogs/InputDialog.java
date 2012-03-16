@@ -4,7 +4,6 @@ package spam.gui.dialogs;
 
 import spam.database.CPLOPConnection;
 import spam.gui.listeners.DataQueryButtonListener;
-import spam.gui.listeners.DataSchemaButtonListener;
 
 import java.awt.Component;
 import java.awt.ComponentOrientation;
@@ -136,13 +135,13 @@ public class InputDialog extends JDialog {
       return dataSetField;
    }
 
-   private JPanel prepareDataHierarchyField(JTextField dataHierarchy) {
+   private JPanel prepareDataHierarchyField(JTextField dataSchema) {
       JPanel dataHierarchyField = new JPanel();
 
       dataHierarchyField.setLayout(new FlowLayout(FlowLayout.LEADING));
 
-      dataHierarchyField.add(dataHierarchy);
-      dataHierarchyField.add(prepareHierarchyQueryButton("Choose Parameters"));
+      dataHierarchyField.add(dataSchema);
+      dataHierarchyField.add(prepareSchemaButton(dataSchema, "Choose Parameters"));
 
       return dataHierarchyField;
    }
@@ -164,10 +163,17 @@ public class InputDialog extends JDialog {
       return dataQueryButton;
    }
 
-   private JButton prepareHierarchyQueryButton(String buttonText) {
+   private JButton prepareSchemaButton(final JTextField schemaField, String buttonText) {
       JButton dataHierarchyButton = new JButton(buttonText);
 
-      dataHierarchyButton.addActionListener(new DataSchemaButtonListener());
+      dataHierarchyButton.addActionListener(new ActionListener() {
+         public void actionPerformed(ActionEvent e) {
+            DataOrganizationDialog newDialog = new DataOrganizationDialog(schemaField);
+
+            newDialog.init();
+            newDialog.setVisible(true);
+         }
+      });
 
       return dataHierarchyButton;
    }
