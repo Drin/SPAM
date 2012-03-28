@@ -1,4 +1,4 @@
-package spam.data;
+package spam.types;
 
 /*
  * This enum represents the different connectivity strengths isolates can have

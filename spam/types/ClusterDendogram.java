@@ -1,7 +1,7 @@
-package spam.data;
+package spam.types;
 
-import spam.data.dendogram.Dendogram;
-import spam.data.Cluster;
+import spam.types.dendogram.Dendogram;
+import spam.types.Cluster;
 
 public class ClusterDendogram {
    private Cluster mCluster;

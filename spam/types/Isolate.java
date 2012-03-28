@@ -1,7 +1,7 @@
-package spam.data;
+package spam.types;
 
-import spam.data.Isolate;
-import spam.data.IsolateRegion;
+import spam.types.Isolate;
+import spam.types.IsolateRegion;
 
 import java.util.Map;
 import java.util.HashMap;

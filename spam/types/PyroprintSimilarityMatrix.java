@@ -1,8 +1,8 @@
-package spam.data;
+package spam.types;
 
-import spam.data.PyroprintRegion;
-import spam.data.Pyroprint;
-import spam.data.PyroprintCorrelation;
+import spam.types.PyroprintRegion;
+import spam.types.Pyroprint;
+import spam.types.PyroprintCorrelation;
 
 import java.util.List;
 import java.util.ArrayList;

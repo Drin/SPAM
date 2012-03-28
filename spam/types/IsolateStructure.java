@@ -1,6 +1,6 @@
-package spam.dataStructures;
+package spam.typesStructures;
 
-import spam.data.SampleMethod;
+import spam.types.SampleMethod;
 
 import java.util.List;
 import java.util.ArrayList;

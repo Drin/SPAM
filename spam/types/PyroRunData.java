@@ -1,9 +1,9 @@
-package spam.data;
+package spam.types;
 
-import spam.data.Connectivity;
-import spam.data.Cluster.DIST_TYPE;
+import spam.types.Connectivity;
+import spam.types.Cluster.DIST_TYPE;
 
-import spam.data.IsolateSimilarityMatrix;
+import spam.types.IsolateSimilarityMatrix;
 
 import java.util.Map;
 

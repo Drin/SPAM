@@ -1,4 +1,4 @@
-package spam.data;
+package spam.types;
 
 import spam.parser.pyrorun.PyrogramParser.PyrogramParser;
 

@@ -1,7 +1,7 @@
-package spam.data;
+package spam.types;
 
-import spam.data.PyroprintNode;
-import spam.data.PyroprintEdge;
+import spam.types.PyroprintNode;
+import spam.types.PyroprintEdge;
 
 import java.util.List;
 import java.util.ArrayList;

@@ -1,4 +1,4 @@
-package spam.data;
+package spam.types;
 
 import java.util.Map;
 import java.util.HashMap;

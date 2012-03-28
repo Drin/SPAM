@@ -1,6 +1,6 @@
-package spam.data;
+package spam.types;
 
-import spam.data.Pyrogram;
+import spam.types.Pyrogram;
 import spam.outputHandlers.MetricsDisplay;
 
 import spam.dataParser.XMLParser.PolyPyroDriver;

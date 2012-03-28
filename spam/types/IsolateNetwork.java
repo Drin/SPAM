@@ -1,4 +1,4 @@
-package spam.dataStructures;
+package spam.types.structures;
 
 /*
  * This class represents a network of isolates.

@@ -1,4 +1,4 @@
-package spam.data;
+package spam.types;
 
 public class PyroSequence {
    private int length = 0;

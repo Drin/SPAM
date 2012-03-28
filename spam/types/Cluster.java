@@ -1,6 +1,6 @@
-package spam.data;
+package spam.types;
 
-import spam.data.Isolate;
+import spam.types.Isolate;
 
 import java.util.List;
 import java.util.Map;
@@ -133,9 +133,9 @@ public class Cluster {
    public double getMinSimilarity(Cluster otherCluster) {
       double minSim = Double.MAX_VALUE;
 
-      for (int dataNdx = 0; dataNdx < mIsolates.size(); dataNdx++) {
+      for (int typesNdx = 0; typesNdx < mIsolates.size(); typesNdx++) {
          for (int otherNdx = 0; otherNdx < otherCluster.mIsolates.size(); otherNdx++) {
-            double sim = mIsolates.get(dataNdx).getSimilarity(otherCluster.mIsolates.get(otherNdx));
+            double sim = mIsolates.get(typesNdx).getSimilarity(otherCluster.mIsolates.get(otherNdx));
 
             minSim = Math.min(sim, minSim);
          }
@@ -147,9 +147,9 @@ public class Cluster {
    public double getMaxSimilarity(Cluster otherCluster) {
       double maxSim = -1;
 
-      for (int dataNdx = 0; dataNdx < mIsolates.size(); dataNdx++) {
+      for (int typesNdx = 0; typesNdx < mIsolates.size(); typesNdx++) {
          for (int otherNdx = 0; otherNdx < otherCluster.mIsolates.size(); otherNdx++) {
-            double sim = mIsolates.get(dataNdx).getSimilarity(otherCluster.mIsolates.get(otherNdx));
+            double sim = mIsolates.get(typesNdx).getSimilarity(otherCluster.mIsolates.get(otherNdx));
 
             maxSim = Math.max(sim, maxSim);
          }
@@ -161,9 +161,9 @@ public class Cluster {
    public double getAvgSimilarity(Cluster otherCluster) {
       double simSum = 0, totalSize = 0;
 
-      for (int dataNdx = 0; dataNdx < mIsolates.size(); dataNdx++) {
+      for (int typesNdx = 0; typesNdx < mIsolates.size(); typesNdx++) {
          for (int otherNdx = 0; otherNdx < otherCluster.mIsolates.size(); otherNdx++) {
-            simSum += mIsolates.get(dataNdx).getSimilarity(otherCluster.mIsolates.get(otherNdx));
+            simSum += mIsolates.get(typesNdx).getSimilarity(otherCluster.mIsolates.get(otherNdx));
 
             totalSize++;
          }
