@@ -1,0 +1,142 @@
+package com.drin.java.types;
+
+import com.drin.java.types.Cluster;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.HashSet;
+
+public class FeatureNode {
+   private static final boolean DEBUG = false;
+   private static final String TIME_OPTION_KEY = "TimeSensitive",
+                               SCHEME_NAME_DELIMITER = "-";
+   private String mName;
+   private Map<String, Boolean> mOptions;
+   private Map<String, FeatureNode> mPartitions;
+   private Set<Cluster> mData, mClusters;
+
+   public FeatureNode(String name) {
+      mName = name;
+
+      mOptions = new HashMap<String, Boolean>();
+      mPartitions = new LinkedHashMap<String, FeatureNode>();
+      mData = null;
+      mClusters = null;
+   }
+
+   public FeatureNode(String name, Map<String, Boolean> options, List<String> values) {
+      this(name);
+
+      for (Map.Entry<String, Boolean> option : options.entrySet()) {
+         mOptions.put(option.getKey(), new Boolean(option.getValue().booleanValue()));
+      }
+
+      for (String value : values) {
+         mPartitions.put(value, null);
+      }
+   }
+
+   public FeatureNode(Cluster element) {
+      mName = "";
+      mOptions = null;
+      mPartitions = null;
+
+      mData = new HashSet<Cluster>();
+      mData.add(element);
+   }
+
+   public FeatureNode(FeatureNode originalNode) {
+      this(originalNode.mName);
+
+      for (Map.Entry<String, Boolean> option : originalNode.mOptions.entrySet()) {
+         mOptions.put(option.getKey(), new Boolean(option.getValue().booleanValue()));
+      }
+
+      for (Map.Entry<String, FeatureNode> partition : originalNode.mPartitions.entrySet()) {
+         if (partition.getValue() == null) {
+            mPartitions.put(partition.getKey(), null);
+         }
+         else {
+            mPartitions.put(partition.getKey(), new FeatureNode((FeatureNode) partition.getValue()));
+         }
+      }
+   }
+
+   public void addData(Cluster element) {
+      if (mPartitions != null) {
+         for (Map.Entry<String, FeatureNode> partition : mPartitions.entrySet()) {
+            int keyNdx = element.getName().indexOf(partition.getKey());
+      
+            if (DEBUG) {
+               System.out.printf("element '%s' has keyNdx %d(%s) but the end of its " +
+                "naming scheme is at %d(%s)\n", element.getName(), keyNdx, partition.getKey(),
+                element.getName().indexOf(SCHEME_NAME_DELIMITER), SCHEME_NAME_DELIMITER);
+            }
+      
+            if (keyNdx != -1 && keyNdx < element.getName().indexOf(SCHEME_NAME_DELIMITER)) {
+               if (partition.getValue() == null) {
+                  partition.setValue(new FeatureNode(element));
+               }
+               else {
+                  partition.getValue().addData(element);
+               }
+            }
+         }
+      }
+      else {
+         mData.add(element);
+      }
+   }
+
+   public void setClusters(Set<Cluster> clusterSet) {
+      mClusters = clusterSet;
+   }
+
+   public void percolateCluster(Cluster element) {
+      if (mData == null) {
+         mData = new HashSet<Cluster>();
+      }
+
+      mData.add(element);
+   }
+
+   public String getName() {
+      return mName;
+   }
+
+   public Set<Cluster> getData() {
+      return mData;
+   }
+
+   public Set<Cluster> getClusters() {
+      return mClusters;
+   }
+
+   public boolean isTimeSensitive() {
+      return mOptions.containsKey(TIME_OPTION_KEY);
+   }
+
+   public Map<String, FeatureNode> getPartitions() {
+      return mPartitions;
+   }
+
+   public FeatureNode getPartition(String partitionName) {
+      return mPartitions.get(partitionName);
+   }
+
+   @Override
+   public String toString() {
+      String fmt = String.format("Feature %s(TimeSensitive[%s]):",
+       getName(), isTimeSensitive());
+
+      for (String partitionName : mPartitions.keySet()) {
+         fmt += " " + partitionName + ",";
+      }
+
+      return fmt;
+   }
+}
