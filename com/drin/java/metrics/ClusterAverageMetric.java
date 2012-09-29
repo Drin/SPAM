@@ -1,7 +1,7 @@
 package com.drin.java.metrics;
 
 import com.drin.java.types.DataObject;
-import com.drin.java.types.Cluster;
+import com.drin.java.clustering.Cluster;
 
 public class ClusterAverageMetric extends ClusterMetric {
    private int mLinkCount;

@@ -1,6 +1,6 @@
-package com.drin.java.parsers;
+package com.drin.java.ontology;
 
-import com.drin.java.types.FeatureNode;
+import com.drin.java.ontology.OntologyTerm;
 
 import java.util.List;
 import java.util.Map;
@@ -12,12 +12,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /*
- * FeatureList Format:
- * <FeatureName>(<Options>):<Partition>, <Partition>, ...;
- * <FeatureName>(<Options>):<Partition>, <Partition>, ...;
+ * Ontology List Format:
+ * <OntologyTerm>(<Options>):<Partition>, <Partition>, ...;
+ * <OntologyTerm>(<Options>):<Partition>, <Partition>, ...;
  * ...
  */
-public class FeatureParser {
+public class OntologyParser {
    private static final String FEATURE_PATTERN = "(^[^#].*)\\((.*)\\):(.*)",
                                FEATURE_DELIMITER = ";",
                                OPTION_DELIM = ",",
@@ -28,18 +28,18 @@ public class FeatureParser {
    private Pattern mRegexPattern;
    private Matcher mRegexMatch;
 
-   public FeatureParser() {
+   public OntologyParser() {
       mRegexPattern = Pattern.compile(FEATURE_PATTERN + FEATURE_DELIMITER);
       mRegexMatch = null;
    }
 
    public static void main(String[] args) {
-      FeatureParser parser = new FeatureParser();
+      OntologyParser parser = new OntologyParser();
 
       String searchStr = args[0];
 
       if (parser.matchString(searchStr)) {
-         parser.printFeature();
+         parser.printOntology();
       }
 
       else {
@@ -47,7 +47,7 @@ public class FeatureParser {
       }
    }
 
-   public String getFeatureDelimiter() {
+   public String getTermDelimiter() {
       return FEATURE_DELIMITER;
    }
 
@@ -61,11 +61,11 @@ public class FeatureParser {
       return mRegexMatch.matches();
    }
 
-   public FeatureNode getFeature() {
-      return new FeatureNode(getFeatureName(), getFeatureOptions(), getFeatureValues());
+   public OntologyTerm getTerm() {
+      return new OntologyTerm(getTermName(), getTermOptions(), getTermValues());
    }
 
-   public String getFeatureName() {
+   public String getTermName() {
       if (mRegexMatch != null && mRegexMatch.matches()) {
          return mRegexMatch.group(NAME_NDX);
       }
@@ -73,7 +73,7 @@ public class FeatureParser {
       return "";
    }
 
-   public Map<String, Boolean> getFeatureOptions() {
+   public Map<String, Boolean> getTermOptions() {
       Map<String, Boolean> optionMap = new HashMap<String, Boolean>();
 
       if (mRegexMatch != null && mRegexMatch.matches()) {
@@ -87,7 +87,7 @@ public class FeatureParser {
       return optionMap;
    }
 
-   public List<String> getFeatureValues() {
+   public List<String> getTermValues() {
       List<String> valueList = new ArrayList<String>();
 
       if (mRegexMatch != null && mRegexMatch.matches()) {
@@ -101,10 +101,10 @@ public class FeatureParser {
       return valueList;
    }
 
-   public void printFeature() {
+   public void printOntology() {
       String feature = String.format("Name: %s\n", mRegexMatch.group(NAME_NDX));
-      Map<String, Boolean> optionMap = getFeatureOptions();
-      List<String> valueList = getFeatureValues();
+      Map<String, Boolean> optionMap = getTermOptions();
+      List<String> valueList = getTermValues();
 
       feature += "Options:\n";
       for (String optionName : optionMap.keySet()) {

@@ -1,15 +1,15 @@
-package com.drin.java.types;
+package com.drin.java.biology;
 
-import com.drin.java.types.DataObject;
-import com.drin.java.types.Pyroprint;
-import com.drin.java.types.Threshold;
+import com.drin.java.clustering.BaseClusterable;
+import com.drin.java.biology.Pyroprint;
+import com.drin.java.metrics.Threshold;
 
 import java.util.Set;
 import java.util.HashSet;
 
-public class ITSRegion extends DataObject {
-   private static final double DEFAULT_ALPHA = 0.997,
-                               DEFAULT_BETA = 0.95;
+public class ITSRegion extends BaseClusterable {
+   private static final double DEFAULT_ALPHA = 0.995,
+                               DEFAULT_BETA = 0.99;
 
    private Set<Pyroprint> mPyroprints;
    private Threshold mThreshold;
@@ -25,9 +25,9 @@ public class ITSRegion extends DataObject {
       this(regionName, DEFAULT_ALPHA, DEFAULT_BETA);
    }
 
-   public Threshold getThreshold() {
-      return mThreshold;
-   }
+   public Threshold getThreshold() { return mThreshold; }
+   public Set<Pyroprint> getPyroprints() { return mPyroprints; }
+   public void add(Pyroprint pyro) { mPyroprints.add(pyro); }
 
    @Override
    public boolean equals(Object otherObj) {
@@ -36,9 +36,5 @@ public class ITSRegion extends DataObject {
       }
 
       return false;
-   }
-
-   public Set<Pyroprint> getPyroprints() {
-      return mPyroprints;
    }
 }

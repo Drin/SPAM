@@ -1,6 +1,6 @@
-package com.drin.java.types;
+package com.drin.java.biology;
 
-import com.drin.java.types.DataObject;
+import com.drin.java.clustering.BaseClusterable;
 
 import java.util.List;
 
@@ -14,7 +14,7 @@ import java.util.List;
  * associates a list of light emittance peak heights to the DNA sequence being
  * analyzed.
  */
-public class Pyroprint extends DataObject {
+public class Pyroprint extends BaseClusterable {
    private List<Double> mPeaks;
    private String mDisp;
 
@@ -22,43 +22,6 @@ public class Pyroprint extends DataObject {
       super(String.format("%d (%s)", pyroId, wellId));
       mDisp = dispSeq;
       mPeaks = data;
-   }
-
-   /*
-    * Overridden Object Methods
-    */
-   @Override
-   public String toString() {
-      String str = mDisp + "\n";
-
-      for (Double peak : mPeaks) {
-         str += peak.doubleValue() + ", ";
-      }
-
-      return str;
-   }
-
-   @Override
-   public boolean equals(Object otherPyroprint) {
-      if (otherPyroprint instanceof Pyroprint) {
-         Pyroprint otherPyro = (Pyroprint) otherPyroprint;
-
-         if (mName.equals(otherPyro.mName) &&
-          mPeaks.size() == otherPyro.mPeaks.size()) {
-            for (int peakNdx = 0; peakNdx < mPeaks.size(); peakNdx++) {
-               Double peakOne = mPeaks.get(peakNdx);
-               Double peakTwo = otherPyro.mPeaks.get(peakNdx);
-
-               if (peakOne.compareTo(peakTwo) != 0) {
-                  return false;
-               }
-            }
-
-            return true;
-         }
-      }
-
-      return false;
    }
 
    /*
@@ -92,6 +55,20 @@ public class Pyroprint extends DataObject {
       return mDisp;
    }
 
+   /**
+    * Check to see if this Pyroprint has the same protocol parameters as the
+    * pyroprint being compared to.
+    *
+    * @param other_pyro The other pyroprint whose protocol parameters should be
+    * compared to this pyroprint's protocol parameters.
+    * @return boolean A boolean value representing whether this pyroprint's
+    * protocol parameters match the other pyroprint's protocol parameters.
+    */
+   public boolean hasSameProtocol(Pyroprint other_pyro) {
+      return this.getLength() == other_pyro.getLength() &&
+             this.getDispSeq().equals(other_pyro.getDispSeq());
+   }
+
    /*
     * Utility Methods
     */
@@ -102,14 +79,14 @@ public class Pyroprint extends DataObject {
     * @return double The value of the peak height for the given list of peak
     * heights.
     */
-   public double getMaxPeak() {
+   public Double getMaxPeak() {
       double mMaxPeak = -1;
 
-      for (double peakVal : mPeaks) {
-         mMaxPeak = Math.max(mMaxPeak, peakVal);
+      for (Double peakVal : mPeaks) {
+         mMaxPeak = Math.max(mMaxPeak, peakVal.doubleValue());
       }
 
-      return mMaxPeak;
+      return new Double(mMaxPeak);
    }
 
    /**
@@ -117,13 +94,50 @@ public class Pyroprint extends DataObject {
     *
     * @return double The average peak height for this pyroprint.
     */
-   public double getMeanPeak() {
+   public Double getMeanPeak() {
       double total = 0;
 
       for (Double peak : mPeaks) {
          total += peak.doubleValue();
       }
 
-      return total/mPeaks.size();
+      return new Double(total/mPeaks.size());
+   }
+
+   /*
+    * Overridden Object Methods
+    */
+   @Override
+   public String toString() {
+      String str = mDisp + "\n\t";
+
+      for (Double peak : mPeaks) {
+         str += peak.doubleValue() + ", ";
+      }
+
+      return str;
+   }
+
+   @Override
+   public boolean equals(Object otherPyroprint) {
+      if (otherPyroprint instanceof Pyroprint) {
+         Pyroprint otherPyro = (Pyroprint) otherPyroprint;
+
+         if (mName.equals(otherPyro.mName) &&
+          mPeaks.size() == otherPyro.mPeaks.size()) {
+            for (int peakNdx = 0; peakNdx < mPeaks.size(); peakNdx++) {
+               Double peakOne = mPeaks.get(peakNdx);
+               Double peakTwo = otherPyro.mPeaks.get(peakNdx);
+
+               if (peakOne.compareTo(peakTwo) != 0) {
+                  return false;
+               }
+            }
+
+            return true;
+         }
+      }
+
+      return false;
    }
 }

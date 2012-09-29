@@ -1,6 +1,6 @@
 package com.drin.java.metrics;
 
-import com.drin.java.types.Isolate;
+import com.drin.java.biology.Isolate;
 import com.drin.java.metrics.DataMetric;
 import com.drin.java.util.Logger;
 

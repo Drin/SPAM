@@ -1,8 +1,8 @@
 package com.drin.java.metrics;
 
 import com.drin.java.types.DataObject;
-import com.drin.java.types.Cluster;
-import com.drin.java.types.Isolate;
+import com.drin.java.clustering.Cluster;
+import com.drin.java.biology.Isolate;
 import com.drin.java.metrics.DataComparator;
 import com.drin.java.metrics.IsolateMultiMatrixMetric;
 

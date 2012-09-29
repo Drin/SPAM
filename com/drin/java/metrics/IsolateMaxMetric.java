@@ -2,8 +2,8 @@ package com.drin.java.metrics;
 
 import com.drin.java.metrics.ITSRegionComparator;
 import com.drin.java.metrics.IsolateMetric;
-import com.drin.java.types.ITSRegion;
-import com.drin.java.types.Isolate;
+import com.drin.java.biology.ITSRegion;
+import com.drin.java.biology.Isolate;
 import com.drin.java.util.Logger;
 
 import java.util.Map;

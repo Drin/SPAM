@@ -1,27 +1,29 @@
 package com.drin.java.metrics;
 
-import com.drin.java.types.ITSRegion;
-import com.drin.java.types.Pyroprint;
-import com.drin.java.types.Threshold;
+import com.drin.java.biology.ITSRegion;
+import com.drin.java.biology.Pyroprint;
+import com.drin.java.metrics.Threshold;
 import com.drin.java.metrics.ITSRegionMetric;
 import com.drin.java.metrics.PyroprintComparator;
 import com.drin.java.metrics.PyroprintMetric;
 
 public class ITSRegionAverageMetric extends ITSRegionMetric {
-   private static final boolean DEBUG = false,
-                                TRANSFORM = false;
+   private static final boolean TRANSFORM = false;
    private int mPairCount;
 
    public ITSRegionAverageMetric(ITSRegion region,
-    PyroprintComparator pyroComp, PyroprintMetric pyroMetric) {
+                                 PyroprintComparator pyroComp,
+                                 PyroprintMetric pyroMetric) {
       super(region.getThreshold().getAlphaThreshold(),
             region.getThreshold().getBetaThreshold(), pyroComp, pyroMetric);
+
       reset();
    }
 
    public ITSRegionAverageMetric(PyroprintComparator pyroComp,
     PyroprintMetric pyroMetric) {
       super(pyroComp, pyroMetric);
+
       reset();
    }
 
@@ -32,70 +34,53 @@ public class ITSRegionAverageMetric extends ITSRegionMetric {
    }
 
    @Override
-   public void apply(Pyroprint data_A, Pyroprint data_B) {
-      Double comparison = mPyroComp.compare(mPyroMetric, data_A, data_B);
+   public void apply(Pyroprint elem_A, Pyroprint elem_B) {
+      for (Pyroprint pyro_A : elem_A.getPyroprints()) {
+         for (Pyroprint pyro_B : elem_B.getPyroprints()) {
+            Double comparison = mPyroComp.compare(mPyroMetric, pyro_A, pyro_B);
 
-      if (DEBUG) { if (comparison == null) { System.out.printf("Pyroprint comparison is null!\n"); } }
+            if (System.getenv().containsKey("DEBUG")) {
+               if (comparison == null) {
+                  System.out.printf("Pyroprint comparison is null!\n");
+               }
+               else if (comparison.isNaN()) {
+                  System.out.printf("comparison is Nan and not null\n");
+                  System.exit(1);
+               }
+            }
 
-      if (DEBUG) {
-         if (comparison.isNaN()) {
-            System.out.printf("comparison is Nan and not null\n");
-            System.exit(1);
-         }
-      }
+            if (comparison != null) {
+               if (System.getenv().containsKey("DEBUG")) {
+                  System.out.printf("ITSRegionAverageMetric:\n\tcomparison between " +
+                                    "'%s' and '%s': %.04f\n", pyro_A.getName(),
+                                    pyro_B.getName(), comparison.doubleValue());
+               }
 
-      if (comparison != null && mResult != null) {
-         if (DEBUG) {
-            System.out.printf("ITSRegionAverageMetric:\n\tcomparison between '%s' and '%s': %.04f\n",
-             data_A.getName(), data_B.getName(), comparison.doubleValue());
-         }
-
-         mResult = new Double(comparison.doubleValue() + mResult.doubleValue());
-         mPairCount++;
-      }
-
-      else if (comparison != null) {
-         if (DEBUG) {
-            System.out.printf("ITSRegionAverageMetric:\n\tcomparison between '%s' and '%s': %.04f\n",
-             data_A.getName(), data_B.getName(), comparison.doubleValue());
-         }
-
-         mResult = comparison;
-         mPairCount++;
-
-         /*
-          * Sanity Check
-          */
-         if (mPairCount != 1) {
-            System.err.println("Failed sanity check!");
-            System.exit(1);
+               mResult = new Double(mResult == null ? comparison.doubleValue()
+                                                    : comparison.doubleValue() +
+                                                      mResult.doubleValue());
+               mPairCount++;
+            }
          }
       }
    }
 
    @Override
    public Double result() {
-      if (mResult != null) {
-         if (TRANSFORM) {
-            if (DEBUG) {
-               System.out.printf("ITSRegionAverageMetric transformed:\n\tResult: %.04f/%d\n",
-                mResult, mPairCount);
-            }
+      Double result = mResult;
 
-            return new Double(transformResult(mResult.doubleValue()/mPairCount));
+      if (result != null) {
+         if (System.getenv().containsKey("DEBUG")) {
+            System.out.printf("ITSRegionAverageMetric %s: %.04f/%d\n",
+                              (TRANSFORM ? "transformed" : "untransformed"),
+                              mResult, mPairCount);
          }
-         else {
-            if (DEBUG) {
-               System.out.printf("ITSRegionAverageMetric untransformed:\n\tResult: %.04f/%d\n",
-                mResult, mPairCount);
-            }
 
-            return new Double(mResult.doubleValue()/mPairCount);
-         }
+         double tmp_result = (mResult.doubleValue()/mPairCount);
+         result = new Double(TRANSFORM ? transformResult(tmp_result) : tmp_result);
       }
 
       reset();
-
-      return mResult;
+      return result;
    }
 }

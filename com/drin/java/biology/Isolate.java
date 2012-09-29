@@ -1,7 +1,8 @@
-package com.drin.java.types;
+package com.drin.java.biology;
 
-import com.drin.java.types.ITSRegion;
-import com.drin.java.types.Pyroprint;
+import com.drin.java.clustering.BaseClusterable;
+import com.drin.java.biology.ITSRegion;
+import com.drin.java.biology.Pyroprint;
 
 import java.util.Set;
 import java.util.HashSet;
@@ -9,9 +10,8 @@ import java.util.HashSet;
 /**
  * Isolate represents a bacterial isolate collected by a biologist.
  *
- * Note: Isolate equality depends on the equals method in DataObject
  */
-public class Isolate extends DataObject {
+public class Isolate extends BaseClusterable {
    private Set<ITSRegion> mRegions;
 
    public Isolate(String isoId, Set<ITSRegion> regions) {
@@ -23,9 +23,7 @@ public class Isolate extends DataObject {
       this(isoId, new HashSet<ITSRegion>());
    }
 
-   public Set<ITSRegion> getRegions() {
-      return mRegions;
-   }
+   public Set<ITSRegion> getRegions() { return mRegions; }
 
    public boolean hasRegion(String regionName) {
       for (ITSRegion region : mRegions) {
@@ -51,5 +49,20 @@ public class Isolate extends DataObject {
       }
 
       return null;
+   }
+
+   @Override
+   public String toString() {
+      String str = "";
+
+      for (ITSRegion region : mRegions) {
+         str += String.format("%s - region '%s':\n", mName, region);
+
+         for (Pyroprint pyro : region.getPyroprints()) {
+            str += String.format("\tpyroprint %s\n\n", pyro);
+         }
+      }
+
+      return str;
    }
 }

@@ -1,7 +1,7 @@
 package com.drin.java.analysis.clustering;
 
 import com.drin.java.types.Cluster;
-import com.drin.java.types.DataObject;
+import com.drin.java.types.BaseClusterable;
 
 import com.drin.java.metrics.DataMetric;
 import com.drin.java.metrics.ClusterComparator;
@@ -18,7 +18,7 @@ public abstract class HierarchicalClusterer implements Clusterer {
    private static final boolean DEBUG = false;
 
    protected Set<Cluster> mClusters;
-   protected Set<Cluster<DataObject>> mResultClusters;
+   protected Set<Cluster<BaseClusterable>> mResultClusters;
 
    protected DataMetric mDataMetric;
    protected ClusterComparator mClusterComp;
@@ -33,7 +33,7 @@ public abstract class HierarchicalClusterer implements Clusterer {
 
       mBetaThreshold = 0;
 
-      mResultClusters = new HashSet<Cluster<DataObject>>();
+      mResultClusters = new HashSet<Cluster<BaseClusterable>>();
    }
 
    public HierarchicalClusterer(Set<Cluster> clusters) {

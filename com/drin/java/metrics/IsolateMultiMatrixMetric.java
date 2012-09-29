@@ -1,8 +1,8 @@
 package com.drin.java.metrics;
 
-import com.drin.java.types.Isolate;
-import com.drin.java.types.ITSRegion;
-import com.drin.java.types.Threshold;
+import com.drin.java.biology.Isolate;
+import com.drin.java.biology.ITSRegion;
+import com.drin.java.metrics.Threshold;
 import com.drin.java.metrics.DataMetric;
 import com.drin.java.util.Logger;
 
