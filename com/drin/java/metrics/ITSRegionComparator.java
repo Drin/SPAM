@@ -1,23 +1,23 @@
 package com.drin.java.metrics;
 
-import com.drin.java.types.ITSRegion;
-import com.drin.java.types.Pyroprint;
+import com.drin.java.biology.ITSRegion;
 import com.drin.java.metrics.ITSRegionMetric;
 
-public class ITSRegionComparator implements DataComparator<ITSRegion, ITSRegionMetric> {
+public class ITSRegionComparator implements DataComparator<ITSRegionMetric, ITSRegion> {
 
    @Override
    public Double compare(ITSRegionMetric regionMetric, ITSRegion elem_A, ITSRegion elem_B) {
-      Double comparison = null;
+      regionMetric.apply(elem_A, elem_B);
 
-      for (Pyroprint pyro_A : elem_A.getPyroprints()) {
-         for (Pyroprint pyro_B : elem_B.getPyroprints()) {
-            regionMetric.apply(pyro_A, pyro_B);
+      Double comparison = regionMetric.result();
+
+      if (System.getenv().containsKey("DEBUG")) {
+         if (comparison != null) {
+            System.err.printf("ITSRegionComparator:\n\tComparison between " +
+                              "'%s' and '%s': %.04f\n", elem_A.getName(),
+                              elem_B.getName(), comparison.doubleValue());
          }
       }
-
-      comparison = regionMetric.result();
-      regionMetric.reset();
 
       return comparison;
    }

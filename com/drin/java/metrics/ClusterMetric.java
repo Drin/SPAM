@@ -1,19 +1,19 @@
 package com.drin.java.metrics;
 
-import com.drin.java.types.Cluster;
-import com.drin.java.types.DataObject;
+import com.drin.java.clustering.Cluster;
+import com.drin.java.clustering.BaseClusterable;
 import com.drin.java.metrics.DataMetric;
 import com.drin.java.metrics.DataComparator;
 
 import java.util.Map;
 
-public abstract class ClusterMetric implements DataMetric<Cluster<DataObject>> {
-   protected DataComparator<DataObject, DataMetric<DataObject>> mComparator;
-   protected DataMetric<DataObject> mDataMetric;
+public abstract class ClusterMetric implements DataMetric<Cluster<BaseClusterable>> {
+   protected DataComparator<BaseClusterable, DataMetric<BaseClusterable>> mComparator;
+   protected DataMetric<BaseClusterable> mDataMetric;
    protected Double mResult;
 
-   public ClusterMetric(DataComparator<DataObject, DataMetric<DataObject>> dataComparator,
-    DataMetric<DataObject> dataMetric) {
+   public ClusterMetric(DataComparator<BaseClusterable, DataMetric<BaseClusterable>> dataComparator,
+    DataMetric<BaseClusterable> dataMetric) {
       mComparator = dataComparator;
       mDataMetric = dataMetric;
       mResult = null;
@@ -21,7 +21,7 @@ public abstract class ClusterMetric implements DataMetric<Cluster<DataObject>> {
 
    @Override
    @SuppressWarnings("rawtypes")
-   public abstract void apply(Cluster<DataObject> data_A, Cluster<DataObject> data_B);
+   public abstract void apply(Cluster<BaseClusterable> data_A, Cluster<BaseClusterable> data_B);
 
    @Override
    public abstract void reset();

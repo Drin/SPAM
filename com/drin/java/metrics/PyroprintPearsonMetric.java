@@ -5,11 +5,12 @@ import com.drin.java.metrics.PyroprintMetric;
 public class PyroprintPearsonMetric extends PyroprintMetric {
    private static final int DEFAULT_LEN = 104;
    private static final boolean USE_STABLE = false,
-                                USE_DISTANCE = false,
-                                DEBUG = false;
+                                USE_DISTANCE = false;
+
    private double[] mPyro_A_arr, mPyro_B_arr;
    private double mPyro_A_sum, mPyro_B_sum, mProduct_AB,
                   mPyro_A_squared_sum, mPyro_B_squared_sum;
+
    private int mPeakCount;
 
    public PyroprintPearsonMetric() {
@@ -44,7 +45,7 @@ public class PyroprintPearsonMetric extends PyroprintMetric {
    }
 
    private void stableCalc(double peak_A, double peak_B) {
-      if (DEBUG) {
+      if (System.getenv().containsKey("DEBUG")) {
          System.err.printf("index: %d peak_A: %.04f peak_B: %.04f\n",
           mPeakCount, peak_A, peak_B);
       }
@@ -59,12 +60,40 @@ public class PyroprintPearsonMetric extends PyroprintMetric {
    }
 
    @Override
-   public void apply(Double elem_A, Double elem_B) {
-      if (elem_A != null && elem_B != null) {
-         if (USE_STABLE) { stableCalc(elem_A.doubleValue(), elem_B.doubleValue()); }
-         else { unstableCalc(elem_A.doubleValue(), elem_B.doubleValue()); }
+   public void apply(Pyroprint elem_A, Pyroprint elem_B) {
+      if (!elem_A.hasSameProtocol(elem_B)) {
+         System.out.printf("%s and %s have different protocols",
+                           elem_A.getName(), elem_B.getName());
+         return;
       }
-      else { System.out.printf("elem_A or elem_B is null!\n"); }
+
+      if (System.getenv().containsKey("DEBUG")) {
+         System.err.printf("Comparing pyroprints...\n");
+      }
+
+      List<Double> peakList_A = elem_A.getPeaks();
+      List<Double> peakList_B = elem_B.getPeaks();
+
+      for (int ndx = 0; ndx < elem_A.getLength(); ndx++) {
+         double val_A = peakList_A.get(ndx).doubleValue();
+         double val_B = peakList_B.get(ndx).doubleValue();
+
+         if (USE_STABLE) { stableCalc(val_A, val_B); }
+         else { unstableCalc(val_A, val_B); }
+      }
+
+      //If there wasn't an error during the calculation and a "stable"
+      //correlation is desired...
+      if (USE_STABLE) {
+         mResult = new Double(USE_DISTANCE ? getStablePearsonDistance()
+                                           : getStablePearsonSimilarity());
+      }
+      //If there wasn't an error during the calculation and an "unstable"
+      //correlation is desired...
+      else {
+         mResult = new Double(USE_DISTANCE ? getUnstablePearsonDistance()
+                                           : getUnstablePearsonSimilarity());
+      }
    }
 
    private void debugState() {
@@ -73,27 +102,29 @@ public class PyroprintPearsonMetric extends PyroprintMetric {
        mPyro_A_sum, mPyro_B_sum, mPyro_A_squared_sum, mPyro_B_squared_sum);
    }
 
-   private Double getUnstablePearsonDistance() {
-      return new Double(1 - getUnstablePearsonSimilarity().doubleValue());
+   private double getUnstablePearsonDistance() {
+      return (1 - getUnstablePearsonSimilarity());
    }
 
-   private Double getUnstablePearsonSimilarity() {
-      if (DEBUG) { debugState(); }
-      if (mPeakCount == 0) {
-         return new Double(-1);
-      }
-
-      return new Double((((mPeakCount * mProduct_AB) - (mPyro_A_sum * mPyro_B_sum))/
-                         (Math.sqrt((mPeakCount * mPyro_A_squared_sum) - (mPyro_A_sum * mPyro_A_sum)) *
-                          Math.sqrt((mPeakCount * mPyro_B_squared_sum) - (mPyro_B_sum * mPyro_B_sum)))));
+   private double getStablePearsonDistance() {
+      return (1 - getStablePearsonSimilarity());
    }
 
-   private Double getStablePearsonDistance() {
-      return new Double(1 - getStablePearsonSimilarity().doubleValue());
+   private double getUnstablePearsonSimilarity() {
+      if (System.getenv().containsKey("DEBUG")) { debugState(); }
+
+      if (mPeakCount == 0) { return -2; }
+
+      double pearson_numerator = (mPeakCount * mProduct_AB) - (mPyro_A_sum * mPyro_B_sum);
+      double denom_A = (mPeakCount * mPyro_A_squared_sum) - (mPyro_A_sum * mPyro_A_sum);
+      double denom_B = (mPeakCount * mPyro_B_squared_sum) - (mPyro_B_sum * mPyro_B_sum);
+
+      return (pearson_numerator/Math.sqrt(denom_A * denom_B));
    }
 
-   private Double getStablePearsonSimilarity() {
-      double mean_A = mPyro_A_sum/mPeakCount, mean_B = mPyro_A_sum/mPeakCount;
+   private double getStablePearsonSimilarity() {
+      double mean_A = mPyro_A_sum/mPeakCount;
+      double mean_B = mPyro_B_sum/mPeakCount;
       double stdDev_A = 0, stdDev_B = 0, coVar = 0;
 
       for (int tmpNdx = 0; tmpNdx < mPeakCount; tmpNdx++) {
@@ -106,24 +137,19 @@ public class PyroprintPearsonMetric extends PyroprintMetric {
          stdDev_B += resid_B * resid_B;
       }
 
-      return new Double(coVar/(Math.sqrt(stdDev_A) * Math.sqrt(stdDev_B)));
+      return (coVar/Math.sqrt(stdDev_A * stdDev_B));
    }
 
    @Override
    public Double result() {
-      Double result = null;
+      Double result = mResult;
 
-      if (USE_STABLE) {
-         if (USE_DISTANCE) { result = getStablePearsonDistance(); }
-         else { result = getStablePearsonSimilarity(); }
-      }
-
-      else {
-         if (USE_DISTANCE) { result = getUnstablePearsonDistance(); }
-         else {
-            result = getUnstablePearsonSimilarity();
-            if (DEBUG) { System.out.printf("Pearson Correlation:\n\tresult: %.04f\n", result); }
+      if (System.getenv().containsKey("DEBUG")) {
+         if (result != null || result.doubleValue() == -2) {
+            System.out.printf("Pearson Correlation: %.04f\n",
+                              result.doubleValue());
          }
+         else { System.out.println("Pearson Correlation is null"); }
       }
 
       reset();

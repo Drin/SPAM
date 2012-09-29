@@ -2,7 +2,7 @@ package com.drin.java.metrics;
 
 import com.drin.java.metrics.DataMetric;
 
-public interface DataComparator<E, M extends DataMetric> {
+public interface DataComparator<M extends DataMetric<E>, E> {
 
    /**
     * This method compares data objects data_A and data_B to get a distance

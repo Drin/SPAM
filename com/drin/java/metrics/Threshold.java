@@ -1,18 +1,18 @@
-package com.drin.java.types;
+package com.drin.java.metrics;
 
 public final class Threshold {
-   private final Double mAlphaThreshold, mBetaThreshold;
+   private final double mAlphaThreshold, mBetaThreshold;
 
    public Threshold(double alpha, double beta) {
       mAlphaThreshold = alpha;
       mBetaThreshold = beta;
    }
 
-   public Double getAlphaThreshold() {
+   public double getAlphaThreshold() {
       return mAlphaThreshold;
    }
 
-   public Double getBetaThreshold() {
+   public double getBetaThreshold() {
       return mBetaThreshold;
    }
 }

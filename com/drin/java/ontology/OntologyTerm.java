@@ -1,6 +1,6 @@
-package com.drin.java.types;
+package com.drin.java.ontology;
 
-import com.drin.java.types.Cluster;
+import com.drin.java.clustering.Cluster;
 
 import java.util.List;
 import java.util.Map;
@@ -10,25 +10,25 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.HashSet;
 
-public class FeatureNode {
+public class OntologyTerm {
    private static final boolean DEBUG = false;
    private static final String TIME_OPTION_KEY = "TimeSensitive",
                                SCHEME_NAME_DELIMITER = "-";
    private String mName;
    private Map<String, Boolean> mOptions;
-   private Map<String, FeatureNode> mPartitions;
+   private Map<String, OntologyTerm> mPartitions;
    private Set<Cluster> mData, mClusters;
 
-   public FeatureNode(String name) {
+   public OntologyTerm(String name) {
       mName = name;
 
       mOptions = new HashMap<String, Boolean>();
-      mPartitions = new LinkedHashMap<String, FeatureNode>();
+      mPartitions = new LinkedHashMap<String, OntologyTerm>();
       mData = null;
       mClusters = null;
    }
 
-   public FeatureNode(String name, Map<String, Boolean> options, List<String> values) {
+   public OntologyTerm(String name, Map<String, Boolean> options, List<String> values) {
       this(name);
 
       for (Map.Entry<String, Boolean> option : options.entrySet()) {
@@ -40,7 +40,7 @@ public class FeatureNode {
       }
    }
 
-   public FeatureNode(Cluster element) {
+   public OntologyTerm(Cluster element) {
       mName = "";
       mOptions = null;
       mPartitions = null;
@@ -49,26 +49,26 @@ public class FeatureNode {
       mData.add(element);
    }
 
-   public FeatureNode(FeatureNode originalNode) {
+   public OntologyTerm(OntologyTerm originalNode) {
       this(originalNode.mName);
 
       for (Map.Entry<String, Boolean> option : originalNode.mOptions.entrySet()) {
          mOptions.put(option.getKey(), new Boolean(option.getValue().booleanValue()));
       }
 
-      for (Map.Entry<String, FeatureNode> partition : originalNode.mPartitions.entrySet()) {
+      for (Map.Entry<String, OntologyTerm> partition : originalNode.mPartitions.entrySet()) {
          if (partition.getValue() == null) {
             mPartitions.put(partition.getKey(), null);
          }
          else {
-            mPartitions.put(partition.getKey(), new FeatureNode((FeatureNode) partition.getValue()));
+            mPartitions.put(partition.getKey(), new OntologyTerm((OntologyTerm) partition.getValue()));
          }
       }
    }
 
    public void addData(Cluster element) {
       if (mPartitions != null) {
-         for (Map.Entry<String, FeatureNode> partition : mPartitions.entrySet()) {
+         for (Map.Entry<String, OntologyTerm> partition : mPartitions.entrySet()) {
             int keyNdx = element.getName().indexOf(partition.getKey());
       
             if (DEBUG) {
@@ -79,7 +79,7 @@ public class FeatureNode {
       
             if (keyNdx != -1 && keyNdx < element.getName().indexOf(SCHEME_NAME_DELIMITER)) {
                if (partition.getValue() == null) {
-                  partition.setValue(new FeatureNode(element));
+                  partition.setValue(new OntologyTerm(element));
                }
                else {
                   partition.getValue().addData(element);
@@ -120,11 +120,11 @@ public class FeatureNode {
       return mOptions.containsKey(TIME_OPTION_KEY);
    }
 
-   public Map<String, FeatureNode> getPartitions() {
+   public Map<String, OntologyTerm> getPartitions() {
       return mPartitions;
    }
 
-   public FeatureNode getPartition(String partitionName) {
+   public OntologyTerm getPartition(String partitionName) {
       return mPartitions.get(partitionName);
    }
 
