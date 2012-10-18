@@ -1,9 +1,14 @@
 package com.drin.java.metrics;
 
 import com.drin.java.biology.ITSRegion;
+
+import com.drin.java.metrics.Threshold;
+
 import com.drin.java.metrics.DataMetric;
 import com.drin.java.metrics.PyroprintComparator;
 import com.drin.java.metrics.PyroprintMetric;
+
+import com.drin.java.util.Logger;
 
 /**
  * Calculates a distance metric for ITSRegions by comparing Pyroprints.
@@ -12,51 +17,66 @@ import com.drin.java.metrics.PyroprintMetric;
  * below the beta threshold, then the comparison should go to 0.
  */
 public abstract class ITSRegionMetric implements DataMetric<ITSRegion> {
-   private static final double DEFAULT_ALPHA = 0.997,
-                               DEFAULT_BETA = 0.95;
+   private static final double DEFAULT_ALPHA = 0.995,
+                               DEFAULT_BETA = 0.99;
 
-   protected double mAlpha, mBeta;
-   protected Double mResult;
+   protected double mResult;
+   protected int mErrCode;
    protected PyroprintComparator mPyroComp;
    protected PyroprintMetric mPyroMetric;
+   protected Threshold mThreshold;
+   protected ITSRegion mRegion;
 
-   public ITSRegionMetric(double alphaThreshold, double betaThreshold,
+   public ITSRegionMetric(double alpha, double beta,
+                          ITSRegion appliedRegion,
                           PyroprintComparator pyroComp,
                           PyroprintMetric pyroMetric) {
+
+      mThreshold = new Threshold(alpha, beta);
+      mRegion = appliedRegion;
       mPyroComp = pyroComp;
       mPyroMetric = pyroMetric;
 
-      mAlpha = alphaThreshold;
-      mBeta = betaThreshold;
-
-      mResult = null;
+      this.reset();
    }
 
-   public ITSRegionMetric(PyroprintComparator pyroComp, PyroprintMetric pyroMetric) {
-      this(DEFAULT_ALPHA, DEFAULT_BETA, pyroComp, pyroMetric);
+   public ITSRegionMetric(ITSRegion appliedRegion,
+                          PyroprintComparator pyroComp,
+                          PyroprintMetric pyroMetric) {
+      this(DEFAULT_ALPHA, DEFAULT_BETA, appliedRegion, pyroComp, pyroMetric);
    }
 
+   @Override
    public abstract void reset();
-
-   public double getAlphaThreshold() { return mAlpha; }
-   public double getBetaThreshold() { return mBeta; }
-
-   public double transformResult(double result) {
-      if (result >= mAlpha) { return 1; }
-      else if (result < mBeta) { return 0; }
-
-      return result;
-   }
 
    @Override
    public abstract void apply(ITSRegion data_A, ITSRegion data_B);
 
    @Override
-   public Double result() {
-      Double result = mResult;
+   public double result() {
+      double result = mResult;
+
+      Logger.error(mErrCode, "Error while computing ITSRegionMetric");
 
       reset();
       return result;
    }
 
+   @Override
+   public void setError(int errCode) { mErrCode = errCode; }
+
+   @Override
+   public int getError() { return mErrCode; }
+
+   public ITSRegion getAppliedRegion() { return mRegion; }
+
+   public double getAlphaThreshold() { return mThreshold.getAlpha(); }
+   public double getBetaThreshold() { return mThreshold.getBeta(); }
+
+   public double transformResult(double result) {
+      if (result >= mThreshold.getAlpha()) { return 1; }
+      else if (result < mThreshold.getBeta()) { return 0; }
+
+      return result;
+   }
 }

@@ -1,6 +1,6 @@
 package com.drin.java.metrics;
 
-import com.drin.java.biology.ITSRegion;
+import com.drin.java.biology.Isolate;
 import com.drin.java.metrics.DataMetric;
 import com.drin.java.metrics.ITSRegionComparator;
 
@@ -9,39 +9,59 @@ import com.drin.java.util.Logger;
 import java.util.Set;
 import java.util.HashSet;
 
-public abstract class IsolateMetric implements DataMetric<ITSRegion> {
+public abstract class IsolateMetric implements DataMetric<Isolate> {
+   protected double mResult;
+   protected int mErrCode;
    protected ITSRegionComparator mRegionComp;
    protected Set<ITSRegionMetric> mRegionMetrics;
-   protected Double mResult;
 
    protected IsolateMetric() {
       mRegionMetrics = new HashSet<ITSRegionMetric>();
-      mResult = null;
+      this.reset();
    }
 
-   public IsolateMetric(ITSRegionComparator regionComp, ITSRegionMetric regionMetric) {
+   public IsolateMetric(ITSRegionComparator regionComp,
+                        ITSRegionMetric metric) {
       this();
       mRegionComp = regionComp;
-      mRegionMetrics.add(regionMetric);
+      mRegionMetrics.add(metric);
    }
 
-   public IsolateMetric(ITSRegionComparator regionComp, ITSRegionMetric regionMetric,
-    ITSRegionMetric regionMetric2) {
-      this(regionComp, regionMetric);
-
-      mRegionMetrics.add(regionMetric2);
+   public IsolateMetric(ITSRegionComparator regionComp,
+                        ITSRegionMetric metric1,
+                        ITSRegionMetric metric2) {
+      this(regionComp, metric1);
+      mRegionMetrics.add(metric2);
    }
 
    @Override
-   public abstract void apply(ITSRegion elem_A, ITSRegion elem_B);
+   public abstract void apply(Isolate elem_A, Isolate elem_B);
 
+   @Override
    public void reset() {
-      mResult = null;
+      mResult = 0;
+      mErrCode = 0;
+
+      Logger.debug("Resetting IsolateMetric");
    }
 
    @Override
-   public Double result() {
-      if (mResult == null) {Logger.debug("Cluster metric has no result to report!"); }
+   public double result() {
+      double result = mResult;
+
+      Logger.error(mErrCode, "IsolateMetric(Line 48): " +
+                             "Error computing Isolate Metric");
+
+      Logger.debug(String.format("Isolate Average Metric:\n\tResulting " +
+                                 "comparison is %.04f(%.04f/%d)", mResult));
+
+      this.reset();
       return mResult;
    }
+
+   @Override
+   public void setError(int errCode) { mErrCode = errCode; }
+
+   @Override
+   public int getError() { return mErrCode; }
 }

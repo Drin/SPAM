@@ -8,39 +8,37 @@ import java.util.HashMap;
 
 @SuppressWarnings("serial")
 public class Configuration {
-   private static final int PROPERTY_NAME = 0,
-                            PROPERTY_VAL = 1;
+   private static final int PROP_KEY = 0,
+                            PROP_VAL = 1;
 
    private static Map<String, Object> mConfigMap = new HashMap<String, Object>();
 
-   public static boolean getBoolean(String propertyName) {
-      if (mConfigMap.containsKey(propertyName)) {
-         return Boolean.valueOf(String.valueOf(mConfigMap.get(propertyName)));
+   public static void loadConfiguration(File propFile) {
+      Scanner propReader = null;
+
+      try { propReader = new Scanner(propFile); }
+      catch (java.io.FileNotFoundException fileErr) {
+         System.err.printf("Could not find file '%s'\n", propFile);
       }
-      //throw new InvalidPropertyException(propertyName);
+
+      while (propReader.hasNextLine()) {
+         String[] property = propReader.nextLine().split("=");
+
+         validateProp(property);
+
+         mConfigMap.put(property[PROP_KEY], property[PROP_VAL]);
+      }
+   }
+
+   public static boolean getBoolean(String propName) {
+      if (mConfigMap.containsKey(propName)) {
+         return Boolean.valueOf(String.valueOf(mConfigMap.get(propName)));
+      }
+      //throw new InvalidPropertyException(propName);
       return false;
    }
 
-   public static void loadConfiguration(File propertiesFile) {
-      Scanner propertyReader = null;
-
-      try {
-         propertyReader = new Scanner(propertiesFile);
-      }
-      catch (java.io.FileNotFoundException fileErr) {
-         System.err.printf("Could not find file '%s'\n", propertiesFile);
-      }
-
-      while (propertyReader.hasNextLine()) {
-         String[] property = propertyReader.nextLine().split("=");
-
-         validateProperty(property);
-
-         mConfigMap.put(property[PROPERTY_NAME], property[PROPERTY_VAL]);
-      }
-   }
-
-   private static void validateProperty(String[] property) {
+   private static void validateProp(String[] property) {
       PROP_STATUS status = PROP_STATUS.VALID;
 
       if (property.length != 2) {
@@ -67,7 +65,6 @@ public class Configuration {
    }
 
    public class InvalidPropertyException extends Exception {
-
       public InvalidPropertyException(String property) {
          super(String.format("Invalid Property '%s'\n", property));
       }

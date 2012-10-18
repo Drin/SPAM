@@ -2,63 +2,53 @@ package com.drin.java.metrics;
 
 import com.drin.java.biology.ITSRegion;
 import com.drin.java.biology.Pyroprint;
-import com.drin.java.metrics.Threshold;
+
 import com.drin.java.metrics.ITSRegionMetric;
 import com.drin.java.metrics.PyroprintComparator;
 import com.drin.java.metrics.PyroprintMetric;
+
+import com.drin.java.util.Logger;
 
 public class ITSRegionAverageMetric extends ITSRegionMetric {
    private static final boolean TRANSFORM = false;
    private int mPairCount;
 
-   public ITSRegionAverageMetric(ITSRegion region,
+   public ITSRegionAverageMetric(double alpha, double beta,
+                                 ITSRegion appliedRegion,
                                  PyroprintComparator pyroComp,
                                  PyroprintMetric pyroMetric) {
-      super(region.getThreshold().getAlphaThreshold(),
-            region.getThreshold().getBetaThreshold(), pyroComp, pyroMetric);
-
-      reset();
+      super(alpha, beta, appliedRegion, pyroComp, pyroMetric);
+      this.reset();
    }
 
-   public ITSRegionAverageMetric(PyroprintComparator pyroComp,
-    PyroprintMetric pyroMetric) {
-      super(pyroComp, pyroMetric);
-
-      reset();
+   public ITSRegionAverageMetric(ITSRegion appliedRegion,
+                                 PyroprintComparator pyroComp,
+                                 PyroprintMetric pyroMetric) {
+      super(appliedRegion, pyroComp, pyroMetric);
+      this.reset();
    }
 
    @Override
    public void reset() {
-      mPairCount = 0;
-      mResult = null;
+      mPairCount = mErrCode = 0;
+      mResult = 0;
    }
 
    @Override
-   public void apply(Pyroprint elem_A, Pyroprint elem_B) {
-      for (Pyroprint pyro_A : elem_A.getPyroprints()) {
-         for (Pyroprint pyro_B : elem_B.getPyroprints()) {
-            Double comparison = mPyroComp.compare(mPyroMetric, pyro_A, pyro_B);
+   public void apply(ITSRegion elem_A, ITSRegion elem_B) {
+      if (elem_A.isSimilarRegion(elem_B)) {
+         for (Pyroprint pyro_A : elem_A.getPyroprints()) {
+            for (Pyroprint pyro_B : elem_B.getPyroprints()) {
+               double result = mPyroComp.compare(mPyroMetric, pyro_A, pyro_B);
 
-            if (System.getenv().containsKey("DEBUG")) {
-               if (comparison == null) {
-                  System.out.printf("Pyroprint comparison is null!\n");
-               }
-               else if (comparison.isNaN()) {
-                  System.out.printf("comparison is Nan and not null\n");
-                  System.exit(1);
-               }
-            }
+               Logger.error(mPyroMetric.getError(),
+                            "Error computing ITSRegion metric\n");
+               Logger.debug(String.format("ITSRegionAverageMetric:\n\t" +
+                                          "comparison between '%s' and " +
+                                          "'%s': %.04f", pyro_A.getName(),
+                                          pyro_B.getName(), result));
 
-            if (comparison != null) {
-               if (System.getenv().containsKey("DEBUG")) {
-                  System.out.printf("ITSRegionAverageMetric:\n\tcomparison between " +
-                                    "'%s' and '%s': %.04f\n", pyro_A.getName(),
-                                    pyro_B.getName(), comparison.doubleValue());
-               }
-
-               mResult = new Double(mResult == null ? comparison.doubleValue()
-                                                    : comparison.doubleValue() +
-                                                      mResult.doubleValue());
+               mResult += result;
                mPairCount++;
             }
          }
@@ -66,19 +56,14 @@ public class ITSRegionAverageMetric extends ITSRegionMetric {
    }
 
    @Override
-   public Double result() {
-      Double result = mResult;
+   public double result() {
+      double result = mResult/mPairCount;
 
-      if (result != null) {
-         if (System.getenv().containsKey("DEBUG")) {
-            System.out.printf("ITSRegionAverageMetric %s: %.04f/%d\n",
-                              (TRANSFORM ? "transformed" : "untransformed"),
-                              mResult, mPairCount);
-         }
+      Logger.debug(String.format("ITSRegionAverageMetric %s: %.04f/%d",
+                                 (TRANSFORM ? "(t)" : "(not t)"),
+                                 mResult, mPairCount));
 
-         double tmp_result = (mResult.doubleValue()/mPairCount);
-         result = new Double(TRANSFORM ? transformResult(tmp_result) : tmp_result);
-      }
+      if (TRANSFORM) { result = transformResult(result); }
 
       reset();
       return result;
