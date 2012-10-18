@@ -3,9 +3,10 @@ package com.drin.java.metrics;
 import com.drin.java.biology.Pyroprint;
 
 public abstract class PyroprintMetric implements DataMetric<Pyroprint> {
-   protected Double mResult;
+   protected double mResult;
+   protected int mErrCode;
 
-   public PyroprintMetric() { mResult = null; }
+   public PyroprintMetric() { this.reset(); }
 
    @Override
    public abstract void apply(Pyroprint elem_A, Pyroprint elem_B);
@@ -14,7 +15,11 @@ public abstract class PyroprintMetric implements DataMetric<Pyroprint> {
    public abstract void reset();
 
    @Override
-   public Double result() {
-      return mResult;
-   }
+   public double result() { return mResult; }
+
+   @Override
+   public void setError(int errCode) { mErrCode = errCode; }
+
+   @Override
+   public int getError() { return mErrCode; }
 }

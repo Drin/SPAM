@@ -8,7 +8,7 @@ public interface DataComparator<M extends DataMetric<E>, E> {
     * This method compares data objects data_A and data_B to get a distance
     * metric between the two.
     */
-   public Double compare(M metric, E elem_A, E elem_B);
+   public double compare(M metric, E elem_A, E elem_B);
 
    /**
     * This method compares object data_A and data_B to check if they are

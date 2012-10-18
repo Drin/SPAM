@@ -5,37 +5,45 @@ import com.drin.java.biology.ITSRegion;
 import com.drin.java.biology.Pyroprint;
 
 import java.util.Set;
-import java.util.HashSet;
+import java.util.Map;
+import java.util.HashMap;
 
 /**
  * Isolate represents a bacterial isolate collected by a biologist.
  *
  */
 public class Isolate extends BaseClusterable {
-   private Set<ITSRegion> mRegions;
+   private Map<String, ITSRegion> mRegions;
 
    public Isolate(String isoId, Set<ITSRegion> regions) {
       super(isoId);
-      mRegions = regions;
+      
+      mRegions = new HashMap<String, ITSRegion>();
+
+      if (regions != null) {
+         for (ITSRegion region : regions) {
+            mRegions.put(region.getName(), region);
+         }
+      }
    }
 
    public Isolate(String isoId) {
-      this(isoId, new HashSet<ITSRegion>());
+      this(isoId, null);
    }
 
-   public Set<ITSRegion> getRegions() { return mRegions; }
+   public Map<String, ITSRegion> getRegions() { return mRegions; }
 
    public boolean hasRegion(String regionName) {
-      for (ITSRegion region : mRegions) {
-         if (region.getName().equals(regionName)) { return true; }
+      if (mRegions != null) {
+         return mRegions.containsKey(regionName);
       }
 
       return false;
    }
 
    public ITSRegion getRegion(String regionName) {
-      for (ITSRegion refRegion : mRegions) {
-         if (regionName.equals(refRegion.getName())) { return refRegion; }
+      if (mRegions != null) {
+         return mRegions.get(regionName);
       }
 
       return null;
@@ -55,10 +63,10 @@ public class Isolate extends BaseClusterable {
    public String toString() {
       String str = "";
 
-      for (ITSRegion region : mRegions) {
-         str += String.format("%s - region '%s':\n", mName, region);
+      for (Map.Entry<String, ITSRegion> region : mRegions.entrySet()) {
+         str += String.format("%s - region '%s':\n", mName, region.getKey());
 
-         for (Pyroprint pyro : region.getPyroprints()) {
+         for (Pyroprint pyro : region.getValue().getPyroprints()) {
             str += String.format("\tpyroprint %s\n\n", pyro);
          }
       }

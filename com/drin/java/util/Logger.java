@@ -53,15 +53,22 @@ public class Logger {
    }
 
    public static void debug(String dbgString) {
-      if (getLogger().mDebug) { writeString(String.format("(%s) %s: %s\n", new Date(), DEBUG_PREFIX, dbgString)); }
+      if (getLogger().mDebug) {
+         writeString(String.format("(%s) %s: %s\n", new Date(),
+                                   DEBUG_PREFIX, dbgString));
+      }
    }
 
-   public static void error(String errString) {
-      writeString(String.format("(%s) %s: %s\n", new Date(), ERR_PREFIX, errString));
+   public static void error(int errCode, String errString) {
+      if (errCode != 0) {
+         writeString(String.format("(%s) %s: %s\n", new Date(),
+                                   ERR_PREFIX, errString));
+      }
    }
 
    public static void warning(String warnString) {
-      writeString(String.format("(%s) %s: %s\n", new Date(), WARNING_PREFIX, warnString));
+      writeString(String.format("(%s) %s: %s\n", new Date(),
+                                WARNING_PREFIX, warnString));
    }
 
    public static void terminate() {
