@@ -21,7 +21,7 @@ public class PyroprintPearsonMetric extends PyroprintMetric {
 
    @Override
    public void reset() {
-      mResult = -1;
+      mResult = 0;
       mErrCode = 0;
 
       mPyro_A_sum = 0;

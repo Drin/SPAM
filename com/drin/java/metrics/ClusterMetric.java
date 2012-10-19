@@ -1,33 +1,46 @@
 package com.drin.java.metrics;
 
-import com.drin.java.clustering.Cluster;
 import com.drin.java.clustering.BaseClusterable;
+import com.drin.java.clustering.Cluster;
+
 import com.drin.java.metrics.DataMetric;
 import com.drin.java.metrics.DataComparator;
 
 import java.util.Map;
 
-public abstract class ClusterMetric implements DataMetric<Cluster<BaseClusterable>> {
-   protected DataComparator<BaseClusterable, DataMetric<BaseClusterable>> mComparator;
-   protected DataMetric<BaseClusterable> mDataMetric;
-   protected Double mResult;
+public abstract class ClusterMetric<E extends BaseClusterable> implements
+                      DataMetric<Cluster<E>> {
+   protected double mResult;
+   protected int mErrCode;
 
-   public ClusterMetric(DataComparator<BaseClusterable, DataMetric<BaseClusterable>> dataComparator,
-    DataMetric<BaseClusterable> dataMetric) {
+   protected DataComparator<DataMetric<E>, E> mComparator;
+   protected DataMetric<E> mDataMetric;
+
+   public ClusterMetric(DataComparator<DataMetric<E>, E> dataComparator,
+                        DataMetric<E> dataMetric) {
       mComparator = dataComparator;
       mDataMetric = dataMetric;
-      mResult = null;
+
+      this.reset();
    }
 
    @Override
-   @SuppressWarnings("rawtypes")
-   public abstract void apply(Cluster<BaseClusterable> data_A, Cluster<BaseClusterable> data_B);
+   public abstract void apply(Cluster<E> data_A, Cluster<E> data_B);
 
    @Override
-   public abstract void reset();
+   public void reset() { mResult = 0; }
 
    @Override
-   public Double result() {
-      return mResult;
+   public double result() {
+      double result = mResult;
+
+      this.reset();
+      return result;
    }
+
+   @Override
+   public void setError(int errCode) { mErrCode = errCode; }
+
+   @Override
+   public int getError() { return mErrCode; }
 }

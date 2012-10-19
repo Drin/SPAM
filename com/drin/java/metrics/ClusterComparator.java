@@ -1,48 +1,34 @@
 package com.drin.java.metrics;
 
+import com.drin.java.clustering.BaseClusterable;
 import com.drin.java.clustering.Cluster;
-import com.drin.java.types.DataObject;
-import com.drin.java.metrics.DataComparator;
-import com.drin.java.metrics.DataMetric;
 
-public class ClusterComparator implements DataComparator<Cluster<DataObject>, DataMetric<DataObject>> {
-   private static final boolean DEBUG = false;
+import com.drin.java.metrics.DataComparator;
+import com.drin.java.metrics.ClusterMetric;
+
+import com.drin.java.util.Logger;
+
+public class ClusterComparator<E extends BaseClusterable> implements
+             DataComparator<ClusterMetric<E>, Cluster<E>> {
 
    @Override
-   public Double compare(DataMetric<DataObject> dataMetric, Cluster<DataObject> clust_A,
-    Cluster<DataObject> clust_B) {
-      double comparisonSum = 0, comparisonCount = 0;
+   public double compare(ClusterMetric<E> clusterMetric,
+                         Cluster<E> clust_A, Cluster<E> clust_B) {
+      clusterMetric.apply(clust_A, clust_B);
 
-      for (DataObject obj_A : clust_A.getElements()) {
-         for (DataObject obj_B : clust_B.getElements()) {
-            dataMetric.apply(obj_A, obj_B);
+      double comparison = clusterMetric.result();
 
-            Double comparison = dataMetric.result();
-            dataMetric.reset();
+      Logger.error(clusterMetric.getError(),
+                   String.format("error computing metric between '%s' " +
+                                 "and '%s'\n", clust_A.getName(),
+                                 clust_B.getName()));
 
-            if (comparison != null) {
-               comparisonSum += comparison.doubleValue();
-               comparisonCount++;
-            }
-            else {
-               if (DEBUG) {
-                  System.out.printf("cluster comparator:\n\tnull comparison between '%s' and '%s' in comparator!\n",
-                   obj_A.getName(), obj_B.getName());
-               }
-            }
-         }
-      }
-
-      if (comparisonCount > 0) {
-         return comparisonSum/comparisonCount;
-      }
-
-      return null;
+      return comparison;
    }
 
    @Override
-   public boolean isSimilar(DataMetric<DataObject> dataMetric, Cluster<DataObject> clust_A,
-    Cluster<DataObject> clust_B) {
+   public boolean isSimilar(ClusterMetric<E> clusterMetric,
+                            Cluster<E> clust_A, Cluster<E> clust_B) {
       throw new UnsupportedOperationException();
    }
 }

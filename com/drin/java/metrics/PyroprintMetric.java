@@ -12,7 +12,10 @@ public abstract class PyroprintMetric implements DataMetric<Pyroprint> {
    public abstract void apply(Pyroprint elem_A, Pyroprint elem_B);
 
    @Override
-   public abstract void reset();
+   public void reset() {
+      mResult = 0;
+      mErrCode = 0;
+   }
 
    @Override
    public double result() { return mResult; }
