@@ -22,10 +22,12 @@ public abstract class ITSRegionMetric implements DataMetric<ITSRegion> {
 
    protected double mResult;
    protected int mErrCode;
-   protected PyroprintComparator mPyroComp;
-   protected PyroprintMetric mPyroMetric;
+
    protected Threshold mThreshold;
    protected ITSRegion mRegion;
+
+   protected PyroprintComparator mPyroComp;
+   protected PyroprintMetric mPyroMetric;
 
    public ITSRegionMetric(double alpha, double beta,
                           ITSRegion appliedRegion,
@@ -47,10 +49,13 @@ public abstract class ITSRegionMetric implements DataMetric<ITSRegion> {
    }
 
    @Override
-   public abstract void reset();
+   public void reset() {
+      mResult = 0;
+      mErrCode = 0;
+   }
 
    @Override
-   public abstract void apply(ITSRegion data_A, ITSRegion data_B);
+   public abstract void apply(ITSRegion elem_A, ITSRegion elem_B);
 
    @Override
    public double result() {

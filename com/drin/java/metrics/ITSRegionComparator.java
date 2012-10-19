@@ -1,7 +1,9 @@
 package com.drin.java.metrics;
 
 import com.drin.java.biology.ITSRegion;
+
 import com.drin.java.metrics.ITSRegionMetric;
+import com.drin.java.metrics.DataComparator;
 
 import com.drin.java.util.Logger;
 

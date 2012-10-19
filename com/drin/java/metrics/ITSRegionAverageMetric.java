@@ -30,8 +30,8 @@ public class ITSRegionAverageMetric extends ITSRegionMetric {
 
    @Override
    public void reset() {
-      mPairCount = mErrCode = 0;
-      mResult = 0;
+      super.reset();
+      mPairCount = 0;
    }
 
    @Override
