@@ -11,20 +11,20 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Map;
 
-public class PartitionedAgglomerative extends AgglomerativeClusterer {
+public class OHClustering extends AgglomerativeClusterer {
    private static final boolean METRIC_IS_DISTANCE = false,
                                 DEBUG = false;
    protected ClusterMatrixMetric mClusterMetric;
    protected FeatureTree mDataStructure;
 
-   public PartitionedAgglomerative(Set<Cluster> clusters, ClusterMatrixMetric clustMetric) {
+   public OHClustering(Set<Cluster> clusters, ClusterMatrixMetric clustMetric) {
       super(clusters);
       mClusterMetric = clustMetric;
 
       mDataStructure = null;
    }
 
-   public PartitionedAgglomerative(FeatureTree dataStructure, ClusterMatrixMetric clustMetric) {
+   public OHClustering(FeatureTree dataStructure, ClusterMatrixMetric clustMetric) {
       super(null);
 
       mDataStructure = dataStructure;

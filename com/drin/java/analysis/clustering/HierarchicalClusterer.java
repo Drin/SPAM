@@ -1,72 +1,62 @@
 package com.drin.java.analysis.clustering;
 
-import com.drin.java.types.Cluster;
-import com.drin.java.types.BaseClusterable;
+import com.drin.java.clustering.BaseClusterable;
+import com.drin.java.clustering.HCluster;
+import com.drin.java.clustering.Cluster;
 
-import com.drin.java.metrics.DataMetric;
+import com.drin.java.metrics.ClusterMetric;
 import com.drin.java.metrics.ClusterComparator;
 
 import com.drin.java.analysis.clustering.Clusterer;
-import com.drin.java.analysis.clustering.ClusterAnalyzer;
 
 import com.drin.java.util.Configuration;
 
 import java.util.Set;
 import java.util.HashSet;
 
-public abstract class HierarchicalClusterer implements Clusterer {
-   private static final boolean DEBUG = false;
+public abstract class HierarchicalClusterer<E extends BaseClusterable> implements Clusterer<E> {
+   protected Set<HCluster<E>> mClusters;
+   protected Set<HCluster<E>> mResultClusters;
 
-   protected Set<Cluster> mClusters;
-   protected Set<Cluster<BaseClusterable>> mResultClusters;
+   protected ClusterMetric<E> mMetric;
+   protected ClusterComparator<E> mComp;
 
-   protected DataMetric mDataMetric;
-   protected ClusterComparator mClusterComp;
+   protected double mThreshold;
 
-   protected double mBetaThreshold;
-
-   public HierarchicalClusterer(Set<Cluster> clusters,
-    DataMetric dataMetric, ClusterComparator clustComp) {
+   public HierarchicalClusterer(Set<HCluster<E>> clusters, double threshold,
+                                ClusterMetric<E> metric,
+                                ClusterComparator<E> comp) {
+      mThreshold = 0;
       mClusters = clusters;
-      mDataMetric = dataMetric;
-      mClusterComp = clustComp;
+      mMetric = metric;
+      mComp = comp;
 
-      mBetaThreshold = 0;
-
-      mResultClusters = new HashSet<Cluster<BaseClusterable>>();
+      mResultClusters = new HashSet<HCluster<E>>();
    }
 
-   public HierarchicalClusterer(Set<Cluster> clusters) {
-      this(clusters, null, null);
-   }
+   protected Set<HCluster<E>> clusterDataSet(Set<HCluster<E>> clusterSet) {
+      Set<HCluster<E>> newClustSet = new HashSet<HCluster<E>>(clusterSet);
 
-   public void setBetaThreshold(double beta) {
-      mBetaThreshold = beta;
-   }
+      while (newClustSet.size() > 1) {
+         HCluster<E>[] closeClusters = findCloseClusters(newClustSet);
 
-   protected Set<Cluster> clusterDataSet(Set<Cluster> clusterSet) {
-      Set<Cluster> newClusterSet = new HashSet<Cluster>(clusterSet);
-
-      while (newClusterSet.size() > 1) {
-         Cluster[] closestClusters = findCloseClusters(newClusterSet);
-
-         if (closestClusters != null) {
-            newClusterSet = combineCloseClusters(closestClusters, newClusterSet);
+         if (closeClusters != null) {
+            newClustSet = combineClusters(closeClusters, newClustSet);
          }
 
          else { break; }
       }
 
-      return newClusterSet;
+      return newClustSet;
    }
 
    @Override
    public void clusterData() {
-      for (Cluster cluster : clusterDataSet(mClusters)) {
+      for (HCluster<E> cluster : clusterDataSet(mClusters)) {
          mResultClusters.add(cluster);
       }
 
-      if (DEBUG) {
+      if (System.getenv().containsKey("DEBUG")) {
          /*
          System.out.println("result clusters:");
          for (Cluster cluster : mResultClusters) {
@@ -76,22 +66,17 @@ public abstract class HierarchicalClusterer implements Clusterer {
       }
    }
 
-   public String[] getResults(ClusterAnalyzer analyzer) {
-      if (mResultClusters != null) {
-         analyzer.analyzeClusters(mResultClusters);
+   public Set<Cluster<E>> getClusters() {
+      Set<Cluster<E>> resultClusters = new HashSet<Cluster<E>>();
 
-         String results = String.format("%s\n%s\n",
-          analyzer.getStats(), analyzer.getDendogram());
-
-         String elements = String.format("%s\n",
-          analyzer.getClusterElements());
-
-         return new String[] { results, elements };
+      for (HCluster<E> cluster : mResultClusters) {
+         resultClusters.add(cluster);
       }
 
-      return new String[] { "No results to report\n" };
+      return resultClusters;
    }
 
-   protected abstract Cluster[] findCloseClusters(Set<Cluster> clusterSet);
-   protected abstract Set<Cluster> combineCloseClusters(Cluster[] closestClusters, Set<Cluster> clusterSet);
+   protected abstract HCluster<E>[] findCloseClusters(Set<HCluster<E>> clusterSet);
+   protected abstract Set<HCluster<E>> combineClusters(HCluster<E>[] closeClusters,
+                                                       Set<HCluster<E>> clusterSet);
 }
