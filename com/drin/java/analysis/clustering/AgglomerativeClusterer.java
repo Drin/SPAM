@@ -1,93 +1,89 @@
 package com.drin.java.analysis.clustering;
 
+import java.lang.reflect.Array;
+
 import com.drin.java.analysis.clustering.Clusterer;
 
-import com.drin.java.types.DataObject;
-import com.drin.java.types.Cluster;
-import com.drin.java.types.HierarchicalCluster;
-import com.drin.java.metrics.DataMetric;
+import com.drin.java.clustering.BaseClusterable;
+import com.drin.java.clustering.HCluster;
+
+import com.drin.java.metrics.ClusterMetric;
 import com.drin.java.metrics.ClusterComparator;
 
 import com.drin.java.util.Configuration;
+import com.drin.java.util.Logger;
 
 import java.util.Set;
 import java.util.HashSet;
 
-public class AgglomerativeClusterer extends HierarchicalClusterer {
+public class AgglomerativeClusterer<E extends BaseClusterable> extends
+             HierarchicalClusterer<E> {
    private static final int CLUSTER_PAIR_SIZE = 2;
-   private static final boolean METRIC_IS_DISTANCE = false,
-                                DEBUG = false;
+   private static final boolean METRIC_IS_DISTANCE = false;
 
-   public AgglomerativeClusterer(Set<Cluster> clusters) {
-      super(clusters);
-   }
-
-   public AgglomerativeClusterer(Set<Cluster> clusters,
-    DataMetric clustMetric, ClusterComparator clustComp) {
-      super(clusters, clustMetric, clustComp);
+   public AgglomerativeClusterer(Set<HCluster<E>> clusters, double thresh,
+                                 ClusterMetric<E> metric,
+                                 ClusterComparator<E> comp) {
+      super(clusters, thresh, metric, comp);
    }
 
    @Override
-   protected Cluster[] findCloseClusters(Set<Cluster> clusterSet) {
-      Cluster<DataObject> closeClust_A = null, closeClust_B = null;
+   protected HCluster<E>[] findCloseClusters(Set<HCluster<E>> clusterSet) {
       double minDist = Double.MAX_VALUE, maxSim = 0;
+      HCluster<E> closeClust_A = null, closeClust_B = null;
 
-      for (Cluster<DataObject> clust_A : clusterSet) {
-         for (Cluster<DataObject> clust_B : clusterSet) {
+      for (HCluster<E> clust_A : clusterSet) {
+         for (HCluster<E> clust_B : clusterSet) {
 
-            if (!clust_A.equals(clust_B)) {
-               Double clustDist = mClusterComp.compare(mDataMetric, clust_A, clust_B);
+            if (clust_A.getName().equals(clust_B.getName())) { continue; }
 
-               if (DEBUG) {
-                  System.out.printf("agglomerative clusterer:\n\tcomparison between '%s' and '%s' is %.04f\n",
-                   clust_A.getName(), clust_B.getName(), clustDist);
-               }
+            double clustDist = mComp.compare(mMetric, clust_A, clust_B);
 
-               if (!METRIC_IS_DISTANCE) {
-                  if (clustDist != null && clustDist.doubleValue() > maxSim &&
-                      clustDist.doubleValue() > mBetaThreshold) {
-                     closeClust_A = clust_A;
-                     closeClust_B = clust_B;
-                     maxSim = clustDist.doubleValue();
-                  }
-               }
+            Logger.debug(String.format("comparison between cluster '%s' and " +
+                                       "cluster '%s' is %.04f", 
+                                       clust_A.getName(), clust_B.getName(),
+                                       clustDist));
 
-               else {
-                  if (clustDist != null && clustDist.doubleValue() < minDist) {
-                     closeClust_A = clust_A;
-                     closeClust_B = clust_B;
-                     minDist = clustDist.doubleValue();
-                  }
-               }
+            if (clustDist > maxSim && clustDist > mThreshold) {
+               closeClust_A = clust_A;
+               closeClust_B = clust_B;
+               maxSim = clustDist;
+            }
+
+            else if (clustDist < minDist && clustDist < mThreshold) {
+               closeClust_A = clust_A;
+               closeClust_B = clust_B;
+               minDist = clustDist;
             }
          }
       }
 
       if (closeClust_A != null && closeClust_B != null) {
-         return new Cluster[] {closeClust_A, closeClust_B};
+         @SuppressWarnings(value={"unchecked", "rawtypes"})
+         HCluster<E>[] closeClusters = new HCluster[] {closeClust_A, closeClust_B};
+         return closeClusters;
       }
 
       return null;
    }
 
    @Override
-   protected Set<Cluster> combineCloseClusters(Cluster[] closestClusters,
-    Set<Cluster> clusterSet) {
-      Set<Cluster> newClusterSet = new HashSet<Cluster>();
+   protected Set<HCluster<E>> combineClusters(HCluster<E>[] closeClusters,
+                                              Set<HCluster<E>> clusterSet) {
+      Set<HCluster<E>> newClusterSet = new HashSet<HCluster<E>>();
 
-      if (closestClusters.length != CLUSTER_PAIR_SIZE) {
-         System.err.printf("Invalid cluster pair to be combined\n");
-         System.exit(1);
+      if (closeClusters.length != CLUSTER_PAIR_SIZE) {
+         Logger.error(-1, "Invalid cluster pair to be combined\n");
       }
 
-      for (Cluster<DataObject> cluster_A : clusterSet) {
-         if (cluster_A.equals(closestClusters[0])) {
-            Cluster<DataObject> cluster_B = closestClusters[1];
-            newClusterSet.add(new HierarchicalCluster(cluster_A, cluster_B));
+      for (HCluster<E> clust_A : clusterSet) {
+         if (clust_A.equals(closeClusters[0])) {
+            HCluster<E> clust_B = closeClusters[1];
+            newClusterSet.add(clust_A.join(clust_B));
          }
 
-         else if (cluster_A.equals(closestClusters[1])) { continue; }
-         else { newClusterSet.add(cluster_A); }
+         else if (clust_A.equals(closeClusters[1])) { continue; }
+         else { newClusterSet.add(clust_A); }
       }
 
       return newClusterSet;

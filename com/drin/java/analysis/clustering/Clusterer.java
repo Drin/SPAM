@@ -1,12 +1,12 @@
 package com.drin.java.analysis.clustering;
 
-import com.drin.java.types.Cluster;
-import com.drin.java.analysis.clustering.ClusterAnalyzer;
+import com.drin.java.clustering.BaseClusterable;
+import com.drin.java.clustering.Cluster;
 
 import java.util.Set;
 
-public interface Clusterer {
+public interface Clusterer<E extends BaseClusterable> {
 
    public void clusterData();
-   public String[] getResults(ClusterAnalyzer analyzer);
+   public Set<Cluster<E>> getClusters();
 }

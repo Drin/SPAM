@@ -28,12 +28,12 @@ public abstract class Cluster<E extends BaseClusterable> extends BaseClusterable
    public boolean equals(Object otherObj) {
       if (otherObj instanceof Cluster<?>) {
          Cluster<?> otherClust = (Cluster<?>) otherObj;
-         int isoNdx = 0;
 
          for (E elem : mElements) {
             if (!otherClust.mElements.contains(elem)) { return false; }
          }
 
+         //return this.getName().equals(otherClust.getName());
          return true;
       }
 
