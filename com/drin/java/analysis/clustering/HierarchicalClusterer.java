@@ -21,12 +21,9 @@ public abstract class HierarchicalClusterer<E extends BaseClusterable> implement
    protected ClusterMetric<E> mMetric;
    protected ClusterComparator<E> mComp;
 
-   protected double mThreshold;
-
-   public HierarchicalClusterer(Set<HCluster<E>> clusters, double threshold,
+   public HierarchicalClusterer(Set<HCluster<E>> clusters,
                                 ClusterMetric<E> metric,
                                 ClusterComparator<E> comp) {
-      mThreshold = 0;
       mClusters = clusters;
       mMetric = metric;
       mComp = comp;

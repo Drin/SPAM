@@ -18,13 +18,16 @@ import java.util.HashSet;
 
 public class AgglomerativeClusterer<E extends BaseClusterable> extends
              HierarchicalClusterer<E> {
-   private static final int CLUSTER_PAIR_SIZE = 2;
-   private static final boolean METRIC_IS_DISTANCE = false;
+   protected static final int CLUSTER_PAIR_SIZE = 2;
+   protected static final boolean METRIC_IS_DISTANCE = false;
+
+   private double mThreshold;
 
    public AgglomerativeClusterer(Set<HCluster<E>> clusters, double thresh,
                                  ClusterMetric<E> metric,
                                  ClusterComparator<E> comp) {
-      super(clusters, thresh, metric, comp);
+      super(clusters, metric, comp);
+      mThreshold = thresh;
    }
 
    @Override
@@ -77,7 +80,7 @@ public class AgglomerativeClusterer<E extends BaseClusterable> extends
       }
 
       for (HCluster<E> clust_A : clusterSet) {
-         if (clust_A.equals(closeClusters[0])) {
+         if (clust_A.getName().equals(closeClusters[0].getName())) {
             HCluster<E> clust_B = closeClusters[1];
             newClusterSet.add(clust_A.join(clust_B));
          }
