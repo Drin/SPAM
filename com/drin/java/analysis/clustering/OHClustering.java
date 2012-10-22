@@ -1,128 +1,133 @@
 package com.drin.java.analysis.clustering;
 
-import com.drin.java.types.DataObject;
-import com.drin.java.types.Cluster;
-import com.drin.java.types.FeatureTree;
-import com.drin.java.types.FeatureNode;
-import com.drin.java.metrics.ClusterMatrixMetric;
+import com.drin.java.clustering.BaseClusterable;
+import com.drin.java.clustering.HCluster;
+
+import com.drin.java.ontology.Ontology;
+import com.drin.java.ontology.OntologyTerm;
+
 import com.drin.java.analysis.clustering.AgglomerativeClusterer;
+
+import com.drin.java.metrics.ClusterMetric;
+import com.drin.java.metrics.ClusterComparator;
+
+import com.drin.java.util.Logger;
 
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Map;
 
-public class OHClustering extends AgglomerativeClusterer {
-   private static final boolean METRIC_IS_DISTANCE = false,
-                                DEBUG = false;
-   protected ClusterMatrixMetric mClusterMetric;
-   protected FeatureTree mDataStructure;
+public class OHClustering<E extends BaseClusterable> extends
+             AgglomerativeClusterer<E> {
+   protected Ontology mOntology;
+   private double mAlpha, mBeta;
 
-   public OHClustering(Set<Cluster> clusters, ClusterMatrixMetric clustMetric) {
-      super(clusters);
-      mClusterMetric = clustMetric;
+   public OHClustering(Set<HCluster<E>> clusters,
+                       double alpha, double beta,
+                       Ontology ontology,
+                       ClusterMetric<E> metric,
+                       ClusterComparator<E> comp) {
+      super(clusters, metric, comp);
 
-      mDataStructure = null;
-   }
-
-   public OHClustering(FeatureTree dataStructure, ClusterMatrixMetric clustMetric) {
-      super(null);
-
-      mDataStructure = dataStructure;
-      mClusterMetric = clustMetric;
+      mAlpha = alpha;
+      mBeta = beta;
+      mOntology = ontology;
    }
 
    private void printOntology() {
-      System.out.printf("cluster tree:\n%s\n", mDataStructure.printClusters());
+      System.out.printf("cluster tree:\n%s\n", mOntology.printClusters());
    }
 
    @Override
    public void clusterData() {
-      if (mDataStructure == null) { super.clusterData(); }
+      if (mOntology == null) { super.clusterData(); }
       else {
-         for (Cluster cluster : clusterDataStructure(mDataStructure.getRoot())) {
+         for (HCluster cluster : ontologicalCluster(mOntology.getRoot())) {
             mResultClusters.add(cluster);
          }
       }
    }
 
-   private Set<Cluster> clusterDataStructure(FeatureNode root) {
-      if (root == null) { return new HashSet<Cluster>(); }
+   private Set<HCluster<E>> ontologicalCluster(OntologyTerm root) {
+      if (root == null) { return new HashSet<HCluster<E>>(); }
 
-      Set<Cluster> clusterSet = new HashSet<Cluster>();
+      Set<HCluster> clusters = new HashSet<HCluster>();
 
       if (root.getPartitions() != null) {
-         for (Map.Entry<String, FeatureNode> partition : root.getPartitions().entrySet()) {
-            clusterSet.addAll(clusterDataStructure(partition.getValue()));
+         for (Map.Entry<String, OntologyTerm> partition : root.getPartitions().entrySet()) {
+            clusters.addAll(ontologicalCluster(partition.getValue()));
       
             if (root.isTimeSensitive()) {
-               if (DEBUG) { System.out.println("Clustering time sensitive clusters..."); }
-               clusterSet = clusterDataSet(clusterSet);
-               root.setClusters(clusterSet);
+               Logger.debug("Clustering time sensitive clusters...");
+
+               clusters = clusterDataSet(clusters);
+               root.setClusters(clusters);
+
                printOntology();
             }
          }
       
          if (!root.isTimeSensitive()) {
-            if (DEBUG) { System.out.println("Clustering non time sensitive clusters..."); }
-            clusterSet = clusterDataSet(clusterSet);
-            root.setClusters(clusterSet);
+            Logger.debug("Clustering non time sensitive clusters...");
+
+            clusters = clusterDataSet(clusters);
+            root.setClusters(clusters);
+
             printOntology();
-            return clusterSet;
+
+            return clusters;
          }
       }
 
       else if (root.getData() != null) {
-         if (DEBUG) { System.out.println("percolating leaf cluster sets"); }
-         clusterSet.addAll(root.getData());
-         clusterSet = clusterDataSet(clusterSet);
-         root.setClusters(clusterSet);
+         Logger.debug("percolating leaf cluster sets");
+
+         clusters.addAll(root.getData());
+         clusters = clusterDataSet(clusters);
+         root.setClusters(clusters);
+
          printOntology();
       }
 
-      return clusterSet;
+      return clusters;
    }
 
 
    @Override
-   protected Cluster[] findCloseClusters(Set<Cluster> clusterSet) {
-      Cluster closeClust_A = null, closeClust_B = null;
+   protected Cluster[] findCloseClusters(Set<HCluster<E>> clusters) {
       double minDist = Double.MAX_VALUE, maxSim = 0;
+      HCluster closeClust_A = null, closeClust_B = null;
 
-      for (Cluster clust_A : clusterSet) {
-         for (Cluster clust_B : clusterSet) {
+      for (HCluster clust_A : clusters) {
+         for (HCluster clust_B : clusters) {
+            if (clust_A.getName().equals(clust_B.getName())) { continue; }
 
-            if (!clust_A.equals(clust_B)) {
-               mClusterMetric.apply(clust_A, clust_B);
-               Double clustDist = mClusterMetric.result();
+            double dist = mComp.compare(mMetric, clust_A, clust_B);
 
-               if (DEBUG) {
-                  System.out.printf("'%s' -> '%s': %.04f (null: %s)\n",
-                   clust_A.getName(), clust_B.getName(), clustDist.doubleValue(),
-                   clustDist == null);
-               }
+            if (System.getenv().containsKey("DEBUG")) {
+               System.out.printf("'%s' -> '%s': %.04f (null: %s)\n",
+                clust_A.getName(), clust_B.getName(), clustDist.doubleValue(),
+                clustDist == null);
+            }
 
-               if (!METRIC_IS_DISTANCE) {
-                  if (clustDist != null && clustDist.doubleValue() > maxSim &&
-                   clustDist.doubleValue() > mBetaThreshold) {
-                     closeClust_A = clust_A;
-                     closeClust_B = clust_B;
-                     maxSim = clustDist.doubleValue();
-                  }
-               }
+            if (dist > maxSim && dist > mBetaThreshold) {
+               closeClust_A = clust_A;
+               closeClust_B = clust_B;
 
-               else {
-                  if (clustDist != null && clustDist.doubleValue() < minDist) {
-                     closeClust_A = clust_A;
-                     closeClust_B = clust_B;
-                     minDist = clustDist.doubleValue();
-                  }
-               }
+               maxSim = dist;
+            }
+
+            if (dist < minDist) {
+               closeClust_A = clust_A;
+               closeClust_B = clust_B;
+
+               minDist = dist;
             }
 
          }
       }
 
-      if (DEBUG) {
+      if (System.getenv().containsKey("DEBUG")) {
          if (closeClust_A == null || closeClust_B == null) {
             System.out.println("Closest clusters are null!\nclusterset: ");
       
@@ -135,35 +140,35 @@ public class OHClustering extends AgglomerativeClusterer {
       }
 
       if (closeClust_A != null && closeClust_B != null) {
-         return new Cluster[] {closeClust_A, closeClust_B};
+         @SuppressWarnings(value={"unchecked", "rawtypes"})
+         HCluster<E>[] closeClusters = new HCluster[] {closeClust_A, closeClust_B};
+         return closeClusters;
       }
 
       return null;
    }
 
    @Override
-   protected Set<Cluster> combineCloseClusters(Cluster[] closestClusters,
-    Set<Cluster> clusterSet) {
-      //Combining clusters should be the same
-      Set<Cluster> newClusterSet = super.combineCloseClusters(closestClusters, clusterSet);
+   protected Set<HCluster<E>> combineClusters(HCluster<E>[] closeClusters,
+                                                   Set<HCluster<E>> clusters) {
+      Set<HCluster<E>> newClusters = super.combineClusters(closeClusters, clusters);
 
-      if (closestClusters.length > 0) {
-         for (Cluster cluster : newClusterSet) {
-            String currClusterName = closestClusters[0].getName();
-            String clusterName = cluster.getName();
-
-            if (currClusterName != null && clusterName != null &&
-             currClusterName.equals(clusterName)) { continue; }
-
-            if (DEBUG) {
-               System.out.printf("Combining clusters '%s' and '%s'\n", currClusterName, clusterName);
-               System.out.printf("recomputing cluster distances\n");
-            }
-      
-            mClusterMetric.recompute(closestClusters[0], cluster);
-         }
+      if (closeClusters.length != CLUSTER_PAIR_SIZE) {
+         Logger.error(-1, "No clusters were combined");
       }
 
-      return newClusterSet;
+      for (HCluster<E> cluster : newClusters) {
+         if (cluster.getName().equals(closeCluster[0].getName())) {
+            continue;
+         }
+
+         Logger.debug(String.format("recomputing clusters '%s' and '%s'\n",
+                                    currClusterName, clusterName));
+   
+         //TODO
+         //mClusterMetric.recompute(closeClusters[0], cluster);
+      }
+
+      return newClusters;
    }
 }
