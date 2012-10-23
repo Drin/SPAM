@@ -1,21 +1,22 @@
 package com.drin.java.ontology;
 
+import com.drin.java.clustering.BaseClusterable;
 import com.drin.java.clustering.Cluster;
+
 import com.drin.java.ontology.OntologyTerm;
 import com.drin.java.ontology.OntologyParser;
 
 import java.io.File;
-
-import java.util.List;
-import java.util.Map;
 import java.util.Scanner;
 
+import java.util.List;
 import java.util.ArrayList;
+
+import java.util.Map;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 
 public class Ontology {
-   private static final boolean DEBUG = false;
    private OntologyTerm mRoot;
 
    public Ontology() {
@@ -31,13 +32,16 @@ public class Ontology {
       return Ontology.printOntology(mRoot, "root", "");
    }
 
-   public void addData(Cluster<?> element) {
+   public void addData(Cluster element) {
       mRoot.addData(element);
-      if (DEBUG) { System.out.printf("added element: '%s' to Ontology \n", element.getName()); }
+      if (System.getenv().containsKey("DEBUG")) {
+         System.out.printf("added element: '%s' to Ontology \n",
+                           element.getName());
+      }
    }
 
    public void addTerm(OntologyTerm newTerm) {
-      if (DEBUG) {
+      if (System.getenv().containsKey("DEBUG")) {
          System.out.printf("adding new term:\n\t%s\n", newTerm.toString());
       }
 
@@ -58,7 +62,7 @@ public class Ontology {
       String ontologyStr = String.format("%s%s:\n", prefix, partitionName);
 
       if (term.getClusters() != null) {
-         for (Cluster<?> element : term.getClusters()) {
+         for (Cluster element : term.getClusters()) {
             ontologyStr += element.prettyPrint(prefix + "   ");
          }
 
@@ -92,7 +96,7 @@ public class Ontology {
       String ontologyStr = String.format("%s%s:\n", prefix, partitionName);
 
       if (term.getData() != null) {
-         for (Cluster<?> element : term.getData()) {
+         for (Cluster element : term.getData()) {
             ontologyStr += String.format("%s%s,", prefix + "   ", element.getName());
          }
 

@@ -1,7 +1,7 @@
 package com.drin.java.analysis.clustering;
 
 import com.drin.java.clustering.BaseClusterable;
-import com.drin.java.clustering.HCluster;
+import com.drin.java.clustering.Cluster;
 
 import com.drin.java.ontology.Ontology;
 import com.drin.java.ontology.OntologyTerm;
@@ -22,12 +22,12 @@ public class OHClustering<E extends BaseClusterable> extends
    protected Ontology mOntology;
    private double mAlpha, mBeta;
 
-   public OHClustering(Set<HCluster<E>> clusters,
+   public OHClustering(Set<Cluster<E>> clusters,
                        double alpha, double beta,
                        Ontology ontology,
                        ClusterMetric<E> metric,
                        ClusterComparator<E> comp) {
-      super(clusters, metric, comp);
+      super(clusters, beta, metric, comp);
 
       mAlpha = alpha;
       mBeta = beta;
@@ -42,16 +42,16 @@ public class OHClustering<E extends BaseClusterable> extends
    public void clusterData() {
       if (mOntology == null) { super.clusterData(); }
       else {
-         for (HCluster cluster : ontologicalCluster(mOntology.getRoot())) {
+         for (Cluster<E> cluster : ontologicalCluster(mOntology.getRoot())) {
             mResultClusters.add(cluster);
          }
       }
    }
 
-   private Set<HCluster<E>> ontologicalCluster(OntologyTerm root) {
-      if (root == null) { return new HashSet<HCluster<E>>(); }
+   private Set<Cluster<E>> ontologicalCluster(OntologyTerm root) {
+      if (root == null) { return new HashSet<Cluster<E>>(); }
 
-      Set<HCluster> clusters = new HashSet<HCluster>();
+      Set<Cluster<E>> clusters = new HashSet<Cluster<E>>();
 
       if (root.getPartitions() != null) {
          for (Map.Entry<String, OntologyTerm> partition : root.getPartitions().entrySet()) {
@@ -93,24 +93,24 @@ public class OHClustering<E extends BaseClusterable> extends
    }
 
 
+   //TODO THIS IS SO WRONG
    @Override
-   protected Cluster[] findCloseClusters(Set<HCluster<E>> clusters) {
+   protected Cluster<E>[] findCloseClusters(Set<Cluster<E>> clusters) {
       double minDist = Double.MAX_VALUE, maxSim = 0;
-      HCluster closeClust_A = null, closeClust_B = null;
+      Cluster<E> closeClust_A = null, closeClust_B = null;
 
-      for (HCluster clust_A : clusters) {
-         for (HCluster clust_B : clusters) {
+      for (Cluster<E> clust_A : clusters) {
+         for (Cluster<E> clust_B : clusters) {
             if (clust_A.getName().equals(clust_B.getName())) { continue; }
 
             double dist = mComp.compare(mMetric, clust_A, clust_B);
 
             if (System.getenv().containsKey("DEBUG")) {
-               System.out.printf("'%s' -> '%s': %.04f (null: %s)\n",
-                clust_A.getName(), clust_B.getName(), clustDist.doubleValue(),
-                clustDist == null);
+               System.out.printf("'%s' -> '%s': %.04f\n", clust_A.getName(),
+                                 clust_B.getName(), dist);
             }
 
-            if (dist > maxSim && dist > mBetaThreshold) {
+            if (dist > maxSim && dist > mBeta) {
                closeClust_A = clust_A;
                closeClust_B = clust_B;
 
@@ -131,7 +131,7 @@ public class OHClustering<E extends BaseClusterable> extends
          if (closeClust_A == null || closeClust_B == null) {
             System.out.println("Closest clusters are null!\nclusterset: ");
       
-            for (Cluster clust_A : clusterSet) {
+            for (Cluster<E> clust_A : clusters) {
                System.out.printf("%s, ", clust_A.getName());
             }
       
@@ -141,7 +141,7 @@ public class OHClustering<E extends BaseClusterable> extends
 
       if (closeClust_A != null && closeClust_B != null) {
          @SuppressWarnings(value={"unchecked", "rawtypes"})
-         HCluster<E>[] closeClusters = new HCluster[] {closeClust_A, closeClust_B};
+         Cluster<E>[] closeClusters = new Cluster[] {closeClust_A, closeClust_B};
          return closeClusters;
       }
 
@@ -149,21 +149,21 @@ public class OHClustering<E extends BaseClusterable> extends
    }
 
    @Override
-   protected Set<HCluster<E>> combineClusters(HCluster<E>[] closeClusters,
-                                                   Set<HCluster<E>> clusters) {
-      Set<HCluster<E>> newClusters = super.combineClusters(closeClusters, clusters);
+   protected Set<Cluster<E>> combineClusters(Cluster<E>[] closeClusters,
+                                             Set<Cluster<E>> clusters) {
+      Set<Cluster<E>> newClusters = super.combineClusters(closeClusters, clusters);
 
       if (closeClusters.length != CLUSTER_PAIR_SIZE) {
          Logger.error(-1, "No clusters were combined");
       }
 
-      for (HCluster<E> cluster : newClusters) {
-         if (cluster.getName().equals(closeCluster[0].getName())) {
+      for (Cluster<E> cluster : newClusters) {
+         if (cluster.getName().equals(closeClusters[0].getName())) {
             continue;
          }
 
          Logger.debug(String.format("recomputing clusters '%s' and '%s'\n",
-                                    currClusterName, clusterName));
+                                    cluster.getName(), closeClusters[0].getName()));
    
          //TODO
          //mClusterMetric.recompute(closeClusters[0], cluster);

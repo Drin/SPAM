@@ -1,5 +1,6 @@
 package com.drin.java.ontology;
 
+import com.drin.java.clustering.BaseClusterable;
 import com.drin.java.clustering.Cluster;
 
 import java.util.List;
@@ -11,7 +12,6 @@ import java.util.LinkedHashMap;
 import java.util.HashSet;
 
 public class OntologyTerm {
-   private static final boolean DEBUG = false;
    private static final String TIME_OPTION_KEY = "TimeSensitive",
                                SCHEME_NAME_DELIMITER = "-";
    private String mName;
@@ -71,7 +71,7 @@ public class OntologyTerm {
          for (Map.Entry<String, OntologyTerm> partition : mPartitions.entrySet()) {
             int keyNdx = element.getName().indexOf(partition.getKey());
       
-            if (DEBUG) {
+            if (System.getenv().containsKey("DEBUG")) {
                System.out.printf("element '%s' has keyNdx %d(%s) but the end of its " +
                 "naming scheme is at %d(%s)\n", element.getName(), keyNdx, partition.getKey(),
                 element.getName().indexOf(SCHEME_NAME_DELIMITER), SCHEME_NAME_DELIMITER);
