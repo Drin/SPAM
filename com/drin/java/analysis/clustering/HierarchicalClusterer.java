@@ -1,7 +1,6 @@
 package com.drin.java.analysis.clustering;
 
 import com.drin.java.clustering.BaseClusterable;
-import com.drin.java.clustering.HCluster;
 import com.drin.java.clustering.Cluster;
 
 import com.drin.java.metrics.ClusterMetric;
@@ -15,27 +14,27 @@ import java.util.Set;
 import java.util.HashSet;
 
 public abstract class HierarchicalClusterer<E extends BaseClusterable> implements Clusterer<E> {
-   protected Set<HCluster<E>> mClusters;
-   protected Set<HCluster<E>> mResultClusters;
+   protected Set<Cluster<E>> mClusters;
+   protected Set<Cluster<E>> mResultClusters;
 
    protected ClusterMetric<E> mMetric;
    protected ClusterComparator<E> mComp;
 
-   public HierarchicalClusterer(Set<HCluster<E>> clusters,
+   public HierarchicalClusterer(Set<Cluster<E>> clusters,
                                 ClusterMetric<E> metric,
                                 ClusterComparator<E> comp) {
       mClusters = clusters;
       mMetric = metric;
       mComp = comp;
 
-      mResultClusters = new HashSet<HCluster<E>>();
+      mResultClusters = new HashSet<Cluster<E>>();
    }
 
-   protected Set<HCluster<E>> clusterDataSet(Set<HCluster<E>> clusterSet) {
-      Set<HCluster<E>> newClustSet = new HashSet<HCluster<E>>(clusterSet);
+   protected Set<Cluster<E>> clusterDataSet(Set<Cluster<E>> clusterSet) {
+      Set<Cluster<E>> newClustSet = new HashSet<Cluster<E>>(clusterSet);
 
       while (newClustSet.size() > 1) {
-         HCluster<E>[] closeClusters = findCloseClusters(newClustSet);
+         Cluster<E>[] closeClusters = findCloseClusters(newClustSet);
 
          if (closeClusters != null) {
             newClustSet = combineClusters(closeClusters, newClustSet);
@@ -49,7 +48,7 @@ public abstract class HierarchicalClusterer<E extends BaseClusterable> implement
 
    @Override
    public void clusterData() {
-      for (HCluster<E> cluster : clusterDataSet(mClusters)) {
+      for (Cluster<E> cluster : clusterDataSet(mClusters)) {
          mResultClusters.add(cluster);
       }
 
@@ -66,14 +65,14 @@ public abstract class HierarchicalClusterer<E extends BaseClusterable> implement
    public Set<Cluster<E>> getClusters() {
       Set<Cluster<E>> resultClusters = new HashSet<Cluster<E>>();
 
-      for (HCluster<E> cluster : mResultClusters) {
+      for (Cluster<E> cluster : mResultClusters) {
          resultClusters.add(cluster);
       }
 
       return resultClusters;
    }
 
-   protected abstract HCluster<E>[] findCloseClusters(Set<HCluster<E>> clusterSet);
-   protected abstract Set<HCluster<E>> combineClusters(HCluster<E>[] closeClusters,
-                                                       Set<HCluster<E>> clusterSet);
+   protected abstract Cluster<E>[] findCloseClusters(Set<Cluster<E>> clusterSet);
+   protected abstract Set<Cluster<E>> combineClusters(Cluster<E>[] closeClusters,
+                                                      Set<Cluster<E>> clusterSet);
 }

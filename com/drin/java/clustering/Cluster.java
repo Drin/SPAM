@@ -19,10 +19,11 @@ public abstract class Cluster<E extends BaseClusterable> extends BaseClusterable
       mDendogram = null;
    }
 
-   public int size() { return mElements.size(); }
-   public void add(E element) { mElements.add(element); }
-   public Set<E> getElements() { return mElements; }
    public Dendogram getDendogram() { return mDendogram; }
+   public Set<E> getElements() { return mElements; }
+   public void add(E element) { mElements.add(element); }
+   public abstract Cluster<E> join(Cluster<E> otherClust);
+   public int size() { return mElements.size(); }
 
    @Override
    public boolean equals(Object otherObj) {

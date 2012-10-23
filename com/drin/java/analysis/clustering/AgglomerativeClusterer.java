@@ -5,7 +5,7 @@ import java.lang.reflect.Array;
 import com.drin.java.analysis.clustering.Clusterer;
 
 import com.drin.java.clustering.BaseClusterable;
-import com.drin.java.clustering.HCluster;
+import com.drin.java.clustering.Cluster;
 
 import com.drin.java.metrics.ClusterMetric;
 import com.drin.java.metrics.ClusterComparator;
@@ -23,7 +23,7 @@ public class AgglomerativeClusterer<E extends BaseClusterable> extends
 
    private double mThreshold;
 
-   public AgglomerativeClusterer(Set<HCluster<E>> clusters, double thresh,
+   public AgglomerativeClusterer(Set<Cluster<E>> clusters, double thresh,
                                  ClusterMetric<E> metric,
                                  ClusterComparator<E> comp) {
       super(clusters, metric, comp);
@@ -31,12 +31,12 @@ public class AgglomerativeClusterer<E extends BaseClusterable> extends
    }
 
    @Override
-   protected HCluster<E>[] findCloseClusters(Set<HCluster<E>> clusterSet) {
+   protected Cluster<E>[] findCloseClusters(Set<Cluster<E>> clusterSet) {
       double minDist = Double.MAX_VALUE, maxSim = 0;
-      HCluster<E> closeClust_A = null, closeClust_B = null;
+      Cluster<E> closeClust_A = null, closeClust_B = null;
 
-      for (HCluster<E> clust_A : clusterSet) {
-         for (HCluster<E> clust_B : clusterSet) {
+      for (Cluster<E> clust_A : clusterSet) {
+         for (Cluster<E> clust_B : clusterSet) {
 
             if (clust_A.getName().equals(clust_B.getName())) { continue; }
 
@@ -63,7 +63,7 @@ public class AgglomerativeClusterer<E extends BaseClusterable> extends
 
       if (closeClust_A != null && closeClust_B != null) {
          @SuppressWarnings(value={"unchecked", "rawtypes"})
-         HCluster<E>[] closeClusters = new HCluster[] {closeClust_A, closeClust_B};
+         Cluster<E>[] closeClusters = new Cluster[] {closeClust_A, closeClust_B};
          return closeClusters;
       }
 
@@ -71,17 +71,17 @@ public class AgglomerativeClusterer<E extends BaseClusterable> extends
    }
 
    @Override
-   protected Set<HCluster<E>> combineClusters(HCluster<E>[] closeClusters,
-                                              Set<HCluster<E>> clusterSet) {
-      Set<HCluster<E>> newClusterSet = new HashSet<HCluster<E>>();
+   protected Set<Cluster<E>> combineClusters(Cluster<E>[] closeClusters,
+                                              Set<Cluster<E>> clusterSet) {
+      Set<Cluster<E>> newClusterSet = new HashSet<Cluster<E>>();
 
       if (closeClusters.length != CLUSTER_PAIR_SIZE) {
          Logger.error(-1, "Invalid cluster pair to be combined\n");
       }
 
-      for (HCluster<E> clust_A : clusterSet) {
+      for (Cluster<E> clust_A : clusterSet) {
          if (clust_A.getName().equals(closeClusters[0].getName())) {
-            HCluster<E> clust_B = closeClusters[1];
+            Cluster<E> clust_B = closeClusters[1];
             newClusterSet.add(clust_A.join(clust_B));
          }
 

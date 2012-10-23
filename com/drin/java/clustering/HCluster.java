@@ -18,8 +18,8 @@ public class HCluster<E extends BaseClusterable> extends Cluster<E> {
       mDendogram = new DendogramLeaf(elem);
    }
 
-   public HCluster<E> join(HCluster<E> otherClust) {
-      HCluster<E> newCluster = new HCluster<E>();
+   public Cluster<E> join(Cluster<E> otherClust) {
+      Cluster<E> newCluster = new Cluster<E>();
 
       newCluster.mElements.addAll(this.mElements);
       newCluster.mElements.addAll(otherClust.mElements);
