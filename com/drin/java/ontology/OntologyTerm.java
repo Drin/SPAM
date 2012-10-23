@@ -1,6 +1,5 @@
 package com.drin.java.ontology;
 
-import com.drin.java.clustering.BaseClusterable;
 import com.drin.java.clustering.Cluster;
 
 import java.util.List;
@@ -61,7 +60,7 @@ public class OntologyTerm {
             mPartitions.put(partition.getKey(), null);
          }
          else {
-            mPartitions.put(partition.getKey(), new OntologyTerm((OntologyTerm) partition.getValue()));
+            mPartitions.put(partition.getKey(), new OntologyTerm(partition.getValue()));
          }
       }
    }

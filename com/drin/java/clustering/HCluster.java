@@ -11,15 +11,14 @@ import com.drin.java.clustering.dendogram.DendogramLeaf;
 
 import java.util.Collection;
 
-@SuppressWarnings("rawtypes")
 public class HCluster extends Cluster {
 
    public HCluster(DataMetric<Cluster> metric) { super(metric); }
 
-   public HCluster(DataMetric<Cluster> metric, Clusterable elem) {
+   public HCluster(DataMetric<Cluster> metric, Clusterable<?> elem) {
       this(metric);
 
-      mData.add(elem);
+      mElements.add(elem);
       mDendogram = new DendogramLeaf(elem);
    }
 
@@ -27,11 +26,11 @@ public class HCluster extends Cluster {
       if (otherClust instanceof HCluster) {
          Cluster newCluster = new HCluster(this.mMetric);
 
-         Collection<Clusterable> otherData = ((HCluster)otherClust).mData;
+         Collection<Clusterable<?>> otherData = ((HCluster)otherClust).mElements;
          Dendogram otherDend = ((HCluster)otherClust).mDendogram;
 
-         newCluster.mData.addAll(this.mData);
-         newCluster.mData.addAll(otherData);
+         newCluster.mElements.addAll(this.mElements);
+         newCluster.mElements.addAll(otherData);
 
          newCluster.mDendogram = new DendogramNode(this.mDendogram, otherDend);
 

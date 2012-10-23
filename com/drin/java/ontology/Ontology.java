@@ -1,6 +1,5 @@
 package com.drin.java.ontology;
 
-import com.drin.java.clustering.BaseClusterable;
 import com.drin.java.clustering.Cluster;
 
 import com.drin.java.ontology.OntologyTerm;
