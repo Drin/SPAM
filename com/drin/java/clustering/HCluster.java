@@ -1,32 +1,43 @@
 package com.drin.java.clustering;
 
-import com.drin.java.clustering.BaseClusterable;
+import com.drin.java.clustering.Clusterable;
 import com.drin.java.clustering.Cluster;
 
+import com.drin.java.metrics.DataMetric;
+
+import com.drin.java.clustering.dendogram.Dendogram;
 import com.drin.java.clustering.dendogram.DendogramNode;
 import com.drin.java.clustering.dendogram.DendogramLeaf;
 
-import java.util.Set;
+import java.util.Collection;
 
-public class HCluster<E extends BaseClusterable> extends Cluster<E> {
+@SuppressWarnings("rawtypes")
+public class HCluster extends Cluster {
 
-   public HCluster() { super(); }
+   public HCluster(DataMetric<Cluster> metric) { super(metric); }
 
-   public HCluster(E elem) {
-      this();
-      mElements.add(elem);
+   public HCluster(DataMetric<Cluster> metric, Clusterable elem) {
+      this(metric);
+
+      mData.add(elem);
       mDendogram = new DendogramLeaf(elem);
    }
 
-   public Cluster<E> join(Cluster<E> otherClust) {
-      Cluster<E> newCluster = new Cluster<E>();
+   public Cluster join(Cluster otherClust) {
+      if (otherClust instanceof HCluster) {
+         Cluster newCluster = new HCluster(this.mMetric);
 
-      newCluster.mElements.addAll(this.mElements);
-      newCluster.mElements.addAll(otherClust.mElements);
+         Collection<Clusterable> otherData = ((HCluster)otherClust).mData;
+         Dendogram otherDend = ((HCluster)otherClust).mDendogram;
 
-      newCluster.mDendogram = new DendogramNode(this.mDendogram,
-                                                otherClust.mDendogram);
+         newCluster.mData.addAll(this.mData);
+         newCluster.mData.addAll(otherData);
 
-      return newCluster;
+         newCluster.mDendogram = new DendogramNode(this.mDendogram, otherDend);
+
+         return newCluster;
+      }
+
+      return null;
    }
 }

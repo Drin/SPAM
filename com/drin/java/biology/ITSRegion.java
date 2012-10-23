@@ -1,50 +1,59 @@
 package com.drin.java.biology;
 
-import com.drin.java.clustering.BaseClusterable;
+import com.drin.java.clustering.Clusterable;
 import com.drin.java.biology.Pyroprint;
+
+import com.drin.java.metrics.DataMetric;
+
+import com.drin.java.util.Logger;
 
 import java.util.Set;
 import java.util.HashSet;
 
-public class ITSRegion extends BaseClusterable {
-   private Set<Pyroprint> mPyroprints;
+public class ITSRegion extends Clusterable<Pyroprint> {
+   private DataMetric<ITSRegion> mMetric;
 
-   public ITSRegion(String regionName) {
-      super(regionName);
-
-      mPyroprints = new HashSet<Pyroprint>();
-   }
-
-   public Set<Pyroprint> getPyroprints() { return mPyroprints; }
-   public void add(Pyroprint pyro) { mPyroprints.add(pyro); }
-
-   public boolean isSimilarRegion(ITSRegion otherRegion) {
-      return mName.equals(otherRegion.mName);
+   public ITSRegion(String regionName, DataMetric<ITSRegion> metric) {
+      super(regionName, new HashSet<Pyroprint>());
+      mMetric = metric;
    }
 
    @Override
-   public boolean equals(Object otherObj) {
+   public double compareTo(Clusterable<Pyroprint> otherObj) {
       if (otherObj instanceof ITSRegion) {
-         ITSRegion otherRegion = (ITSRegion) otherObj;
+         mMetric.apply(this, (ITSRegion) otherObj);
 
-         if (this.isSimilarRegion(otherRegion) &&
-             mPyroprints.size() == otherRegion.mPyroprints.size()) {
+         double comparison = mMetric.result();
 
-            for (Pyroprint pyro : mPyroprints) {
-               //If this is true (otherRegion does not contain this pyroprint)
-               //then the regions do not contain the same pyroprints and are
-               //thus not the same region
-               if (!otherRegion.mPyroprints.contains(pyro)) { return false; }
-            }
+         Logger.debug(String.format("ITSRegionComparator:\n\tComparison " +
+                                    "between '%s' and '%s': %.04f\n",
+                                    this.getName(),
+                                    ((ITSRegion)otherObj).getName(),
+                                    comparison));
 
-            //If all pyroprints were contained in the other and the number of
-            //pyroprints in this region are the same as the number in
-            //otherRegion and both have the same region name (e.g. '16s-23s')
-            //then both regions are the same region
-            return true;
-         }
+         return comparison;
+      }
+
+      return -2;
+   }
+
+   @Override
+   public boolean isSimilar(Clusterable<Pyroprint> otherObj) {
+      if (otherObj instanceof ITSRegion) {
+         return this.getName().equals(((ITSRegion)otherObj).getName());
       }
 
       return false;
+   }
+
+   @Override
+   public String toString() {
+      String str = mName;
+
+      for (Pyroprint pyro : mData) {
+         str += String.format("\t%s\n", pyro);
+      }
+
+      return str;
    }
 }
