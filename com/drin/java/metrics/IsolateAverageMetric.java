@@ -3,24 +3,20 @@ package com.drin.java.metrics;
 import com.drin.java.biology.ITSRegion;
 import com.drin.java.biology.Isolate;
 
-import com.drin.java.metrics.ITSRegionComparator;
-import com.drin.java.metrics.ITSRegionMetric;
+import com.drin.java.metrics.DataMetric;
 
 import com.drin.java.util.Logger;
 
-import java.util.Map;
+import java.util.Collection;
+import java.util.Iterator;
 
-public class IsolateAverageMetric extends IsolateMetric {
+public class IsolateAverageMetric extends DataMetric<Isolate> {
+   private DataMetric<Isolate> mMetric;
 
-   public IsolateAverageMetric(ITSRegionComparator regionComp,
-                               ITSRegionMetric regionMetric) {
-      super(regionComp, regionMetric);
-   }
+   public IsolateAverageMetric(DataMetric<Isolate> metric) {
+      super();
 
-   public IsolateAverageMetric(ITSRegionComparator regionComp,
-                               ITSRegionMetric regionMetric_A,
-                               ITSRegionMetric regionMetric_B) {
-      super(regionComp, regionMetric_A, regionMetric_B);
+      mMetric = metric;
    }
 
    @Override
@@ -28,23 +24,31 @@ public class IsolateAverageMetric extends IsolateMetric {
       double total = 0;
       int regionCount = 0;
 
-      Map<String, ITSRegion> regionMap_A = elem_A.getRegions();
-      Map<String, ITSRegion> regionMap_B = elem_B.getRegions();
+      Iterator<ITSRegion> itr_A = elem_A.getData().iterator();
 
-      for (ITSRegionMetric metric : mRegionMetrics) {
-         ITSRegion region_A = regionMap_A.get(metric.getAppliedRegion().getName());
-         ITSRegion region_B = regionMap_B.get(metric.getAppliedRegion().getName());
+      while (itr_A.hasNext()) {
+         ITSRegion region_A = itr_A.next();
+         Iterator<ITSRegion> itr_B = elem_B.getData().iterator();
 
-         double comparison = mRegionComp.compare(metric, region_A, region_B);
+         while (itr_B.hasNext()) {
+            ITSRegion region_B = itr_B.next();
 
-         Logger.debug(String.format("Isolate Average Metric:\n\tregion " +
-                                    "comparison is %.04f for region %s",
-                                    comparison, region_A.getName()));
+            if (region_A.isSimilar(region_B)) {
+               double comparison = region_A.compareTo(region_B);
 
-         total += comparison;
-         regionCount++;
+               Logger.debug(String.format("Isolate Average Metric:\n\tregion " +
+                                          "comparison is %.04f for region %s",
+                                          comparison, region_A.getName()));
 
-         if (regionCount > 2) { setError(1); }
+               total += comparison;
+               regionCount++;
+
+               if (regionCount > 2) { setError(1); }
+
+               break;
+            }
+
+         }
       }
 
       if (regionCount > 0) {

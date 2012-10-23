@@ -1,5 +1,7 @@
 package com.drin.java.util;
 
+import com.drin.java.util.InvalidPropertyException;
+
 import java.io.File;
 
 import java.util.Scanner;
@@ -8,12 +10,13 @@ import java.util.HashMap;
 
 @SuppressWarnings("serial")
 public class Configuration {
+   private static final String KEY_VAL_DELIM = "=";
    private static final int PROP_KEY = 0,
                             PROP_VAL = 1;
 
    private static Map<String, Object> mConfigMap = new HashMap<String, Object>();
 
-   public static void loadConfiguration(File propFile) {
+   public static void loadConfiguration(File propFile) throws InvalidPropertyException {
       Scanner propReader = null;
 
       try { propReader = new Scanner(propFile); }
@@ -22,7 +25,9 @@ public class Configuration {
       }
 
       while (propReader.hasNextLine()) {
-         String[] property = propReader.nextLine().split("=");
+         String[] property = propReader.nextLine().split(KEY_VAL_DELIM);
+
+         if (property.length < 2) { continue; }
 
          validateProp(property);
 
@@ -30,15 +35,31 @@ public class Configuration {
       }
    }
 
-   public static boolean getBoolean(String propName) {
+   public static String getString(String propName) {
+      if (mConfigMap.containsKey(propName)) {
+         return String.valueOf(mConfigMap.get(propName));
+      }
+
+      return null;
+   }
+
+   public static Boolean getBoolean(String propName) {
       if (mConfigMap.containsKey(propName)) {
          return Boolean.valueOf(String.valueOf(mConfigMap.get(propName)));
       }
-      //throw new InvalidPropertyException(propName);
-      return false;
+
+      return null;
    }
 
-   private static void validateProp(String[] property) {
+   public static Integer getInt(String propName) {
+      if (mConfigMap.containsKey(propName)) {
+         return Integer.valueOf(String.valueOf(mConfigMap.get(propName)));
+      }
+
+      return null;
+   }
+
+   private static void validateProp(String[] property) throws InvalidPropertyException {
       PROP_STATUS status = PROP_STATUS.VALID;
 
       if (property.length != 2) {
@@ -47,16 +68,21 @@ public class Configuration {
 
       switch (status) {
          case VALID:
-            break;
+            return;
 
          case INV_LEN:
-            System.err.printf("Invalid property format: should be <name>:<value>\n");
-            System.exit(1);
-            break;
+            String err = String.format("Invalid property format: should be " +
+                                       "<name>%s<value>", KEY_VAL_DELIM);
+            throw new InvalidPropertyException(err);
 
          default:
-            System.err.printf("Unknown property validation status\n");
-            System.exit(1);
+            throw new InvalidPropertyException("Unknown property");
+      }
+   }
+
+   private static void debug() {
+      for (Map.Entry<String, Object> prop : mConfigMap.entrySet()) {
+         System.out.printf("%s => %s\n", prop.getKey(), prop.getValue());
       }
    }
 
@@ -64,9 +90,17 @@ public class Configuration {
       VALID, INV_LEN, INV_VAL;
    }
 
-   public class InvalidPropertyException extends Exception {
-      public InvalidPropertyException(String property) {
-         super(String.format("Invalid Property '%s'\n", property));
+   public static void main(String[] args) {
+      try {
+         if (args.length > 0) {
+            Configuration.loadConfiguration(new File(args[0]));
+         }
+         else { Configuration.loadConfiguration(new File("props-standard.cfg")); }
+
+         Configuration.debug();
+      }
+      catch(InvalidPropertyException err) {
+         System.out.println(err);
       }
    }
 }
