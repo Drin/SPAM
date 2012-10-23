@@ -3,29 +3,26 @@ package com.drin.java.metrics;
 import com.drin.java.biology.ITSRegion;
 import com.drin.java.biology.Pyroprint;
 
-import com.drin.java.metrics.ITSRegionMetric;
-import com.drin.java.metrics.PyroprintComparator;
-import com.drin.java.metrics.PyroprintMetric;
+import com.drin.java.metrics.DataMetric;
 
+import com.drin.java.util.Configuration;
 import com.drin.java.util.Logger;
+import com.drin.java.util.InvalidPropertyException;
 
-public class ITSRegionAverageMetric extends ITSRegionMetric {
-   private static final boolean TRANSFORM = false;
+public class ITSRegionAverageMetric extends DataMetric<ITSRegion> {
+   private static final String TRANSFORM_KEY = "TransformCorrelation";
+
+   private Boolean mTransform;
    private int mPairCount;
+   private double mAlpha, mBeta;
 
-   public ITSRegionAverageMetric(double alpha, double beta,
-                                 ITSRegion appliedRegion,
-                                 PyroprintComparator pyroComp,
-                                 PyroprintMetric pyroMetric) {
-      super(alpha, beta, appliedRegion, pyroComp, pyroMetric);
+   public ITSRegionAverageMetric(double alpha, double beta) {
       this.reset();
-   }
 
-   public ITSRegionAverageMetric(ITSRegion appliedRegion,
-                                 PyroprintComparator pyroComp,
-                                 PyroprintMetric pyroMetric) {
-      super(appliedRegion, pyroComp, pyroMetric);
-      this.reset();
+      mAlpha = alpha;
+      mBeta = beta;
+
+      mTransform = Configuration.getBoolean(TRANSFORM_KEY);
    }
 
    @Override
@@ -36,13 +33,11 @@ public class ITSRegionAverageMetric extends ITSRegionMetric {
 
    @Override
    public void apply(ITSRegion elem_A, ITSRegion elem_B) {
-      if (elem_A.isSimilarRegion(elem_B)) {
-         for (Pyroprint pyro_A : elem_A.getPyroprints()) {
-            for (Pyroprint pyro_B : elem_B.getPyroprints()) {
-               double result = mPyroComp.compare(mPyroMetric, pyro_A, pyro_B);
+      if (elem_A.isSimilar(elem_B)) {
+         for (Pyroprint pyro_A : elem_A.getData()) {
+            for (Pyroprint pyro_B : elem_B.getData()) {
+               double result = pyro_A.compareTo(pyro_B);
 
-               Logger.error(mPyroMetric.getError(),
-                            "Error computing ITSRegion metric\n");
                Logger.debug(String.format("ITSRegionAverageMetric:\n\t" +
                                           "comparison between '%s' and " +
                                           "'%s': %.04f", pyro_A.getName(),
@@ -57,15 +52,27 @@ public class ITSRegionAverageMetric extends ITSRegionMetric {
 
    @Override
    public double result() {
-      double result = mResult/mPairCount;
+      double result = mResult;
 
-      Logger.debug(String.format("ITSRegionAverageMetric %s: %.04f/%d",
-                                 (TRANSFORM ? "(t)" : "(not t)"),
-                                 mResult, mPairCount));
+      if (mPairCount <= 0) { setError(-1); }
+      else { result /= mPairCount; }
 
-      if (TRANSFORM) { result = transformResult(result); }
+      if (mTransform != null) {
+         Logger.debug(String.format("ITSRegionAverageMetric %s: %.04f/%d",
+                                    (mTransform ? "(t)" : "(not t)"),
+                                    mResult, mPairCount));
+
+         if (mTransform) { result = transformResult(result); }
+      }
+      else { Logger.error(-1, "Invalid Transform Property"); }
 
       reset();
+      return result;
+   }
+
+   private double transformResult(double result) {
+      if (result > mAlpha) { return 1; }
+      else if (result < mBeta) { return 0; }
       return result;
    }
 }
