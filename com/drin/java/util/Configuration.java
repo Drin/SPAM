@@ -27,7 +27,7 @@ public class Configuration {
       while (propReader.hasNextLine()) {
          String[] property = propReader.nextLine().split(KEY_VAL_DELIM);
 
-         if (property.length < 2) { continue; }
+         if (property.length < 2 || property[0].startsWith("#")) { continue; }
 
          validateProp(property);
 

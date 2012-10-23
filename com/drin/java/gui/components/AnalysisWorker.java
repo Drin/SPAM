@@ -1,10 +1,9 @@
 package com.drin.java.gui.components;
 
-import com.drin.java.output.ClusterWriter;
-
-import com.drin.java.types.IsolateCluster;
+import com.drin.java.clustering.Cluster;
 import com.drin.java.analysis.clustering.Clusterer;
-import com.drin.java.analysis.clustering.ClusterAnalyzer;
+
+import com.drin.java.output.ClusterWriter;
 
 import javax.swing.SwingWorker;
 import javax.swing.JTextArea;
@@ -15,17 +14,13 @@ import java.util.List;
 public class AnalysisWorker extends SwingWorker<String[], Integer> {
    private static final int DENDOGRAM_NDX = 0,
                             ISOLATE_LIST_NDX = 1;
-   private static final String PRETTY_PREFIX = "\t";
-   private Set<IsolateCluster> mRecentResults;
-   private ClusterAnalyzer mAnalyzer;
+
    private Clusterer mClusterer;
    private JTextArea mCanvas;
 
    private String mOutFile;
 
-   public AnalysisWorker(ClusterAnalyzer analyzer, Clusterer clusterer, JTextArea resultCanvas) {
-      mRecentResults = null;
-      mAnalyzer = analyzer;
+   public AnalysisWorker(Clusterer clusterer, JTextArea resultCanvas) {
       mClusterer = clusterer;
       mCanvas = resultCanvas;
       mOutFile = null;
@@ -37,11 +32,16 @@ public class AnalysisWorker extends SwingWorker<String[], Integer> {
 
    @Override
    public String[] doInBackground() {
-      System.out.println("working in background...");
       mClusterer.clusterData();
 
-      System.out.println("finished working in background!");
-      return mClusterer.getResults(mAnalyzer);
+      String[] clusters = new String[mClusterer.getClusters().size()];
+
+      int clustNdx = 0;
+      for (Cluster cluster : mClusterer.getClusters()) {
+         clusters[clustNdx++] = cluster.toString();
+      }
+
+      return clusters;
    }
 
    private void writeElements(String elementStr) {

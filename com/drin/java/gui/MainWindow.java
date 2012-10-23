@@ -32,6 +32,7 @@ public class MainWindow extends JFrame {
 
    private static MainWindow mMainFrame = null;
    private static JTextArea mOutputCanvas = null;
+
    private JMenuBar mMenuBar;
 
    public static MainWindow getMainFrame() {
@@ -57,7 +58,7 @@ public class MainWindow extends JFrame {
 
       mMenuBar.add(initFileMenu());
       mMenuBar.add(initAnalysisMenu());
-      mMenuBar.add(initClusterMenu());
+
       mMenuBar.add(initDendogramMenu());
       mMenuBar.add(initLibMenu());
       mMenuBar.add(initPyroMenu());
@@ -102,28 +103,6 @@ public class MainWindow extends JFrame {
    private JMenu initAnalysisMenu() {
       JMenu analysisMenu = new JMenu("Analysis");
 
-      JMenuItem clusterDataItem = new JMenuItem("Cluster Data");
-
-      clusterDataItem.addActionListener(new ActionListener() {
-         public void actionPerformed(java.awt.event.ActionEvent actionEvent) {
-            ClusterParameterDialog clusterDialog = new ClusterParameterDialog(mMainFrame, "Cluster Parameters");
-            clusterDialog.init();
-            clusterDialog.setVisible(true);
-         }
-      });
-
-
-      JMenuItem clusterDataItem2 = new JMenuItem("Cluster Legacy Data");
-
-      clusterDataItem2.addActionListener(new ActionListener() {
-         public void actionPerformed(java.awt.event.ActionEvent actionEvent) {
-            ClusterDialog clusterDialog = new ClusterDialog(mMainFrame, "Cluster Parameters");
-            clusterDialog.init();
-            clusterDialog.setVisible(true);
-         }
-      });
-
-
       JMenu strainIdentifySubMenu = new JMenu("Identify strains from...");
 
       JMenuItem cplopDatabaseItem = new JMenuItem("CPLOP database");
@@ -135,25 +114,22 @@ public class MainWindow extends JFrame {
          }
       });
 
+      JMenuItem clusterDataItem = new JMenuItem("CSV File");
+
+      clusterDataItem.addActionListener(new ActionListener() {
+         public void actionPerformed(java.awt.event.ActionEvent actionEvent) {
+            ClusterFileDialog clusterDialog = new ClusterFileDialog(mMainFrame, "Cluster Input Data");
+            clusterDialog.init();
+            clusterDialog.setVisible(true);
+         }
+      });
+
       strainIdentifySubMenu.add(cplopDatabaseItem);
+      strainIdentifySubMenu.add(clusterDataItem);
+
       analysisMenu.add(strainIdentifySubMenu);
-      analysisMenu.add(clusterDataItem);
-      analysisMenu.add(clusterDataItem2);
 
       return analysisMenu;
-   }
-
-   private JMenu initClusterMenu() {
-      JMenuItem clusterSingle = new JMenuItem("E.coli data file");
-      /*
-      ClusterSingleListener clustSingleListener = new ClusterSingleListener(this);
-      clusterSingle.addActionListener(clustSingleListener);
-      */
-
-      JMenu clusterMenu = new JMenu("Cluster");
-      clusterMenu.add(clusterSingle);
-
-      return clusterMenu;
    }
 
    private JMenu initDendogramMenu() {

@@ -1,39 +1,25 @@
 package com.drin.java.metrics;
 
-import com.drin.java.clustering.BaseClusterable;
+import com.drin.java.clustering.Clusterable;
 import com.drin.java.clustering.Cluster;
 
-import com.drin.java.metrics.DataComparator;
 import com.drin.java.metrics.DataMetric;
-import com.drin.java.metrics.ClusterMetric;
 
 import com.drin.java.util.Logger;
 
-public class ClusterAverageMetric<E extends BaseClusterable> extends ClusterMetric<E> {
+public class ClusterAverageMetric extends DataMetric<Cluster> {
    private int mLinkCount;
 
-   public ClusterAverageMetric(DataComparator<DataMetric<E>, E> dataComparator,
-                               DataMetric<E> dataMetric) {
-      super(dataComparator, dataMetric);
-
+   public ClusterAverageMetric() {
       this.reset();
    }
 
    @Override
-   public void apply(Cluster<E> data_A, Cluster<E> data_B) {
-      for (E elem_A : data_A.getElements()) {
-         for (E elem_B : data_B.getElements()) {
-            mResult += mComparator.compare(mDataMetric, elem_A, elem_B);
+   public void apply(Cluster data_A, Cluster data_B) {
+      for (Clusterable<?> elem_A : data_A.getElements()) {
+         for (Clusterable<?> elem_B : data_B.getElements()) {
+            mResult += elem_A.compareTo(elem_B);
             mLinkCount++;
-
-            if (mDataMetric.getError() != 0) {
-               setError(-1);
-            }
-
-            Logger.error(mDataMetric.getError(),
-                         String.format("Error computing metric between " +
-                                       "elements %s and %s\n", elem_A.getName(),
-                                       elem_B.getName()));
          }
       }
    }
@@ -46,9 +32,10 @@ public class ClusterAverageMetric<E extends BaseClusterable> extends ClusterMetr
 
    @Override
    public double result() {
-      double result = mResult / mLinkCount;
+      double result = mResult;
 
-      Logger.error(getError(), "Error computing ClusterAverageMetric");
+      if (mLinkCount <= 0) { setError(-1); }
+      else { result /= mLinkCount; }
 
       this.reset();
       return result;

@@ -1,20 +1,19 @@
 package com.drin.java.gui.dialogs;
 
-import com.drin.java.types.Cluster;
-import com.drin.java.types.DataObject;
-import com.drin.java.types.FeatureTree;
-import com.drin.java.types.Isolate;
-import com.drin.java.types.IsolateCluster;
-import com.drin.java.types.ITSRegion;
-import com.drin.java.parsers.FeatureParser;
-import com.drin.java.metrics.ClusterComparator;
-import com.drin.java.metrics.ClusterMatrixMetric;
-import com.drin.java.metrics.DataComparator;
+import com.drin.java.biology.Pyroprint;
+import com.drin.java.biology.ITSRegion;
+import com.drin.java.biology.Isolate;
+
+import com.drin.java.clustering.Clusterable;
+import com.drin.java.clustering.Cluster;
+
+import com.drin.java.ontology.Ontology;
+import com.drin.java.ontology.OntologyParser;
+
 import com.drin.java.metrics.DataMetric;
-import com.drin.java.metrics.IsolateMultiMatrixMetric;
-import com.drin.java.analysis.clustering.ClusterAnalyzer;
+
 import com.drin.java.analysis.clustering.HierarchicalClusterer;
-import com.drin.java.analysis.clustering.PartitionedAgglomerative;
+import com.drin.java.analysis.clustering.OHClustering;
 
 import com.drin.java.gui.MainWindow;
 import com.drin.java.gui.components.AnalysisWorker;
@@ -59,49 +58,15 @@ import javax.swing.BoxLayout;
 import javax.swing.JComboBox;
 
 public class ClusterDialog extends JDialog {
-   private static final boolean DEBUG = false;
-
    private final int DIALOG_HEIGHT = 550, DIALOG_WIDTH = 415;
-   private String recentlyAccessedDir = "";
+
+   private String mRecentDir = "";
    private Container mPane = null, mOwner = null;
-   private Map<File, String> dataFileMap;
 
-   private ButtonGroup firstDataRegion, secondDataRegion;
-   private JComboBox clusterRestrictions;
-   private JTextField firstDataFile, secondDataFile, outputDataFile, dataStructureDataFile;
-   private JTextField firstDataUpperThreshold, secondDataUpperThreshold;
-   private JTextField firstDataLowerThreshold, secondDataLowerThreshold;
-
-   public ClusterDialog() {
-      super();
-
-      this.setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
-      this.setResizable(false);
-      this.setLocationRelativeTo(null);
-
-      mPane = this.getContentPane();
-      mPane.setLayout(new BoxLayout(mPane, BoxLayout.Y_AXIS));
-      mPane.setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
-
-      setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-
-      dataFileMap = new HashMap<File, String>();
-      firstDataRegion = newRadioSelection();
-      secondDataRegion = newRadioSelection();
-
-      firstDataFile = new JTextField(20);
-      secondDataFile = new JTextField(20);
-      outputDataFile = new JTextField(20);
-      dataStructureDataFile = new JTextField(20);
-
-      firstDataUpperThreshold = new JTextField("99.7", 20);
-      firstDataLowerThreshold = new JTextField("99.0", 20);
-
-      secondDataUpperThreshold = new JTextField("99.7", 20);
-      secondDataLowerThreshold = new JTextField("99.0", 20);
-
-      clusterRestrictions = new JComboBox(new String[] {"structure", "similarity"});
-   }
+   private ButtonGroup mFirstRegionSel, mSecondRegionSel;
+   private JTextField mFirstInput, mSecondInput, mOutFile, mOntology;
+   private JTextField mFirstAlpha, mSecondAlpha;
+   private JTextField mFirstBeta, mSecondBeta;
 
    public ClusterDialog(Frame owner, String title) {
       super(owner, title);
@@ -118,26 +83,23 @@ public class ClusterDialog extends JDialog {
 
       setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 
-      dataFileMap = new HashMap<File, String>();
-      firstDataRegion = newRadioSelection();
-      secondDataRegion = newRadioSelection();
+      mFirstRegionSel = newRadioSelection();
+      mSecondRegionSel = newRadioSelection();
 
-      firstDataFile = new JTextField(20);
-      secondDataFile = new JTextField(20);
-      outputDataFile = new JTextField(20);
-      dataStructureDataFile = new JTextField(20);
+      mFirstInput = new JTextField(20);
+      mSecondInput = new JTextField(20);
+      mOutFile = new JTextField(20);
+      mOntology = new JTextField(20);
 
-      firstDataUpperThreshold = new JTextField("99.7", 20);
-      firstDataLowerThreshold = new JTextField("99.0", 20);
+      mFirstAlpha = new JTextField("99.7", 20);
+      mFirstBeta = new JTextField("99.0", 20);
 
-      secondDataUpperThreshold = new JTextField("99.7", 20);
-      secondDataLowerThreshold = new JTextField("99.0", 20);
-
-      clusterRestrictions = new JComboBox(new String[] {"structure", "similarity"});
+      mSecondAlpha = new JTextField("99.7", 20);
+      mSecondBeta = new JTextField("99.0", 20);
    }
 
    public static void main(String[] args) {
-      ClusterDialog dialog = new ClusterDialog();
+      ClusterDialog dialog = new ClusterDialog(null, "Cluster Dialog");
 
       dialog.init();
       dialog.setVisible(true);
@@ -152,45 +114,26 @@ public class ClusterDialog extends JDialog {
       labelField2.setLayout(new FlowLayout(FlowLayout.LEADING));
       labelField2.add(new JLabel("Input Dataset"));
 
-      //mPane.add(newGlobalThreshold(globalThreshold));
       
-      mPane.add(newHeaderField(outputDataFile, clusterRestrictions, dataStructureDataFile));
-      //mPane.add(newOutputNameField(outputDataFile));
+      mPane.add(newHeaderField(mOutFile, mOntology));
 
       mPane.add(labelField);
       mPane.add(new JSeparator());
-      mPane.add(newFileField(firstDataRegion, firstDataFile, firstDataUpperThreshold, firstDataLowerThreshold, outputDataFile));
+      mPane.add(newFileField(mFirstRegionSel, mFirstInput, mFirstAlpha, mFirstBeta, mOutFile));
 
       mPane.add(labelField2);
       mPane.add(new JSeparator());
-      mPane.add(newFileField(secondDataRegion, secondDataFile, secondDataUpperThreshold, secondDataLowerThreshold, outputDataFile));
+      mPane.add(newFileField(mSecondRegionSel, mSecondInput, mSecondAlpha, mSecondBeta, mOutFile));
 
       mPane.add(controls());
 
       mPane.validate();
    }
 
-   /*
-   public JPanel newGlobalThreshold(JTextField thresholdText) {
-      JPanel thresholdField = new JPanel();
+   public JPanel newHeaderField(JTextField outFileField, JTextField ontologyField) {
 
-      //thresholdField.setLayout(new BoxLayout(thresholdField, BoxLayout.X_AXIS));
-      thresholdField.setLayout(new FlowLayout(FlowLayout.LEADING));
-      thresholdField.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
-
-      thresholdField.add(new JLabel("Clustering Threshold:"));
-      thresholdField.add(thresholdText);
-      thresholdField.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-      return thresholdField;
-   }
-   */
-
-   public JPanel newHeaderField(JTextField outputDataFileField,
-    JComboBox restrictionType, JTextField structureFileField) {
-
-      JPanel outputNameField = new JPanel(), preferenceField = new JPanel(),
-             organizationField = new JPanel(), headerLayout = new JPanel();
+      JPanel outputNameField = new JPanel(), organizationField = new JPanel(),
+             headerLayout = new JPanel();
 
       headerLayout.setLayout(new BoxLayout(headerLayout, BoxLayout.Y_AXIS));
       headerLayout.setAlignmentY(Component.CENTER_ALIGNMENT);
@@ -199,26 +142,18 @@ public class ClusterDialog extends JDialog {
       outputNameField.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
 
       outputNameField.add(new JLabel("Output file name:"));
-      outputNameField.add(outputDataFileField);
+      outputNameField.add(outFileField);
       outputNameField.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-      preferenceField.setLayout(new FlowLayout(FlowLayout.LEADING));
-      preferenceField.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
-
-      preferenceField.add(new JLabel("Cluster distance preference:"));
-      preferenceField.add(restrictionType);
-      preferenceField.setAlignmentX(Component.CENTER_ALIGNMENT);
 
       organizationField.setLayout(new FlowLayout(FlowLayout.LEADING));
       organizationField.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
 
       organizationField.add(new JLabel("Experimental Organization"));
-      organizationField.add(structureFileField);
+      organizationField.add(ontologyField);
       organizationField.setAlignmentX(Component.CENTER_ALIGNMENT);
-      organizationField.add(newFileBrowseButton(structureFileField, null));
+      organizationField.add(newFileBrowseButton(ontologyField, null));
 
       headerLayout.add(outputNameField);
-      headerLayout.add(preferenceField);
       headerLayout.add(organizationField);
 
       return headerLayout;
@@ -342,147 +277,124 @@ public class ClusterDialog extends JDialog {
             /*
              * preparing arguments for clusterer
              */
+            if (mOntology.getText().equals("") || mFirstAlpha.getText().equals("") ||
+                mFirstBeta.getText().equals("") || mSecondAlpha.getText().equals("") ||
+                mSecondBeta.getText().equals("")) {
+               JOptionPane.showMessageDialog(mOwner, "Invalid input",
+                                             "Invalid Input",
+                                             JOptionPane.ERROR_MESSAGE);
+               return;
+            }
 
-            IsolateMultiMatrixMetric isoMetric = new IsolateMultiMatrixMetric();
-            FeatureTree organizationTree = null;
             Set<Cluster> clusterSet = new HashSet<Cluster>();
+            Ontology ontology = Ontology.createOntology(mOntology.getText());
 
-            if (!dataStructureDataFile.getText().equals("")) {
-               organizationTree = FeatureTree.constructOrganization(dataStructureDataFile.getText());
 
-               if (DEBUG) { System.out.printf("constructed feature tree:\n%s\n", organizationTree); }
+            double firstAlpha = Double.parseDouble(mFirstAlpha.getText());
+            double firstBeta = Double.parseDouble(mFirstBeta.getText());
+
+            double secondAlpha = Double.parseDouble(mSecondAlpha.getText());
+            double secondBeta = Double.parseDouble(mSecondBeta.getText());
+               
+            JRadioButton firstRegion = null, secondRegion = null;
+            Enumeration regionSelection = mFirstRegionSel.getElements();
+
+            while (regionSelection.hasMoreElements()) {
+               JRadioButton tmpRadio = (JRadioButton) regionSelection.nextElement();
+
+               if (tmpRadio.isSelected()) {
+                  firstRegion = tmpRadio;
+               }
             }
 
-            try {
-               double firstUpperThreshold = Double.parseDouble(firstDataUpperThreshold.getText());
-               double firstLowerThreshold = Double.parseDouble(firstDataLowerThreshold.getText());
+            regionSelection = mSecondRegionSel.getElements();
 
-               double secondUpperThreshold = Double.parseDouble(secondDataUpperThreshold.getText());
-               double secondLowerThreshold = Double.parseDouble(secondDataLowerThreshold.getText());
-               
-               JRadioButton firstRegion = null, secondRegion = null;
-               Enumeration regionSelection = firstDataRegion.getElements();
+            while (regionSelection.hasMoreElements()) {
+               JRadioButton tmpRadio = (JRadioButton) regionSelection.nextElement();
 
-               while (regionSelection.hasMoreElements()) {
-                  JRadioButton tmpRadio = (JRadioButton) regionSelection.nextElement();
-
-                  if (tmpRadio.isSelected()) {
-                     firstRegion = tmpRadio;
-                  }
+               if (tmpRadio.isSelected()) {
+                  secondRegion = tmpRadio;
                }
+            }
 
-               regionSelection = secondDataRegion.getElements();
-
-               while (regionSelection.hasMoreElements()) {
-                  JRadioButton tmpRadio = (JRadioButton) regionSelection.nextElement();
-
-                  if (tmpRadio.isSelected()) {
-                     secondRegion = tmpRadio;
-                  }
-               }
-
-               if (firstRegion != null && secondRegion != null &&
+            if (firstRegion != null && secondRegion != null &&
                 firstRegion.getText().equals(secondRegion.getText())) {
-                  JOptionPane.showMessageDialog(mOwner,
-                   "Invalid regions selected: Please select different regions for each input data",
-                   "Invalid Options", JOptionPane.ERROR_MESSAGE);
-                  return;
-               }
-               if (firstDataFile.getText().equals(secondDataFile.getText())) {
-                  int selectedOption = JOptionPane.showConfirmDialog(mOwner,
-                   "Same file input for both regions. Are you sure?",
-                   "Duplicate input confirmation", JOptionPane.YES_NO_OPTION);
-
-                  if (selectedOption == JOptionPane.NO_OPTION) {
-                     JOptionPane.showMessageDialog(mOwner,
-                      "Clustering cancelled",
-                      "Cancelled", JOptionPane.INFORMATION_MESSAGE);
-                     return;
-                  }
-               }
-               
-               if (firstUpperThreshold < 1 || secondUpperThreshold < 1) {
-                  JOptionPane.showMessageDialog(mOwner,
-                   "Invalid threshold values",
-                   "Invalid Options", JOptionPane.ERROR_MESSAGE);
-                  return;
-               }
-
-               if (!firstDataFile.getText().equals("") && firstRegion != null) {
-                  MatrixParser parser = new MatrixParser(firstDataFile.getText());
-
-                  ITSRegion region = new ITSRegion(firstRegion.getText(),
-                   firstUpperThreshold/100, firstLowerThreshold/100);
-
-                  Map<String, Map<String, Double>> correlations = parser.parseData();
-
-                  //Only has to be done for each unique isolate id (aka once
-                  //per isolate dataset, not per region)
-                  for (String isoId : correlations.keySet()) {
-                     Cluster element = new IsolateCluster(isoId, new Isolate(isoId));
-                     clusterSet.add(element);
-                     if (organizationTree != null) { organizationTree.addData(element); }
-                  }
-
-                  if (DEBUG) { System.out.printf("constructed feature tree with data:\n%s\n", organizationTree); }
-
-                  isoMetric.addIsolateMatrix(region, correlations);
-                  isoMetric.addThreshold(region, region.getThreshold());
-               }
-               else if (!firstDataFile.getText().equals("") || firstRegion != null) {
-                  JOptionPane.showMessageDialog(mOwner,
-                   "Invalid parameters for first data input",
-                   "Invalid Options", JOptionPane.ERROR_MESSAGE);
-
-                  return;
-               }
-
-               if (secondRegion != null) {
-                  if (!secondDataFile.getText().equals("") && secondRegion != null) {
-                     MatrixParser parser = new MatrixParser(secondDataFile.getText());
-                     ITSRegion region = new ITSRegion(secondRegion.getText(),
-                      secondUpperThreshold/100, secondLowerThreshold/100);
-
-                     isoMetric.addIsolateMatrix(region, parser.parseData());
-                     isoMetric.addThreshold(region, region.getThreshold());
-                  }
-                  else if (!secondDataFile.getText().equals("") || secondRegion != null) {
-                     JOptionPane.showMessageDialog(mOwner,
-                      "Invalid parameters for second data input",
-                      "Invalid Options", JOptionPane.ERROR_MESSAGE);
-
-                     return;
-                  }
-               }
-            }
-            catch (NullPointerException emptyValErr) {
-               //System.err.println("No file was selected");
                JOptionPane.showMessageDialog(mOwner,
-                "No file was selected",
-                "Invalid File", JOptionPane.ERROR_MESSAGE);
+                "Please select different regions for each input data",
+                "Invalid Regions Selected", JOptionPane.ERROR_MESSAGE);
+               return;
+            }
+            if (mFirstInput.getText().equals(mSecondInput.getText())) {
+               int selectedOption = JOptionPane.showConfirmDialog(mOwner,
+                "Same file input for both regions. Are you sure?",
+                "Duplicate input confirmation", JOptionPane.YES_NO_OPTION);
 
-               emptyValErr.printStackTrace();
+               if (selectedOption == JOptionPane.NO_OPTION) {
+                  JOptionPane.showMessageDialog(mOwner,
+                   "Clustering cancelled",
+                   "Cancelled", JOptionPane.INFORMATION_MESSAGE);
+                  return;
+               }
+            }
+               
+            if (firstAlpha < 1 || secondAlpha < 1) {
+               JOptionPane.showMessageDialog(mOwner,
+                "Invalid threshold values",
+                "Invalid Options", JOptionPane.ERROR_MESSAGE);
+               return;
             }
 
-            System.out.println("preparing to cluster...");
+            if (!mFirstInput.getText().equals("")) {
+               MatrixParser parser = new MatrixParser(mFirstInput.getText());
 
-            DataComparator<Cluster<DataObject>, DataMetric<DataObject>> clusterComp = new ClusterComparator();
-            ClusterMatrixMetric clusterMetric = new ClusterMatrixMetric();
-            clusterMetric.buildMatrix(clusterComp, isoMetric, clusterSet);
-            HierarchicalClusterer clusterer = null;
-            
-            if (organizationTree != null) {
-               clusterer = new PartitionedAgglomerative(organizationTree, clusterMetric);
+               ITSRegion region = new ITSRegion(firstRegion.getText(),
+                                  new ITSRegionAverageMetric(firstAlpha/100,
+                                                             firstBeta/100));
+
+               Map<String, Map<String, Double>> correlations = parser.parseData();
+
+               //Only has to be done for each unique isolate id (aka once
+               //per isolate dataset, not per region)
+               for (String isoId : correlations.keySet()) {
+                  Cluster element = new IsolateCluster(isoId, new Isolate(isoId));
+                  clusterSet.add(element);
+                  if (ontology != null) { ontology.addData(element); }
+               }
+
             }
-            else { clusterer = new PartitionedAgglomerative(clusterSet, clusterMetric); }
+            else if (mFirstInput.getText().equals("")) {
+               JOptionPane.showMessageDialog(mOwner,
+                "Invalid parameters for first data input",
+                "Invalid Options", JOptionPane.ERROR_MESSAGE);
 
-            ClusterAnalyzer analyzer = new ClusterAnalyzer(isoMetric);
-            //HClustering clusterer = new HClustering(args.size());
+               return;
+            }
+
+            if (secondRegion != null) {
+               if (!mSecondInput.getText().equals("")) {
+                  ITSRegion region = new ITSRegion(secondRegion.getText(),
+                                     new ITSRegionAverageMetric(secondAlpha/100,
+                                                                secondBeta/100));
+               }
+               else if (mSecondInput.getText().equals("")) {
+                  JOptionPane.showMessageDialog(mOwner,
+                   "Invalid parameters for second data input",
+                   "Invalid Options", JOptionPane.ERROR_MESSAGE);
+
+                  return;
+               }
+            }
+
+            if (ontology != null) {
+               clusterer = new OHClustering(ontology, clusterMetric);
+            }
+            else { clusterer = new OHClustering(clusterSet, clusterMetric); }
+
             if (clusterer != null) {
                AnalysisWorker worker = new AnalysisWorker(analyzer, clusterer,
                 MainWindow.getMainFrame().getOutputCanvas());
 
-               worker.setOutputFile(outputDataFile.getText());
+               worker.setOutputFile(mOutFile.getText());
                worker.execute();
             }
 
