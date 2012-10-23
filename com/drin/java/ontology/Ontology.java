@@ -111,7 +111,7 @@ public class Ontology {
       return ontologyStr;
    }
 
-   public static Ontology constructOrganization(String fileName) {
+   public static Ontology createOntology(String fileName) {
       if (fileName == null) { return null; }
 
       Ontology ont = new Ontology();
@@ -136,7 +136,7 @@ public class Ontology {
    }
 
    public static void main(String[] args) {
-      Ontology ont = Ontology.constructOrganization(args[0]);
+      Ontology ont = Ontology.createOntology(args[0]);
       System.out.println("ontology :\n" + ont);
    }
 }

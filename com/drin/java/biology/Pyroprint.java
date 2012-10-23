@@ -126,7 +126,7 @@ public class Pyroprint extends Clusterable<Double> {
    }
 
    @Override
-   public boolean isSimilar(Clusterable<Double> otherObj) {
+   public boolean isSimilar(Clusterable<?> otherObj) {
       if (otherObj instanceof Pyroprint) {
          return hasSameProtocol((Pyroprint) otherObj);
       }
@@ -135,7 +135,7 @@ public class Pyroprint extends Clusterable<Double> {
    }
 
    @Override
-   public double compareTo(Clusterable<Double> otherObj) {
+   public double compareTo(Clusterable<?> otherObj) {
       if (otherObj instanceof Pyroprint) {
          mMetric.apply(this, (Pyroprint) otherObj);
 

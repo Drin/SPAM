@@ -25,7 +25,7 @@ public class Isolate extends Clusterable<ITSRegion> {
    }
 
    @Override
-   public double compareTo(Clusterable<ITSRegion> otherObj) {
+   public double compareTo(Clusterable<?> otherObj) {
       if (otherObj instanceof Isolate) {
          mMetric.apply(this, (Isolate) otherObj);
 
@@ -41,7 +41,7 @@ public class Isolate extends Clusterable<ITSRegion> {
    }
 
    @Override
-   public boolean isSimilar(Clusterable<ITSRegion> otherObj) {
+   public boolean isSimilar(Clusterable<?> otherObj) {
       if (otherObj instanceof Isolate) {
          return this.getName().equals(((Isolate)otherObj).getName());
       }

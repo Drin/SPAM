@@ -1,37 +1,21 @@
 package com.drin.java.gui.dialogs;
 
-import com.drin.java.types.DataObject;
-import com.drin.java.metrics.DataMetric;
-import com.drin.java.metrics.DataComparator;
-
-import com.drin.java.types.Isolate;
-import com.drin.java.types.ITSRegion;
-import com.drin.java.types.Pyroprint;
-import com.drin.java.types.Cluster;
-import com.drin.java.types.IsolateCluster;
-
-import com.drin.java.metrics.ClusterIsolateComparator;
-import com.drin.java.metrics.IsolateComparator;
-import com.drin.java.metrics.ITSRegionComparator;
-import com.drin.java.metrics.PyroprintComparator;
-
-import com.drin.java.metrics.ClusterIsolateMetric;
-import com.drin.java.metrics.IsolateMetric;
-import com.drin.java.metrics.ITSRegionMetric;
-import com.drin.java.metrics.PyroprintMetric;
+import com.drin.java.biology.Isolate;
+import com.drin.java.biology.ITSRegion;
+import com.drin.java.biology.Pyroprint;
+import com.drin.java.clustering.Cluster;
 
 import com.drin.java.metrics.ClusterAverageMetric;
 import com.drin.java.metrics.IsolateAverageMetric;
 import com.drin.java.metrics.ITSRegionAverageMetric;
-import com.drin.java.metrics.PyroprintPearsonMetric;
+import com.drin.java.metrics.PyroprintUnstablePearsonMetric;
 
 import com.drin.java.analysis.clustering.HierarchicalClusterer;
 import com.drin.java.analysis.clustering.AgglomerativeClusterer;
-import com.drin.java.analysis.clustering.ClusterAnalyzer;
 
 import com.drin.java.gui.MainWindow;
-import com.drin.java.gui.components.AnalysisWorker;
 import com.drin.java.gui.listeners.DataQueryButtonListener;
+import com.drin.java.gui.components.AnalysisWorker;
 import com.drin.java.database.CPLOPConnection;
 
 import java.awt.Component;

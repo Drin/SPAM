@@ -19,7 +19,7 @@ public class ITSRegion extends Clusterable<Pyroprint> {
    }
 
    @Override
-   public double compareTo(Clusterable<Pyroprint> otherObj) {
+   public double compareTo(Clusterable<?> otherObj) {
       if (otherObj instanceof ITSRegion) {
          mMetric.apply(this, (ITSRegion) otherObj);
 
@@ -38,7 +38,7 @@ public class ITSRegion extends Clusterable<Pyroprint> {
    }
 
    @Override
-   public boolean isSimilar(Clusterable<Pyroprint> otherObj) {
+   public boolean isSimilar(Clusterable<?> otherObj) {
       if (otherObj instanceof ITSRegion) {
          return this.getName().equals(((ITSRegion)otherObj).getName());
       }
