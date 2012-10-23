@@ -4,11 +4,10 @@ import java.lang.reflect.Array;
 
 import com.drin.java.analysis.clustering.Clusterer;
 
-import com.drin.java.clustering.BaseClusterable;
+import com.drin.java.clustering.Clusterable;
 import com.drin.java.clustering.Cluster;
 
-import com.drin.java.metrics.ClusterMetric;
-import com.drin.java.metrics.ClusterComparator;
+import com.drin.java.metrics.DataMetric;
 
 import com.drin.java.util.Configuration;
 import com.drin.java.util.Logger;
@@ -16,36 +15,29 @@ import com.drin.java.util.Logger;
 import java.util.Set;
 import java.util.HashSet;
 
-public class AgglomerativeClusterer<E extends BaseClusterable> extends
-             HierarchicalClusterer<E> {
+public class AgglomerativeClusterer extends HierarchicalClusterer {
    protected static final int CLUSTER_PAIR_SIZE = 2;
    protected static final boolean METRIC_IS_DISTANCE = false;
 
    private double mThreshold;
 
-   public AgglomerativeClusterer(Set<Cluster<E>> clusters, double thresh,
-                                 ClusterMetric<E> metric,
-                                 ClusterComparator<E> comp) {
-      super(clusters, metric, comp);
+   public AgglomerativeClusterer(Set<Cluster> clusters, double thresh,
+                                 DataMetric<Cluster> metric) {
+      super(clusters, metric);
       mThreshold = thresh;
    }
 
    @Override
-   protected Cluster<E>[] findCloseClusters(Set<Cluster<E>> clusterSet) {
+   protected Cluster[] findCloseClusters(Set<Cluster> clusterSet) {
       double minDist = Double.MAX_VALUE, maxSim = 0;
-      Cluster<E> closeClust_A = null, closeClust_B = null;
+      Cluster closeClust_A = null, closeClust_B = null;
 
-      for (Cluster<E> clust_A : clusterSet) {
-         for (Cluster<E> clust_B : clusterSet) {
+      for (Cluster clust_A : clusterSet) {
+         for (Cluster clust_B : clusterSet) {
 
-            if (clust_A.getName().equals(clust_B.getName())) { continue; }
+            if (clust_A.isSimilar(clust_B)) { continue; }
 
-            double clustDist = mComp.compare(mMetric, clust_A, clust_B);
-
-            Logger.debug(String.format("comparison between cluster '%s' and " +
-                                       "cluster '%s' is %.04f", 
-                                       clust_A.getName(), clust_B.getName(),
-                                       clustDist));
+            double clustDist = clust_A.compareTo(clust_B);
 
             if (clustDist > maxSim && clustDist > mThreshold) {
                closeClust_A = clust_A;
@@ -63,7 +55,7 @@ public class AgglomerativeClusterer<E extends BaseClusterable> extends
 
       if (closeClust_A != null && closeClust_B != null) {
          @SuppressWarnings(value={"unchecked", "rawtypes"})
-         Cluster<E>[] closeClusters = new Cluster[] {closeClust_A, closeClust_B};
+         Cluster[] closeClusters = new Cluster[] {closeClust_A, closeClust_B};
          return closeClusters;
       }
 
@@ -71,17 +63,17 @@ public class AgglomerativeClusterer<E extends BaseClusterable> extends
    }
 
    @Override
-   protected Set<Cluster<E>> combineClusters(Cluster<E>[] closeClusters,
-                                              Set<Cluster<E>> clusterSet) {
-      Set<Cluster<E>> newClusterSet = new HashSet<Cluster<E>>();
+   protected Set<Cluster> combineClusters(Cluster[] closeClusters,
+                                          Set<Cluster> clusterSet) {
+      Set<Cluster> newClusterSet = new HashSet<Cluster>();
 
       if (closeClusters.length != CLUSTER_PAIR_SIZE) {
          Logger.error(-1, "Invalid cluster pair to be combined\n");
       }
 
-      for (Cluster<E> clust_A : clusterSet) {
-         if (clust_A.getName().equals(closeClusters[0].getName())) {
-            Cluster<E> clust_B = closeClusters[1];
+      for (Cluster clust_A : clusterSet) {
+         if (clust_A.isSimilar(closeClusters[0])) {
+            Cluster clust_B = closeClusters[1];
             newClusterSet.add(clust_A.join(clust_B));
          }
 

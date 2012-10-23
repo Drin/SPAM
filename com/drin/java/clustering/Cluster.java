@@ -10,35 +10,57 @@ import com.drin.java.util.Logger;
 import java.util.Set;
 import java.util.HashSet;
 
-@SuppressWarnings("rawtypes")
-public abstract class Cluster extends Clusterable<Clusterable> {
+public abstract class Cluster {
    private static int CLUST_ID = 1;
+   private String mName;
 
    protected DataMetric<Cluster> mMetric;
    protected Dendogram mDendogram;
+   protected Set<Clusterable<?>> mElements;
 
    public Cluster(DataMetric<Cluster> metric) { this(CLUST_ID++, metric); }
 
    public Cluster(int clustId, DataMetric<Cluster> metric) {
-      super(String.format("%d", clustId), new HashSet<Clusterable>());
-
+      mName = String.format("%d", clustId);
       mMetric = metric;
+      
+      mElements = new HashSet<Clusterable<?>>();
       mDendogram = null;
    }
 
    public abstract Cluster join(Cluster otherClust);
 
    public Dendogram getDendogram() { return mDendogram; }
+   public Set<Clusterable<?>> getElements() { return mElements; }
 
-   public void add(Clusterable element) { mData.add(element); }
+   public void add(Clusterable<?> element) { mElements.add(element); }
+
+   public String getName() { return mName; }
+
+   public double compareTo(Cluster otherClust) {
+      mMetric.apply(this, otherClust);
+
+      double comparison = mMetric.result();
+
+      Logger.error(mMetric.getError(),
+                   String.format("error computing metric between '%s' " +
+                                 "and '%s'\n", this.mName,
+                                 otherClust.mName));
+
+      return comparison;
+   }
+
+   public boolean isSimilar(Cluster otherClust) {
+      return mName.equals(otherClust.mName);
+   }
 
    @Override
    public boolean equals(Object otherObj) {
       if (otherObj instanceof Cluster) {
          Cluster otherClust = (Cluster) otherObj;
 
-         for (Clusterable elem : mData) {
-            if (!otherClust.mData.contains(elem)) { return false; }
+         for (Clusterable<?> elem : mElements) {
+            if (!otherClust.mElements.contains(elem)) { return false; }
          }
 
          //return this.getName().equals(otherClust.getName());
@@ -48,43 +70,16 @@ public abstract class Cluster extends Clusterable<Clusterable> {
       return false;
    }
 
+   @Override
+   public String toString() { return prettyPrint(""); }
+
    public String prettyPrint(String prefix) {
       String str = "";
 
-      for (Clusterable element : mData) {
+      for (Clusterable<?> element : mElements) {
          str += String.format("%s\n", element);
       }
 
       return str;
-   }
-
-   @Override
-   public String toString() { return prettyPrint(""); }
-
-   @Override
-   public double compareTo(Clusterable<Clusterable> otherObj) {
-      if (otherObj instanceof Cluster) {
-         mMetric.apply(this, (Cluster) otherObj);
-
-         double comparison = mMetric.result();
-
-         Logger.error(mMetric.getError(),
-                      String.format("error computing metric between '%s' " +
-                                    "and '%s'\n", this.getName(),
-                                    ((Cluster)otherObj).getName()));
-
-         return comparison;
-      }
-
-      return -2;
-   }
-
-   @Override
-   public boolean isSimilar(Clusterable<Clusterable> otherObj) {
-      if (otherObj instanceof Cluster) {
-         return this.getName().equals(((Cluster)otherObj).getName());
-      }
-
-      return false;
    }
 }
