@@ -2,13 +2,21 @@ package com.drin.java.gui.dialogs;
 
 import com.drin.java.parsers.MatrixParser;
 
-import com.drin.java.types.Cluster;
-import com.drin.java.types.Isolate;
-import com.drin.java.types.ITSRegion;
-import com.drin.java.types.Pyroprint;
+import com.drin.java.biology.Isolate;
+import com.drin.java.biology.ITSRegion;
+import com.drin.java.biology.Pyroprint;
 
-import com.drin.java.analysis.clustering.HierarchicalClusterer;
+import com.drin.java.metrics.IsolateSimpleMetric;
+import com.drin.java.metrics.ClusterAverageMetric;
+
+import com.drin.java.clustering.Cluster;
+import com.drin.java.clustering.HCluster;
+
+import com.drin.java.analysis.clustering.Clusterer;
 import com.drin.java.analysis.clustering.AgglomerativeClusterer;
+import com.drin.java.analysis.clustering.OHClustering;
+
+import com.drin.java.ontology.Ontology;
 
 import com.drin.java.gui.MainWindow;
 import com.drin.java.gui.components.AnalysisWorker;
@@ -31,13 +39,18 @@ import javax.swing.JTextField;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.BoxLayout;
+import javax.swing.JOptionPane;
+import javax.swing.JComponent;
+import javax.swing.JSeparator;
 
 import java.io.File;
 
 import java.util.Map;
 import java.util.Set;
-import java.util.HashSet;
 import java.util.List;
+
+import java.util.HashMap;
+import java.util.HashSet;
 
 import java.lang.reflect.Constructor;
 
@@ -47,16 +60,20 @@ public class ClusterFileDialog extends JDialog {
     * CONSTANTS
     */
    private final int DIALOG_HEIGHT = 400, DIALOG_WIDTH = 500;
+   private final String ALPHA_VAL = "99.5", BETA_VAL = "99.0";
 
    private final String[] CLUSTER_METHODS = new String[] {"Hierarchical",
                                                           "OHClustering"};
+   private final String[] ITS_REGIONS = new String[] { "16s-23s", "23s-5s" };
 
    /*
     * GUI Components
     */
-   private Container mPane = null;
-   private JTextField mDataSet;
    private String mRecentDir;
+   private Container mPane = null;
+   private JComboBox mMethod, mRegion_A, mRegion_B;
+   private JTextField mData_A, mData_B, mOutFile, mOntology,
+                      mAlpha_A, mAlpha_B, mBeta_A, mBeta_B;
 
    public static void main(String[] args) {
       ClusterFileDialog dialog = new ClusterFileDialog(null, "Cluster Input Data");
@@ -71,111 +88,103 @@ public class ClusterFileDialog extends JDialog {
       this.setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
       this.setResizable(false);
       this.setLocationRelativeTo(null);
-
       this.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+
+      mRecentDir = "";
 
       mPane = this.getContentPane();
       mPane.setLayout(new BoxLayout(mPane, BoxLayout.Y_AXIS));
       mPane.setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
 
-      mRecentDir = null;
-      mDataSet = new JTextField(20);
-      mMethod = new JComboBox<String>(CLUSTER_METHODS);
+      mMethod = new JComboBox(CLUSTER_METHODS);
+      mRegion_A = new JComboBox(ITS_REGIONS);
+      mRegion_B = new JComboBox(ITS_REGIONS);
+
+      mData_A = new JTextField(20);
+      mData_B = new JTextField(20);
+      mOutFile = new JTextField(20);
+      mOntology = new JTextField(15);
+
+      mAlpha_A = new JTextField(ALPHA_VAL, 20);
+      mAlpha_B = new JTextField(ALPHA_VAL, 20);
+
+      mBeta_A  = new JTextField(BETA_VAL, 20);
+      mBeta_B  = new JTextField(BETA_VAL, 20);
    }
 
    public void init() {
-      JLabel dataLabel = new JLabel("Select Input Data:");
-      JPanel dataField = prepareDataInput(mDataSet);
+      mPane.add(headerSection(mOutFile, mOntology, mMethod));
 
-      JLabel methodLabel = new JLabel("Select Clustering Method:");
-      JPanel methodField = prepareMethodSelect(mMethod);
+      JPanel labelField = new JPanel();
+      labelField.setLayout(new FlowLayout(FlowLayout.LEADING));
+      labelField.add(new JLabel("Input Dataset"));
 
-      mPane.add(methodLabel);
-      mPane.add(methodField);
+      mPane.add(labelField);
+      mPane.add(new JSeparator());
+      mPane.add(inputField(mRegion_A, mData_A, mAlpha_A, mBeta_A, mOutFile));
 
-      mPane.add(initControls());
+      mPane.add(labelField);
+      mPane.add(new JSeparator());
+      mPane.add(inputField(mRegion_B, mData_B, mAlpha_B, mBeta_B, mOutFile));
+
+      mPane.add(controls());
 
       mPane.validate();
    }
 
-   private JPanel prepareDataInput(JTextField dataInput) {
-      JPanel dataField = new JPanel();
+   public JPanel headerSection(JTextField outfile, JTextField ontology,
+                               JComboBox method) {
+      JPanel ontologySection = null, layout = new JPanel();
 
-      dataField.setLayout(new FlowLayout(FlowLayout.LEADING));
+      layout.setLayout(new BoxLayout(layout, BoxLayout.Y_AXIS));
 
-      dataField.add(dataInput);
+      ontologySection = horizontal_input("Experimental Organization", ontology);
+      ontologySection.add(fileBrowseButton(ontology, null));
 
-      return dataField;
+      layout.add(horizontal_input("Output file name:", outfile));
+      layout.add(horizontal_input("Clustering Method:", method));
+      layout.add(ontologySection);
+      layout.setAlignmentY(Component.CENTER_ALIGNMENT);
+
+      return layout;
    }
 
-   private JPanel prepareMethodSelect(JComboBox<String> methodOptions) {
-      JPanel methodField = new JPanel();
+   public JPanel inputField(JComboBox region, JTextField input,
+    JTextField alpha, JTextField beta, JTextField outfile) {
+      JPanel selection = new JPanel(), fileInput = new JPanel(),
+             fileInputPanel = new JPanel();
 
-      methodField.setLayout(new FlowLayout(FlowLayout.LEADING));
+      selection.setLayout(new BoxLayout(selection, BoxLayout.Y_AXIS));
+      selection.add(new JLabel("ITS Region:"));
+      selection.add(region);
+      selection.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-      methodField.add(methodOptions);
+      fileInput.setLayout(new BoxLayout(fileInput, BoxLayout.Y_AXIS));
+      fileInput.add(new JLabel("File:"));
+      fileInput.add(input);
+      fileInput.add(new JLabel("Threshold:"));
+      fileInput.add(alpha);
+      fileInput.add(beta);
+      fileInput.setAlignmentY(Component.CENTER_ALIGNMENT);
 
-      return methodField;
+      fileInputPanel.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
+      fileInputPanel.add(selection);
+      fileInputPanel.add(fileInput);
+      fileInputPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+      fileInputPanel.add(fileBrowseButton(input, outfile));
+
+      return fileInputPanel;
    }
 
-   public JPanel initControls() {
+   private JPanel controls() {
       JPanel dialogControls = new JPanel();
 
       dialogControls.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
-
       dialogControls.add(createOkayButton());
       dialogControls.add(createCancelButton());
-
       dialogControls.setAlignmentX(Component.CENTER_ALIGNMENT);
 
       return dialogControls;
-   }
-
-   private void takeAction() {
-      /*
-            HierarchicalClusterer clusterer = null;
-            String dataSourceType = String.valueOf(mDataSource.getSelectedItem());
-
-            if (dataSourceType.equals(MATRIX_TYPE)) {
-               //Do for each region
-               MatrixParser parser = new MatrixParser(mDataSet.getText());
-               Map<String, Map<String, Double>> correlations = parser.parseData();
-               Set<Cluster> clusterSet = new HashSet<Cluster>();
-
-               //Since clusterSet is just a set of isolates, and isolates
-               //are only necessary for their isolate IDs this can be done
-               //for a single region
-               for (String isoId : correlations.keySet()) {
-                  clusterSet.add(new IsolateCluster(isoId, new Isolate(isoId)));
-               }
-
-               if (DEBUG) {
-                  System.out.printf("correlation matrix: \n");
-
-                  for (String iso_A : correlations.keySet()) {
-                     Map<String, Double> corrMap = correlations.get(iso_A);
-                     for (String iso_B : corrMap.keySet()) {
-                        System.out.printf("%s : %s -> %.04f\n",
-                         iso_A, iso_B, corrMap.get(iso_B).doubleValue());
-                     }
-                  }
-               }
-
-               ClusterComparator clusterComp = new ClusterComparator(); 
-               IsolateMatrixMetric isoMetric = new IsolateMatrixMetric(correlations);
-
-               clusterer = new AgglomerativeClusterer(clusterSet, isoMetric, clusterComp);
-               ClusterAnalyzer analyzer = new ClusterAnalyzer(isoMetric);
-
-               if (clusterer != null) {
-                  AnalysisWorker worker = new AnalysisWorker(analyzer, clusterer,
-                   MainWindow.getMainFrame().getOutputCanvas());
-
-                  worker.execute();
-               }
-            }
-            */
-      System.out.println("derp de derp");
    }
 
    private JButton createOkayButton() {
@@ -185,12 +194,16 @@ public class ClusterFileDialog extends JDialog {
          public void actionPerformed(ActionEvent e) {
             int clusterNum = 0;
 
-            if (mDataSet.getText().equals("")) {
+            if (mData_A.getText().equals("")  || mData_B.getText().equals("") ||
+                mAlpha_A.getText().equals("") || mBeta_A.getText().equals("") ||
+                mAlpha_B.getText().equals("") || mBeta_B.getText().equals("")) {
+               JOptionPane.showMessageDialog(null, "Invalid input",
+                                             "Invalid Input",
+                                             JOptionPane.ERROR_MESSAGE);
                return;
             }
 
             takeAction();
-
             dispose();
          }
       });
@@ -209,5 +222,167 @@ public class ClusterFileDialog extends JDialog {
       });
 
       return cancelButton;
+   }
+
+   private boolean performSanityChecks(String region_A, String region_B,
+                                       String data_A, String data_B,
+                                       double alpha_A, double alpha_B) {
+      if (region_A.equals(region_B)) {
+         JOptionPane.showMessageDialog(null,
+          "Please select different regions for each input data",
+          "Invalid Regions Selected", JOptionPane.ERROR_MESSAGE);
+         return false;
+      }
+      if (data_A.equals(data_B)) {
+         int selectedOption = JOptionPane.showConfirmDialog(null,
+          "Same file input for both regions. Are you sure?",
+          "Duplicate input confirmation", JOptionPane.YES_NO_OPTION);
+
+         if (selectedOption == JOptionPane.NO_OPTION) {
+            JOptionPane.showMessageDialog(null, "Clustering cancelled",
+                                          "Cancelled",
+                                          JOptionPane.INFORMATION_MESSAGE);
+            return false;
+         }
+      }
+         
+      if (alpha_A < 1 || alpha_B < 1) {
+         JOptionPane.showMessageDialog(null, "Invalid threshold values",
+                                       "Invalid Options",
+                                       JOptionPane.ERROR_MESSAGE);
+         return false;
+      }
+
+      if (data_A.equals("")) {
+         JOptionPane.showMessageDialog(null, "Invalid parameters for " +
+                                       "first data input", "Invalid Options",
+                                       JOptionPane.ERROR_MESSAGE);
+         return false;
+      }
+      if (data_B.equals("")) {
+         JOptionPane.showMessageDialog(null, "Invalid parameters for " +
+                                       "second data input", "Invalid Options",
+                                       JOptionPane.ERROR_MESSAGE);
+         return false;
+      }
+
+      return true;
+   }
+
+   /*
+    * args for clusterer consist of:
+    *    String filename - a file name
+    *    String regionname - name of the ITS region represented
+    *    String lowerThreshold - a double value
+    *    String upperThreshold - a double value
+    *    one option from:
+    *       Single
+    *       Average
+    *       Complete
+    *       Ward
+    * argument 1 (filename) is *MANDATORY*
+    * argument 2 (region name) is *MANDATORY*
+    * argument 2 defaults to 95% similarity
+    * argument 3 defaults to 99.7% similarity
+    * argument 4 defaults to Average similarity distance
+    */
+   private void takeAction() {
+      Ontology ontology = null;
+      Clusterer clusterer = null;
+      Set<Cluster> clusters = new HashSet<Cluster>();
+      
+      if (!mOntology.getText().equals("")) {
+         ontology = Ontology.createOntology(mOntology.getText());
+      }
+
+      String region_A = String.valueOf(mRegion_A.getSelectedItem());
+      String data_A   = mData_A.getText();
+      double alpha_A  = Double.parseDouble(mAlpha_A.getText());
+      double beta_A   = Double.parseDouble(mBeta_A.getText());
+
+      String region_B = String.valueOf(mRegion_B.getSelectedItem());
+      String data_B   = mData_B.getText();
+      double alpha_B  = Double.parseDouble(mAlpha_B.getText());
+      double beta_B   = Double.parseDouble(mBeta_B.getText());
+
+      performSanityChecks(region_A, region_B, data_A, data_B, alpha_A, alpha_B);
+
+      Map<String, Map<String, Map<String, Double>>> regionMap =
+                  new HashMap<String, Map<String, Map<String, Double>>>();
+
+      Set<String> isoIds = null;
+      //Build correlation map for region A
+      MatrixParser parser = new MatrixParser(data_A);
+      Map<String, Map<String, Double>> corrMap = parser.parseData();
+      isoIds = corrMap.keySet();
+      regionMap.put(region_A, corrMap);
+
+      //Build correlation map for region B
+      parser = new MatrixParser(data_B);
+      corrMap = parser.parseData();
+      regionMap.put(region_B, corrMap);
+
+      //Build a metric that now encompasses both regions
+      IsolateSimpleMetric isoMetric = new IsolateSimpleMetric(regionMap);
+
+      if (isoIds != null) {
+         for (String isoId : isoIds) {
+            Cluster cluster = new HCluster(new ClusterAverageMetric(),
+                                           new Isolate(isoId, isoMetric));
+            clusters.add(cluster);
+         }
+      }
+
+      clusterer = new OHClustering(clusters, ontology);
+
+      AnalysisWorker worker = new AnalysisWorker(clusterer,
+       MainWindow.getMainFrame().getOutputCanvas());
+
+      worker.setOutputFile(mOutFile.getText());
+      worker.execute();
+   }
+
+   private JButton fileBrowseButton(final JTextField infile, final JTextField outfile) {
+      JButton fileBrowse = new JButton("Browse");
+
+      fileBrowse.addActionListener(new ActionListener() {
+         public void actionPerformed(ActionEvent e) {
+            JFileChooser chooser = new JFileChooser();
+            //chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+
+            if (mRecentDir != "") {
+               File curDir = new File(mRecentDir);
+               chooser.setCurrentDirectory(curDir);
+            }
+            
+            int returnVal = chooser.showOpenDialog(chooser);
+            
+            if (returnVal == JFileChooser.APPROVE_OPTION) {
+               File dataFile = chooser.getSelectedFile();
+               infile.setText(dataFile.getAbsolutePath());
+
+               if (outfile != null && outfile.getText().equals("")) {
+                  outfile.setText(dataFile.getName().substring(0,
+                                  dataFile.getName().indexOf(".csv")));
+               }
+
+               mRecentDir = chooser.getSelectedFile().getPath();
+            }
+         }
+      });
+
+      return fileBrowse;
+   }
+
+   private JPanel horizontal_input(String label, JComponent component) {
+      JPanel panel = new JPanel();
+
+      panel.setLayout(new FlowLayout(FlowLayout.LEADING));
+      panel.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
+      panel.add(new JLabel(label));
+      panel.add(component);
+      panel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+      return panel;
    }
 }

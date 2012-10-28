@@ -8,6 +8,8 @@ import com.drin.java.metrics.DataMetric;
 
 import com.drin.java.util.Logger;
 
+import java.util.Iterator;
+
 import java.util.Set;
 import java.util.HashSet;
 
@@ -22,6 +24,10 @@ public class Isolate extends Clusterable<ITSRegion> {
       super(isoId, regions);
 
       mMetric = metric;
+   }
+
+   public Isolate(String isoId, DataMetric<Isolate> metric) {
+      this(isoId, null, metric);
    }
 
    @Override
@@ -43,7 +49,25 @@ public class Isolate extends Clusterable<ITSRegion> {
    @Override
    public boolean isSimilar(Clusterable<?> otherObj) {
       if (otherObj instanceof Isolate) {
-         return this.getName().equals(((Isolate)otherObj).getName());
+         if (this.getData() != null) {
+            Iterator<ITSRegion> itr_A = this.getData().iterator();
+
+            while (itr_A.hasNext()) {
+               ITSRegion region_A = itr_A.next();
+               Iterator<ITSRegion> itr_B = ((Isolate)otherObj).getData().iterator();
+
+               while (itr_B.hasNext()) {
+                  ITSRegion region_B = itr_B.next();
+
+                  if (region_A.getName().equals(region_B.getName())) {
+                     if (!region_A.isSimilar(region_B)) { return false; }
+                  }
+               }
+            }
+
+            return true;
+         }
+         else return this.compareTo((Isolate) otherObj) > 99.5;
       }
 
       return false;
@@ -53,13 +77,16 @@ public class Isolate extends Clusterable<ITSRegion> {
    public String toString() {
       String str = "";
 
-      for (ITSRegion region : mData) {
-         str += String.format("region '%s':\n", region.getName());
+      if (this.getData() != null) {
+         for (ITSRegion region : mData) {
+            str += String.format("region '%s':\n", region.getName());
 
-         for (Pyroprint pyro : region.getData()) {
-            str += String.format("\tpyroprint %s\n\n", pyro);
+            for (Pyroprint pyro : region.getData()) {
+               str += String.format("\tpyroprint %s\n\n", pyro);
+            }
          }
       }
+      else { return this.getName(); }
 
       return str;
    }

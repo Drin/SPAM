@@ -8,10 +8,11 @@ import com.drin.java.gui.listeners.rawHandlers.DisplayPyrogramListener;
 import com.drin.java.gui.listeners.xmlHandlers.CompareXMLPyrogramsListener;
 import com.drin.java.gui.listeners.xmlHandlers.DisplayXMLPyrogramListener;
 import com.drin.java.gui.listeners.SaveFileListener;
-*/
 import com.drin.java.gui.dialogs.InputDialog;
 import com.drin.java.gui.dialogs.ClusterDialog;
 import com.drin.java.gui.dialogs.ClusterParameterDialog;
+*/
+import com.drin.java.gui.dialogs.ClusterFileDialog;
 
 //import com.drin.javadataTypes.ClusterDendogram;
 //import com.drin.javadataTypes.Pyrogram;
@@ -105,6 +106,7 @@ public class MainWindow extends JFrame {
 
       JMenu strainIdentifySubMenu = new JMenu("Identify strains from...");
 
+      /*
       JMenuItem cplopDatabaseItem = new JMenuItem("CPLOP database");
       cplopDatabaseItem.addActionListener(new ActionListener() {
          public void actionPerformed(java.awt.event.ActionEvent actionEvent) {
@@ -113,6 +115,7 @@ public class MainWindow extends JFrame {
             dataSelectDialog.setVisible(true);
          }
       });
+      */
 
       JMenuItem clusterDataItem = new JMenuItem("CSV File");
 
@@ -124,7 +127,7 @@ public class MainWindow extends JFrame {
          }
       });
 
-      strainIdentifySubMenu.add(cplopDatabaseItem);
+      //strainIdentifySubMenu.add(cplopDatabaseItem);
       strainIdentifySubMenu.add(clusterDataItem);
 
       analysisMenu.add(strainIdentifySubMenu);

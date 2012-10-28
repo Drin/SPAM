@@ -5,8 +5,6 @@ import com.drin.java.analysis.clustering.Clusterer;
 import com.drin.java.clustering.Clusterable;
 import com.drin.java.clustering.Cluster;
 
-import com.drin.java.metrics.DataMetric;
-
 import com.drin.java.util.Configuration;
 
 import java.util.Set;
@@ -16,18 +14,16 @@ public abstract class HierarchicalClusterer implements Clusterer {
    protected Set<Cluster> mClusters;
    protected Set<Cluster> mResultClusters;
 
-   protected DataMetric<Cluster> mMetric;
-
-   public HierarchicalClusterer(Set<Cluster> clusters,
-                                DataMetric<Cluster> metric) {
+   public HierarchicalClusterer(Set<Cluster> clusters) {
       mClusters = clusters;
-      mMetric = metric;
 
       mResultClusters = new HashSet<Cluster>();
    }
 
    protected Set<Cluster> clusterDataSet(Set<Cluster> clusterSet) {
       Set<Cluster> newClustSet = new HashSet<Cluster>(clusterSet);
+
+      System.out.println("Hierarchical Clustering...");
 
       while (newClustSet.size() > 1) {
          Cluster[] closeClusters = findCloseClusters(newClustSet);

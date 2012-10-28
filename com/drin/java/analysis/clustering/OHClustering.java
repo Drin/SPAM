@@ -8,8 +8,6 @@ import com.drin.java.ontology.OntologyTerm;
 import com.drin.java.clustering.Clusterable;
 import com.drin.java.clustering.Cluster;
 
-import com.drin.java.metrics.DataMetric;
-
 import com.drin.java.util.Logger;
 
 import java.util.Set;
@@ -18,16 +16,12 @@ import java.util.Map;
 
 public class OHClustering extends AgglomerativeClusterer {
    protected Ontology mOntology;
-   private double mAlpha, mBeta;
 
-   public OHClustering(Set<Cluster> clusters,
-                       double alpha, double beta,
-                       Ontology ontology,
-                       DataMetric<Cluster> metric) {
-      super(clusters, beta, metric);
+   //TODO the 2nd param to super (single threshold for hierarchical clustering)
+   //should not be 0...
+   public OHClustering(Set<Cluster> clusters, Ontology ontology) {
+      super(clusters, 0);
 
-      mAlpha = alpha;
-      mBeta = beta;
       mOntology = ontology;
    }
 
@@ -90,32 +84,26 @@ public class OHClustering extends AgglomerativeClusterer {
    }
 
 
-   //TODO THIS IS SO WRONG
    @Override
    protected Cluster[] findCloseClusters(Set<Cluster> clusters) {
-      double minDist = Double.MAX_VALUE, maxSim = 0;
+      double maxSim = 0;
       Cluster closeClust_A = null, closeClust_B = null;
 
       for (Cluster clust_A : clusters) {
          for (Cluster clust_B : clusters) {
-            if (clust_A.isSimilar(clust_B)) { continue; }
+            if (clust_A.getName().equals(clust_B.getName())) { continue; }
 
             double dist = clust_A.compareTo(clust_B);
 
-            if (dist > maxSim && dist > mBeta) {
+            System.out.printf("%s and %s have %.04f similarity\n",
+                              clust_A, clust_B, dist);
+
+            if (dist > maxSim && clust_A.isSimilar(clust_B)) {
                closeClust_A = clust_A;
                closeClust_B = clust_B;
 
                maxSim = dist;
             }
-
-            if (dist < minDist) {
-               closeClust_A = clust_A;
-               closeClust_B = clust_B;
-
-               minDist = dist;
-            }
-
          }
       }
 

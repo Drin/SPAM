@@ -33,7 +33,7 @@ public class IsolateAverageMetric extends DataMetric<Isolate> {
          while (itr_B.hasNext()) {
             ITSRegion region_B = itr_B.next();
 
-            if (region_A.isSimilar(region_B)) {
+            if (region_A.getName().equals(region_B.getName())) {
                double comparison = region_A.compareTo(region_B);
 
                Logger.debug(String.format("Isolate Average Metric:\n\tregion " +
