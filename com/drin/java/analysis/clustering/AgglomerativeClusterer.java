@@ -7,8 +7,6 @@ import com.drin.java.analysis.clustering.Clusterer;
 import com.drin.java.clustering.Clusterable;
 import com.drin.java.clustering.Cluster;
 
-import com.drin.java.metrics.DataMetric;
-
 import com.drin.java.util.Configuration;
 import com.drin.java.util.Logger;
 
@@ -17,24 +15,21 @@ import java.util.HashSet;
 
 public class AgglomerativeClusterer extends HierarchicalClusterer {
    protected static final int CLUSTER_PAIR_SIZE = 2;
-   protected static final boolean METRIC_IS_DISTANCE = false;
 
    private double mThreshold;
 
-   public AgglomerativeClusterer(Set<Cluster> clusters, double thresh,
-                                 DataMetric<Cluster> metric) {
-      super(clusters, metric);
+   public AgglomerativeClusterer(Set<Cluster> clusters, double thresh) {
+      super(clusters);
       mThreshold = thresh;
    }
 
    @Override
    protected Cluster[] findCloseClusters(Set<Cluster> clusterSet) {
-      double minDist = Double.MAX_VALUE, maxSim = 0;
+      double maxSim = 0;
       Cluster closeClust_A = null, closeClust_B = null;
 
       for (Cluster clust_A : clusterSet) {
          for (Cluster clust_B : clusterSet) {
-
             if (clust_A.isSimilar(clust_B)) { continue; }
 
             double clustDist = clust_A.compareTo(clust_B);
@@ -42,13 +37,8 @@ public class AgglomerativeClusterer extends HierarchicalClusterer {
             if (clustDist > maxSim && clustDist > mThreshold) {
                closeClust_A = clust_A;
                closeClust_B = clust_B;
-               maxSim = clustDist;
-            }
 
-            else if (clustDist < minDist && clustDist < mThreshold) {
-               closeClust_A = clust_A;
-               closeClust_B = clust_B;
-               minDist = clustDist;
+               maxSim = clustDist;
             }
          }
       }

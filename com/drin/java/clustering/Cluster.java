@@ -51,7 +51,13 @@ public abstract class Cluster {
    }
 
    public boolean isSimilar(Cluster otherClust) {
-      return mName.equals(otherClust.mName);
+      for (Clusterable<?> elem_A : mElements) {
+         for (Clusterable<?> elem_B : otherClust.mElements) {
+            if (!elem_A.isSimilar(elem_B)) { return false; }
+         }
+      }
+
+      return true;
    }
 
    @Override
@@ -71,10 +77,10 @@ public abstract class Cluster {
    }
 
    @Override
-   public String toString() { return prettyPrint(""); }
+   public String toString() { return prettyPrint("\t"); }
 
    public String prettyPrint(String prefix) {
-      String str = "";
+      String str = this.getName() + ":\n";
 
       for (Clusterable<?> element : mElements) {
          str += String.format("%s\n", element);

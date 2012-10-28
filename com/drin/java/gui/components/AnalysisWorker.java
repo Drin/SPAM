@@ -38,6 +38,7 @@ public class AnalysisWorker extends SwingWorker<String[], Integer> {
 
       int clustNdx = 0;
       for (Cluster cluster : mClusterer.getClusters()) {
+         System.out.printf("cluster: %s\n", cluster.toString());
          clusters[clustNdx++] = cluster.toString();
       }
 
@@ -79,10 +80,18 @@ public class AnalysisWorker extends SwingWorker<String[], Integer> {
       }
 
       if (resultArr != null) {
+         String resultStr = "";
+         for (int ndx = 0; ndx < resultArr.length; ndx++) {
+            resultStr += resultArr[ndx] + "\n";
+         }
+         /*
          writeDendogram(resultArr[DENDOGRAM_NDX]);
          writeElements(resultArr[ISOLATE_LIST_NDX]);
+         */
       
-         mCanvas.setText(resultArr[DENDOGRAM_NDX]);
+         //mCanvas.setText(resultArr[DENDOGRAM_NDX]);
+         mCanvas.setText(resultStr);
+         System.out.println(resultStr);
       }
 
       System.out.println("done!");

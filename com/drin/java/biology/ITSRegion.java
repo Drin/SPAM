@@ -12,9 +12,13 @@ import java.util.HashSet;
 
 public class ITSRegion extends Clusterable<Pyroprint> {
    private DataMetric<ITSRegion> mMetric;
+   private double mAlpha, mBeta;
 
-   public ITSRegion(String regionName, DataMetric<ITSRegion> metric) {
+   public ITSRegion(String regionName, double alpha, double beta,
+                    DataMetric<ITSRegion> metric) {
       super(regionName, new HashSet<Pyroprint>());
+      mAlpha = alpha;
+      mBeta = beta;
       mMetric = metric;
    }
 
@@ -40,7 +44,7 @@ public class ITSRegion extends Clusterable<Pyroprint> {
    @Override
    public boolean isSimilar(Clusterable<?> otherObj) {
       if (otherObj instanceof ITSRegion) {
-         return this.getName().equals(((ITSRegion)otherObj).getName());
+         return this.compareTo((ITSRegion) otherObj) > mAlpha;
       }
 
       return false;

@@ -33,7 +33,8 @@ public class ITSRegionAverageMetric extends DataMetric<ITSRegion> {
 
    @Override
    public void apply(ITSRegion elem_A, ITSRegion elem_B) {
-      if (elem_A.isSimilar(elem_B)) {
+      if (elem_A.getName().equals(elem_B.getName())) {
+
          for (Pyroprint pyro_A : elem_A.getData()) {
             for (Pyroprint pyro_B : elem_B.getData()) {
                double result = pyro_A.compareTo(pyro_B);
@@ -47,6 +48,7 @@ public class ITSRegionAverageMetric extends DataMetric<ITSRegion> {
                mPairCount++;
             }
          }
+
       }
    }
 
