@@ -13,6 +13,7 @@ import java.util.HashSet;
 public abstract class Cluster {
    private static int CLUST_ID = 1;
    private String mName;
+   protected double mDiameter, mMean;
 
    protected DataMetric<Cluster> mMetric;
    protected Dendogram mDendogram;
@@ -26,9 +27,16 @@ public abstract class Cluster {
       
       mElements = new HashSet<Clusterable<?>>();
       mDendogram = null;
+
+      mDiameter = -2;
+      mMean = -2;
    }
 
    public String getName() { return mName; }
+   public double getDiameter() { return mDiameter; }
+   public double getMean() { return mMean; }
+
+   public abstract void computeStatistics();
    public abstract Cluster join(Cluster otherClust);
 
    public Dendogram getDendogram() { return mDendogram; }

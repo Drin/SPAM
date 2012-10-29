@@ -13,10 +13,6 @@ public class DendogramLeaf implements Dendogram {
 
    public Clusterable<?> getData() { return mElement; }
 
-   public Dendogram join(Dendogram otherDend) {
-      return new DendogramNode(this, otherDend);
-   }
-
    @Override
    public String toString() {
       return String.format("<Isolate name=\"%s\"/>\n", mElement.getName());

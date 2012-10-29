@@ -1,21 +1,22 @@
 package com.drin.java.clustering.dendogram;
 
 import com.drin.java.clustering.dendogram.Dendogram;
+import com.drin.java.clustering.Cluster;
 
 public class DendogramNode implements Dendogram {
    private Dendogram mLeft, mRight;
+   private Cluster mCluster;
 
-   public DendogramNode(Dendogram left, Dendogram right) {
+   public DendogramNode(Dendogram left, Dendogram right, Cluster clust) {
       mLeft = left;
       mRight = right;
+
+      mCluster = clust;
    }
 
    public Dendogram getLeft() { return mLeft; }
    public Dendogram getRight() { return mRight; }
-
-   public Dendogram join(Dendogram otherDend) {
-      return new DendogramNode(this, otherDend);
-   }
+   public Cluster getCluster() { return mCluster; }
 
    public void setLeft(Dendogram left) { mLeft = left; }
    public void setRight(Dendogram right) { mRight = right; }
@@ -23,21 +24,28 @@ public class DendogramNode implements Dendogram {
    @Override
    public String toString() { return DendogramNode.pp(this, "   "); }
 
-   private static String pp(Dendogram node, String prefix) {
+   private static String pp(Dendogram dend, String prefix) {
       String pretty = "";
 
-      if (node != null) {
-         pretty += String.format("%s<Cluster>\n", prefix);
+      if (dend != null) {
+         if (dend instanceof DendogramNode) {
+            DendogramNode node = (DendogramNode) dend;
 
-         if (node instanceof DendogramNode) {
-            pretty += pp(((DendogramNode)node).mLeft, prefix + "   ");
-            pretty += pp(((DendogramNode)node).mRight, prefix + "   ");
-         }
-         else if (node instanceof DendogramLeaf) {
-            pretty += ((DendogramLeaf)node).pp(prefix + "   ");
-         }
+            pretty += String.format("%s<Cluster diameter=\"%.04f\" " +
+                                    "mean=\"%.04f\">\n", prefix,
+                                    node.getCluster().getDiameter(),
+                                    node.getCluster().getMean());
 
-         pretty += String.format("%s</Cluster>\n", prefix);
+            pretty += pp(node.mLeft, prefix + "   ");
+            pretty += pp(node.mRight, prefix + "   ");
+
+            pretty += String.format("%s</Cluster>\n", prefix);
+         }
+         else if (dend instanceof DendogramLeaf) {
+            DendogramLeaf leaf = (DendogramLeaf) dend;
+
+            pretty += leaf.pp(prefix);
+         }
 
          return pretty;
       }
