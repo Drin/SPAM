@@ -61,6 +61,17 @@ public abstract class Cluster {
       return true;
    }
 
+   public boolean isDifferent(Cluster otherClust) {
+      for (Clusterable<?> elem_A : mElements) {
+         for (Clusterable<?> elem_B : otherClust.mElements) {
+
+            if (!elem_A.isDifferent(elem_B)) { return false; }
+         }
+      }
+
+      return true;
+   }
+
    @Override
    public boolean equals(Object otherObj) {
       if (otherObj instanceof Cluster) {

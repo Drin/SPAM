@@ -135,6 +135,15 @@ public class Pyroprint extends Clusterable<Double> {
    }
 
    @Override
+   public boolean isDifferent(Clusterable<?> otherObj) {
+      if (otherObj instanceof Pyroprint) {
+         return !hasSameProtocol((Pyroprint) otherObj);
+      }
+
+      return true;
+   }
+
+   @Override
    public double compareTo(Clusterable<?> otherObj) {
       if (otherObj instanceof Pyroprint) {
          mMetric.apply(this, (Pyroprint) otherObj);
