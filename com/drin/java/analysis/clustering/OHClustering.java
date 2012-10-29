@@ -89,14 +89,13 @@ public class OHClustering extends AgglomerativeClusterer {
       double maxSim = 0;
       Cluster closeClust_A = null, closeClust_B = null;
 
+      Logger.debug("finding close clusters...");
+
       for (Cluster clust_A : clusters) {
          for (Cluster clust_B : clusters) {
             if (clust_A.getName().equals(clust_B.getName())) { continue; }
 
             double dist = clust_A.compareTo(clust_B);
-
-            System.out.printf("%s and %s have %.04f similarity\n",
-                              clust_A, clust_B, dist);
 
             if (dist > maxSim && clust_A.isSimilar(clust_B)) {
                closeClust_A = clust_A;
@@ -104,18 +103,6 @@ public class OHClustering extends AgglomerativeClusterer {
 
                maxSim = dist;
             }
-         }
-      }
-
-      if (System.getenv().containsKey("DEBUG")) {
-         if (closeClust_A == null || closeClust_B == null) {
-            System.out.println("Closest clusters are null!\nclusterset: ");
-      
-            for (Cluster clust_A : clusters) {
-               System.out.printf("%s, ", clust_A.getName());
-            }
-      
-            System.out.printf("\n");
          }
       }
 
@@ -134,18 +121,20 @@ public class OHClustering extends AgglomerativeClusterer {
       Set<Cluster> newClusters = super.combineClusters(closeClusters, clusters);
 
       if (closeClusters.length != CLUSTER_PAIR_SIZE) {
-         Logger.error(-1, "No clusters were combined");
+         Logger.error(-1, "No cluster distances were recomputed");
       }
 
+      /*
+       * TODO: figure out recomputing distances...
       for (Cluster cluster : newClusters) {
          if (cluster.isSimilar(closeClusters[0])) { continue; }
 
          Logger.debug(String.format("recomputing clusters '%s' and '%s'\n",
                                     cluster.getName(), closeClusters[0].getName()));
    
-         //TODO
-         //mClusterMetric.recompute(closeClusters[0], cluster);
+         mClusterMetric.recompute(closeClusters[0], cluster);
       }
+      */
 
       return newClusters;
    }

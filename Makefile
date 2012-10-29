@@ -6,7 +6,7 @@ SPAM_MAIN=com.drin.java.gui.SpamGUI
 
 CC = javac
 ENGINE = java
-JFLAGS = -deprecation #-Xlint
+JFLAGS = -deprecation -Xlint
 
 compile: clean spam
 

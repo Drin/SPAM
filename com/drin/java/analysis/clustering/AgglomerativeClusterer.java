@@ -30,11 +30,11 @@ public class AgglomerativeClusterer extends HierarchicalClusterer {
 
       for (Cluster clust_A : clusterSet) {
          for (Cluster clust_B : clusterSet) {
-            if (clust_A.isSimilar(clust_B)) { continue; }
+            if (clust_A.getName().equals(clust_B.getName())) { continue; }
 
             double clustDist = clust_A.compareTo(clust_B);
 
-            if (clustDist > maxSim && clustDist > mThreshold) {
+            if (clustDist > maxSim && clust_A.isSimilar(clust_B)) {
                closeClust_A = clust_A;
                closeClust_B = clust_B;
 
@@ -61,13 +61,19 @@ public class AgglomerativeClusterer extends HierarchicalClusterer {
          Logger.error(-1, "Invalid cluster pair to be combined\n");
       }
 
+
+      Logger.debug(String.format("combining clusters '%s' and '%s'",
+                                 closeClusters[0], closeClusters[1]));
+
       for (Cluster clust_A : clusterSet) {
-         if (clust_A.isSimilar(closeClusters[0])) {
+         if (clust_A.getName().equals(closeClusters[0].getName())) {
             Cluster clust_B = closeClusters[1];
             newClusterSet.add(clust_A.join(clust_B));
          }
 
-         else if (clust_A.equals(closeClusters[1])) { continue; }
+         else if (clust_A.getName().equals(closeClusters[1].getName())) {
+            continue;
+         }
          else { newClusterSet.add(clust_A); }
       }
 

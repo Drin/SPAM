@@ -45,6 +45,7 @@ public class Logger {
    private static void writeString(String outString) {
       try {
          getLogger().mWriter.write(outString);
+         getLogger().mWriter.flush();
       }
       catch(java.io.IOException ioErr) {
          System.err.printf("IO Error when writing to log file.\n");

@@ -37,8 +37,8 @@ public class Isolate extends Clusterable<ITSRegion> {
 
          double comparison = mMetric.result();
 
-         Logger.debug(String.format("Isolate Comparator:\n\tisolate " +
-                                    "comparison: %.04f", comparison));
+         Logger.debug(String.format("'%s' and '%s' => [%.05f]", this.getName(),
+                                    otherObj.getName(), comparison));
 
          return comparison;
       }
@@ -67,7 +67,8 @@ public class Isolate extends Clusterable<ITSRegion> {
 
             return true;
          }
-         else return this.compareTo((Isolate) otherObj) > 99.5;
+         //TODO
+         else return this.compareTo((Isolate) otherObj) > .995;
       }
 
       return false;
