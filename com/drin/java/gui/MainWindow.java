@@ -60,9 +60,10 @@ public class MainWindow extends JFrame {
       mMenuBar.add(initFileMenu());
       mMenuBar.add(initAnalysisMenu());
 
-      mMenuBar.add(initDendogramMenu());
-      mMenuBar.add(initLibMenu());
-      mMenuBar.add(initPyroMenu());
+      //TODO
+      //mMenuBar.add(initDendogramMenu());
+      //mMenuBar.add(initLibMenu());
+      //mMenuBar.add(initPyroMenu());
 
       setJMenuBar(mMenuBar);
       validate();
@@ -70,6 +71,7 @@ public class MainWindow extends JFrame {
       return true;
    }
 
+   //TODO
    /**
     * Initialize menu items that will be present in the 'File' menu, then
     * return the initialized 'File' menu
@@ -94,7 +96,7 @@ public class MainWindow extends JFrame {
 
 
       JMenu fileMenu = new JMenu("File");
-      fileMenu.add(importDendogram);
+      //fileMenu.add(importDendogram);
       //fileMenu.add(saveFile);
       fileMenu.add(exitProgram);
 
