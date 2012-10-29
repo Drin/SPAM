@@ -20,17 +20,22 @@ public class DendogramNode implements Dendogram {
    public void setLeft(Dendogram left) { mLeft = left; }
    public void setRight(Dendogram right) { mRight = right; }
 
-   public String toString() { return pp(this, "   "); }
+   @Override
+   public String toString() { return DendogramNode.pp(this, "   "); }
 
-   private String pp(Dendogram node, String prefix) {
+   private static String pp(Dendogram node, String prefix) {
       String pretty = "";
 
       if (node != null) {
-         pretty += String.format("%s<Cluster name=\"%s\">\n", prefix,
-          String.format("[%s_%s]", mLeft, mRight));
+         pretty += String.format("%s<Cluster>\n", prefix);
 
-         //pretty += pp(node.mLeft, prefix + "   ");
-         //pretty += pp(node.mRight, prefix + "   ");
+         if (node instanceof DendogramNode) {
+            pretty += pp(((DendogramNode)node).mLeft, prefix + "   ");
+            pretty += pp(((DendogramNode)node).mRight, prefix + "   ");
+         }
+         else if (node instanceof DendogramLeaf) {
+            pretty += ((DendogramLeaf)node).pp(prefix + "   ");
+         }
 
          pretty += String.format("%s</Cluster>\n", prefix);
 

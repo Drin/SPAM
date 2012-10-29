@@ -11,7 +11,9 @@ public class ClusterWriter {
    private File mFile;
 
    public ClusterWriter(String outputFile) {
-      mFileName = System.getProperty("user.dir") + FILE_SEP + DEFAULT_DIR + FILE_SEP + outputFile;
+      mFileName = System.getProperty("user.dir") +
+                  FILE_SEP + DEFAULT_DIR +
+                  FILE_SEP + outputFile;
    }
 
    public void writeData(String text) {
