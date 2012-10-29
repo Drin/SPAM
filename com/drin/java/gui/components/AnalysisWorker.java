@@ -38,8 +38,7 @@ public class AnalysisWorker extends SwingWorker<String[], Integer> {
 
       int clustNdx = 0;
       for (Cluster cluster : mClusterer.getClusters()) {
-         System.out.printf("cluster: %s\n", cluster.toString());
-         clusters[clustNdx++] = cluster.toString();
+         clusters[clustNdx++] = cluster.prettyPrint("\t");
       }
 
       return clusters;

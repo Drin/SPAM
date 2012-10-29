@@ -51,9 +51,14 @@ public abstract class Cluster {
    }
 
    public boolean isSimilar(Cluster otherClust) {
+      Logger.debug("Checking cluster similarity...");
       for (Clusterable<?> elem_A : mElements) {
          for (Clusterable<?> elem_B : otherClust.mElements) {
-            if (!elem_A.isSimilar(elem_B)) { return false; }
+            if (!elem_A.isSimilar(elem_B)) {
+               Logger.debug(String.format("'%s' and '%s' are not similar",
+                                          elem_A.getName(), elem_B.getName()));
+               return false;
+            }
          }
       }
 
@@ -77,7 +82,15 @@ public abstract class Cluster {
    }
 
    @Override
-   public String toString() { return prettyPrint("\t"); }
+   public String toString() {
+      String str = this.getName() + ": ";
+
+      for (Clusterable<?> element : mElements) {
+         str += String.format("%s, ", element);
+      }
+
+      return str;
+   }
 
    public String prettyPrint(String prefix) {
       String str = this.getName() + ":\n";

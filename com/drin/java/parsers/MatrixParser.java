@@ -1,5 +1,7 @@
 package com.drin.java.parsers;
 
+import com.drin.java.util.Logger;
+
 import java.io.File;
 import java.util.Scanner;
 import java.util.Map;
@@ -10,8 +12,6 @@ public class MatrixParser {
    private String mTokenDelim;
 
    private static final String DEFAULT_DELIMITER = ",";
-   private static final boolean DEBUG = false,
-                                USE_DISTANCE = false;
 
    public MatrixParser(String filename) {
       mMatrixFile = new File(filename);
@@ -60,7 +60,7 @@ public class MatrixParser {
       while (fileScanner.hasNextLine()) {
          String tupleStr = fileScanner.nextLine();
 
-         if (DEBUG) { System.out.printf("read line '%s'\n", tupleStr); }
+         Logger.debug(String.format("read line '%s'", tupleStr));
 
          tupleMap.putAll(constructTuple(tupleColMap,
           tupleStr.replace("\"","").split(mTokenDelim)));
@@ -89,12 +89,18 @@ public class MatrixParser {
          try {
             double tmpVal = Double.parseDouble(tupleData[tupleCol]);
 
-            if (USE_DISTANCE) { tuple.put(tupleColName, (1 - new Double(tmpVal/100))); }
-            else { tuple.put(tupleColName, new Double(tmpVal/100)); }
+            //If the given value is greater than 1, assume that the correlation
+            //is a percentage instead of in decimal form
+            if (tmpVal > 1) { tmpVal = tmpVal / 100; }
+
+            Logger.debug(String.format("parsed correlation value [%s]", tmpVal));
+
+            tuple.put(tupleColName, new Double(tmpVal));
          }
 
          catch (NumberFormatException numErr) {
-            System.err.printf("Matrix contains invalid value '%s'\n", tupleData[tupleCol]);
+            Logger.error(-1, String.format("Matrix contains invalid value '%s'",
+                                           tupleData[tupleCol]));
             System.exit(1);
          }
       }

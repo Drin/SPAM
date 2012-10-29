@@ -22,22 +22,22 @@ public class IsolateSimpleMetric extends DataMetric<Isolate> {
       for (String region : mRegionMap.keySet()) {
          Map<String, Map<String, Double>> corrMap = mRegionMap.get(region);
 
-         System.out.printf("elem_A: '%s' elem_B: '%s'\n", elem_A.getName(), elem_B.getName());
          /*
+         System.out.printf("elem_A: '%s' elem_B: '%s'\n", elem_A.getName(), elem_B.getName());
          System.out.printf("elem_A -> elem_B: '%s' elem_B -> elem_A: '%s'\n",
                            corrMap.containsKey(elem_A.getName()),
                            corrMap.containsKey(elem_B.getName()));
-                           */
+         */
 
          if (corrMap.containsKey(elem_A.getName()) &&
              corrMap.get(elem_A.getName()).containsKey(elem_B.getName())) {
             Map<String, Double> tmp_map = corrMap.get(elem_A.getName());
 
-            System.out.printf("%s\n", elem_A.getName());
+            //System.out.printf("%s\n", elem_A.getName());
 
             if (tmp_map.containsKey(elem_B.getName())) {
-               System.out.printf("%s\n", elem_B.getName());
-               mResult = tmp_map.get(elem_B.getName()).doubleValue();
+               //System.out.printf("%s\n", elem_B.getName());
+               mResult += tmp_map.get(elem_B.getName()).doubleValue();
             }
             else {
                setError(-1);
@@ -49,11 +49,11 @@ public class IsolateSimpleMetric extends DataMetric<Isolate> {
              corrMap.get(elem_B.getName()).containsKey(elem_A.getName())) {
             Map<String, Double> tmp_map = corrMap.get(elem_B.getName());
 
-            System.out.printf("else %s\n", elem_B.getName());
+            //System.out.printf("else %s\n", elem_B.getName());
 
             if (tmp_map.containsKey(elem_A.getName())) {
-               System.out.printf("%s\n", elem_A.getName());
-               mResult = tmp_map.get(elem_A.getName()).doubleValue();
+               //System.out.printf("%s\n", elem_A.getName());
+               mResult += tmp_map.get(elem_A.getName()).doubleValue();
             }
             else {
                setError(-1);
@@ -69,8 +69,9 @@ public class IsolateSimpleMetric extends DataMetric<Isolate> {
 
    @Override
    public double result() {
-      double result = mResult;
+      double result = mResult / mRegionMap.size();
 
+      //Logger.debug(String.format("comparison: [%.05f]", result));
       this.reset();
       return result;
    }

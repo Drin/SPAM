@@ -71,7 +71,7 @@ public class ClusterFileDialog extends JDialog {
     */
    private String mRecentDir;
    private Container mPane = null;
-   private JComboBox mMethod, mRegion_A, mRegion_B;
+   private JComboBox<String> mMethod, mRegion_A, mRegion_B;
    private JTextField mData_A, mData_B, mOutFile, mOntology,
                       mAlpha_A, mAlpha_B, mBeta_A, mBeta_B;
 
@@ -96,9 +96,9 @@ public class ClusterFileDialog extends JDialog {
       mPane.setLayout(new BoxLayout(mPane, BoxLayout.Y_AXIS));
       mPane.setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
 
-      mMethod = new JComboBox(CLUSTER_METHODS);
-      mRegion_A = new JComboBox(ITS_REGIONS);
-      mRegion_B = new JComboBox(ITS_REGIONS);
+      mMethod = new JComboBox<String>(CLUSTER_METHODS);
+      mRegion_A = new JComboBox<String>(ITS_REGIONS);
+      mRegion_B = new JComboBox<String>(ITS_REGIONS);
 
       mData_A = new JTextField(20);
       mData_B = new JTextField(20);
@@ -133,7 +133,7 @@ public class ClusterFileDialog extends JDialog {
    }
 
    public JPanel headerSection(JTextField outfile, JTextField ontology,
-                               JComboBox method) {
+                               JComboBox<String> method) {
       JPanel ontologySection = null, layout = new JPanel();
 
       layout.setLayout(new BoxLayout(layout, BoxLayout.Y_AXIS));
@@ -149,7 +149,7 @@ public class ClusterFileDialog extends JDialog {
       return layout;
    }
 
-   public JPanel inputField(JComboBox region, JTextField input,
+   public JPanel inputField(JComboBox<String> region, JTextField input,
     JTextField alpha, JTextField beta, JTextField outfile) {
       JPanel selection = new JPanel(), fileInput = new JPanel(),
              fileInputPanel = new JPanel();
@@ -203,8 +203,9 @@ public class ClusterFileDialog extends JDialog {
                return;
             }
 
-            takeAction();
-            dispose();
+            boolean isValid = takeAction();
+
+            if (isValid) { dispose(); }
          }
       });
 
@@ -286,7 +287,7 @@ public class ClusterFileDialog extends JDialog {
     * argument 3 defaults to 99.7% similarity
     * argument 4 defaults to Average similarity distance
     */
-   private void takeAction() {
+   private boolean takeAction() {
       Ontology ontology = null;
       Clusterer clusterer = null;
       Set<Cluster> clusters = new HashSet<Cluster>();
@@ -305,7 +306,9 @@ public class ClusterFileDialog extends JDialog {
       double alpha_B  = Double.parseDouble(mAlpha_B.getText());
       double beta_B   = Double.parseDouble(mBeta_B.getText());
 
-      performSanityChecks(region_A, region_B, data_A, data_B, alpha_A, alpha_B);
+      boolean isValid = performSanityChecks(region_A, region_B, data_A, data_B,
+                                            alpha_A, alpha_B);
+      if (!isValid) { return false; }
 
       Map<String, Map<String, Map<String, Double>>> regionMap =
                   new HashMap<String, Map<String, Map<String, Double>>>();
@@ -340,6 +343,8 @@ public class ClusterFileDialog extends JDialog {
 
       worker.setOutputFile(mOutFile.getText());
       worker.execute();
+
+      return true;
    }
 
    private JButton fileBrowseButton(final JTextField infile, final JTextField outfile) {
