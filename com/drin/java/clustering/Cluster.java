@@ -28,49 +28,12 @@ public abstract class Cluster {
       mDendogram = null;
    }
 
+   public String getName() { return mName; }
    public abstract Cluster join(Cluster otherClust);
 
    public Dendogram getDendogram() { return mDendogram; }
    public Set<Clusterable<?>> getElements() { return mElements; }
-
    public void add(Clusterable<?> element) { mElements.add(element); }
-
-   public String getName() { return mName; }
-
-   public double compareTo(Cluster otherClust) {
-      mMetric.apply(this, otherClust);
-
-      double comparison = mMetric.result();
-
-      Logger.error(mMetric.getError(),
-                   String.format("error computing metric between '%s' " +
-                                 "and '%s'\n", this.mName,
-                                 otherClust.mName));
-
-      return comparison;
-   }
-
-   public boolean isSimilar(Cluster otherClust) {
-      for (Clusterable<?> elem_A : mElements) {
-         for (Clusterable<?> elem_B : otherClust.mElements) {
-
-            if (!elem_A.isSimilar(elem_B)) { return false; }
-         }
-      }
-
-      return true;
-   }
-
-   public boolean isDifferent(Cluster otherClust) {
-      for (Clusterable<?> elem_A : mElements) {
-         for (Clusterable<?> elem_B : otherClust.mElements) {
-
-            if (!elem_A.isDifferent(elem_B)) { return false; }
-         }
-      }
-
-      return true;
-   }
 
    @Override
    public boolean equals(Object otherObj) {
@@ -107,5 +70,40 @@ public abstract class Cluster {
       }
 
       return str;
+   }
+
+   public double compareTo(Cluster otherClust) {
+      mMetric.apply(this, otherClust);
+
+      double comparison = mMetric.result();
+
+      Logger.error(mMetric.getError(),
+                   String.format("error computing metric between '%s' " +
+                                 "and '%s'\n", this.mName,
+                                 otherClust.mName));
+
+      return comparison;
+   }
+
+   public boolean isSimilar(Cluster otherClust) {
+      for (Clusterable<?> elem_A : mElements) {
+         for (Clusterable<?> elem_B : otherClust.mElements) {
+
+            if (!elem_A.isSimilar(elem_B)) { return false; }
+         }
+      }
+
+      return true;
+   }
+
+   public boolean isDifferent(Cluster otherClust) {
+      for (Clusterable<?> elem_A : mElements) {
+         for (Clusterable<?> elem_B : otherClust.mElements) {
+
+            if (!elem_A.isDifferent(elem_B)) { return false; }
+         }
+      }
+
+      return true;
    }
 }

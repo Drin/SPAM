@@ -1,9 +1,11 @@
 package com.drin.java.gui.components;
 
 import com.drin.java.clustering.Cluster;
-import com.drin.java.analysis.clustering.Clusterer;
+import com.drin.java.clustering.Clusterable;
 
+import com.drin.java.analysis.clustering.Clusterer;
 import com.drin.java.output.ClusterWriter;
+import com.drin.java.util.Logger;
 
 import javax.swing.SwingWorker;
 import javax.swing.JTextArea;
@@ -12,12 +14,10 @@ import java.util.Set;
 import java.util.List;
 
 public class AnalysisWorker extends SwingWorker<String[], Integer> {
-   private static final int DENDOGRAM_NDX = 0,
-                            ISOLATE_LIST_NDX = 1;
-
+   private static final int DENDOGRAM_INFO = 0,
+                            CLUSTER_INFO = 1;
    private Clusterer mClusterer;
    private JTextArea mCanvas;
-
    private String mOutFile;
 
    public AnalysisWorker(Clusterer clusterer, JTextArea resultCanvas) {
@@ -26,22 +26,66 @@ public class AnalysisWorker extends SwingWorker<String[], Integer> {
       mOutFile = null;
    }
 
-   public void setOutputFile(String outFileName) {
-      mOutFile = outFileName;
-   }
+   public void setOutputFile(String outFileName) { mOutFile = outFileName; }
 
    @Override
    public String[] doInBackground() {
       mClusterer.clusterData();
 
-      String[] clusters = new String[mClusterer.getClusters().size()];
-
-      int clustNdx = 0;
+      String clustInfo = "", dendInfo = "<Clusters>\n";
       for (Cluster cluster : mClusterer.getClusters()) {
-         clusters[clustNdx++] = cluster.prettyPrint("\t");
+         /*
+          * Dendogram Information
+          */
+         dendInfo += cluster.getDendogram().toString();
+
+         /*
+          * Cluster Information
+          */
+         clustInfo += String.format("Cluster %s:\n", cluster.getName());
+         for (Clusterable<?> elem : cluster.getElements()) {
+            clustInfo += String.format("\t,%s\n", elem.getName());
+         }
       }
 
-      return clusters;
+      dendInfo += "</Clusters>\n";
+
+      return new String[] {dendInfo, clustInfo};
+   }
+
+   @Override
+   protected void done() {
+      String[] resultArr = null;
+
+      try {
+         resultArr = get();
+      }
+      catch(InterruptedException interrErr) {
+         Logger.error(-1, "Analysis worker interrupted while waiting for " +
+                      "Clusterer to finish!");
+         interrErr.printStackTrace();
+      }
+      catch(java.util.concurrent.ExecutionException execErr) {
+         Logger.error(-1, "Error while analysis worker was executing!");
+         execErr.printStackTrace();
+      }
+
+      if (resultArr != null) {
+         writeDendogram(resultArr[DENDOGRAM_INFO]);
+         writeElements(resultArr[CLUSTER_INFO]);
+      
+         mCanvas.setText(resultArr[DENDOGRAM_INFO]);
+         mCanvas.setText(resultArr[CLUSTER_INFO]);
+      }
+
+      Logger.debug("Analysis Worker finished!");
+   }
+
+   @Override
+   protected void process(List<Integer> chunks) {
+      System.out.printf("%d clusters remaining...\n");
+      mCanvas.setText(String.format("%d clusters remaining...\n",
+       chunks.get(chunks.size() - 1)));
    }
 
    private void writeElements(String elementStr) {
@@ -60,46 +104,5 @@ public class AnalysisWorker extends SwingWorker<String[], Integer> {
          writer = new ClusterWriter(mOutFile + ClusterWriter.FileType.XML);
          writer.writeData(dendogramStr);
       }
-   }
-
-   @Override
-   protected void done() {
-      String[] resultArr = null;
-
-      try {
-         resultArr = get();
-      }
-      catch(InterruptedException interrErr) {
-         System.out.printf("Analysis worker interrupted while waiting for Clusterer to finish!\n");
-         interrErr.printStackTrace();
-      }
-      catch(java.util.concurrent.ExecutionException execErr) {
-         System.out.printf("Error while analysis worker was executing!\n");
-         execErr.printStackTrace();
-      }
-
-      if (resultArr != null) {
-         String resultStr = "";
-         for (int ndx = 0; ndx < resultArr.length; ndx++) {
-            resultStr += resultArr[ndx] + "\n";
-         }
-         /*
-         writeDendogram(resultArr[DENDOGRAM_NDX]);
-         writeElements(resultArr[ISOLATE_LIST_NDX]);
-         */
-      
-         //mCanvas.setText(resultArr[DENDOGRAM_NDX]);
-         mCanvas.setText(resultStr);
-         System.out.println(resultStr);
-      }
-
-      System.out.println("done!");
-   }
-
-   @Override
-   protected void process(List<Integer> chunks) {
-      System.out.printf("%d clusters remaining...\n");
-      mCanvas.setText(String.format("%d clusters remaining...\n",
-       chunks.get(chunks.size() - 1)));
    }
 }
