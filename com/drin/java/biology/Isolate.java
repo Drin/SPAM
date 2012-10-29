@@ -10,6 +10,7 @@ import com.drin.java.util.Logger;
 
 import java.util.Iterator;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
 
@@ -18,7 +19,9 @@ import java.util.HashSet;
  *
  */
 public class Isolate extends Clusterable<ITSRegion> {
+   private static final int ALPHA_NDX = 0, BETA_NDX = 1;
    private DataMetric<Isolate> mMetric;
+   private Map<String, double[]> mThresholds;
 
    public Isolate(String isoId, Set<ITSRegion> regions, DataMetric<Isolate> metric) {
       super(isoId, regions);
@@ -26,8 +29,13 @@ public class Isolate extends Clusterable<ITSRegion> {
       mMetric = metric;
    }
 
-   public Isolate(String isoId, DataMetric<Isolate> metric) {
-      this(isoId, null, metric);
+   public Isolate(String isoId, Map<String, double[]> threshMap,
+                  DataMetric<Isolate> metric) {
+      super(isoId, null);
+
+      mMetric = metric;
+
+      mThresholds = threshMap;
    }
 
    @Override
@@ -67,8 +75,13 @@ public class Isolate extends Clusterable<ITSRegion> {
 
             return true;
          }
-         //TODO
-         else return this.compareTo((Isolate) otherObj) > .995;
+         else if (mThresholds != null) {
+            double comparison = this.compareTo((Isolate) otherObj);
+
+            for (Map.Entry<String, double[]> thresh : mThresholds.entrySet()) {
+               return comparison > thresh.getValue()[ALPHA_NDX];
+            }
+         }
       }
 
       return false;
