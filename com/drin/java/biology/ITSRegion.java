@@ -44,7 +44,16 @@ public class ITSRegion extends Clusterable<Pyroprint> {
    @Override
    public boolean isSimilar(Clusterable<?> otherObj) {
       if (otherObj instanceof ITSRegion) {
-         return this.compareTo((ITSRegion) otherObj) > mAlpha;
+         return this.compareTo((ITSRegion) otherObj) >= mAlpha;
+      }
+
+      return false;
+   }
+
+   @Override
+   public boolean isDifferent(Clusterable<?> otherObj) {
+      if (otherObj instanceof ITSRegion) {
+         return this.compareTo((ITSRegion) otherObj) < mBeta;
       }
 
       return false;

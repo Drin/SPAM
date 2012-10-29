@@ -16,11 +16,8 @@ import java.util.HashSet;
 public class AgglomerativeClusterer extends HierarchicalClusterer {
    protected static final int CLUSTER_PAIR_SIZE = 2;
 
-   private double mThreshold;
-
-   public AgglomerativeClusterer(Set<Cluster> clusters, double thresh) {
+   public AgglomerativeClusterer(Set<Cluster> clusters) {
       super(clusters);
-      mThreshold = thresh;
    }
 
    @Override
@@ -34,7 +31,7 @@ public class AgglomerativeClusterer extends HierarchicalClusterer {
 
             double clustDist = clust_A.compareTo(clust_B);
 
-            if (clustDist > maxSim && clust_A.isSimilar(clust_B)) {
+            if (clustDist > maxSim && !clust_A.isDifferent(clust_B)) {
                closeClust_A = clust_A;
                closeClust_B = clust_B;
 

@@ -79,12 +79,49 @@ public class Isolate extends Clusterable<ITSRegion> {
             double comparison = this.compareTo((Isolate) otherObj);
 
             for (Map.Entry<String, double[]> thresh : mThresholds.entrySet()) {
-               return comparison > thresh.getValue()[ALPHA_NDX];
+               if (comparison < thresh.getValue()[ALPHA_NDX]) { return false; }
             }
+
+            return true;
          }
       }
 
       return false;
+   }
+
+   @Override
+   public boolean isDifferent(Clusterable<?> otherObj) {
+      if (otherObj instanceof Isolate) {
+         if (this.getData() != null) {
+            Iterator<ITSRegion> itr_A = this.getData().iterator();
+
+            while (itr_A.hasNext()) {
+               ITSRegion region_A = itr_A.next();
+               Iterator<ITSRegion> itr_B = ((Isolate)otherObj).getData().iterator();
+
+               while (itr_B.hasNext()) {
+                  ITSRegion region_B = itr_B.next();
+
+                  if (region_A.getName().equals(region_B.getName())) {
+                     if (region_A.isDifferent(region_B)) { return true; }
+                  }
+               }
+            }
+
+            return false;
+         }
+         else if (mThresholds != null) {
+            double comparison = this.compareTo((Isolate) otherObj);
+
+            for (Map.Entry<String, double[]> thresh : mThresholds.entrySet()) {
+               if (comparison >= thresh.getValue()[BETA_NDX]) { return false; }
+            }
+
+            return true;
+         }
+      }
+
+      return true;
    }
 
    @Override

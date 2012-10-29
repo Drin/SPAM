@@ -27,4 +27,5 @@ public abstract class Clusterable<E> {
 
    public abstract double compareTo(Clusterable<?> otherData);
    public abstract boolean isSimilar(Clusterable<?> otherData);
+   public abstract boolean isDifferent(Clusterable<?> otherData);
 }

@@ -20,7 +20,7 @@ public class OHClustering extends AgglomerativeClusterer {
    //TODO the 2nd param to super (single threshold for hierarchical clustering)
    //should not be 0...
    public OHClustering(Set<Cluster> clusters, Ontology ontology) {
-      super(clusters, 0);
+      super(clusters);
 
       mOntology = ontology;
    }

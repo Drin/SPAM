@@ -62,9 +62,11 @@ public class ClusterFileDialog extends JDialog {
    private final int DIALOG_HEIGHT = 400, DIALOG_WIDTH = 500;
    private final String ALPHA_VAL = "99.5", BETA_VAL = "99.0";
 
+   private final String[] ITS_REGIONS = new String[] { "16s-23s", "23s-5s" };
+   /*
    private final String[] CLUSTER_METHODS = new String[] {"Hierarchical",
                                                           "OHClustering"};
-   private final String[] ITS_REGIONS = new String[] { "16s-23s", "23s-5s" };
+   */
 
    /*
     * GUI Components
@@ -96,7 +98,7 @@ public class ClusterFileDialog extends JDialog {
       mPane.setLayout(new BoxLayout(mPane, BoxLayout.Y_AXIS));
       mPane.setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
 
-      mMethod = new JComboBox<String>(CLUSTER_METHODS);
+      //mMethod = new JComboBox<String>(CLUSTER_METHODS);
       mRegion_A = new JComboBox<String>(ITS_REGIONS);
       mRegion_B = new JComboBox<String>(ITS_REGIONS);
 
@@ -113,7 +115,8 @@ public class ClusterFileDialog extends JDialog {
    }
 
    public void init() {
-      mPane.add(headerSection(mOutFile, mOntology, mMethod));
+      //mPane.add(headerSection(mOutFile, mOntology, mMethod));
+      mPane.add(headerSection(mOutFile, mOntology));
 
       JPanel labelField = new JPanel();
       labelField.setLayout(new FlowLayout(FlowLayout.LEADING));
@@ -132,8 +135,8 @@ public class ClusterFileDialog extends JDialog {
       mPane.validate();
    }
 
-   public JPanel headerSection(JTextField outfile, JTextField ontology,
-                               JComboBox<String> method) {
+   //public JPanel headerSection(JTextField outfile, JTextField ontology, JComboBox<String> method) {
+   public JPanel headerSection(JTextField outfile, JTextField ontology) {
       JPanel ontologySection = null, layout = new JPanel();
 
       layout.setLayout(new BoxLayout(layout, BoxLayout.Y_AXIS));
@@ -142,7 +145,7 @@ public class ClusterFileDialog extends JDialog {
       ontologySection.add(fileBrowseButton(ontology, null));
 
       layout.add(horizontal_input("Output file name:", outfile));
-      layout.add(horizontal_input("Clustering Method:", method));
+      //layout.add(horizontal_input("Clustering Method:", method));
       layout.add(ontologySection);
       layout.setAlignmentY(Component.CENTER_ALIGNMENT);
 
@@ -344,7 +347,8 @@ public class ClusterFileDialog extends JDialog {
          }
       }
 
-      clusterer = new OHClustering(clusters, ontology);
+      if (mOntology != null) { clusterer = new OHClustering(clusters, ontology); }
+      else if (mOntology == null) { clusterer = new AgglomerativeClusterer(clusters); }
 
       AnalysisWorker worker = new AnalysisWorker(clusterer,
        MainWindow.getMainFrame().getOutputCanvas());
