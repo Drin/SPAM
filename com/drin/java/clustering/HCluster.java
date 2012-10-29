@@ -9,6 +9,8 @@ import com.drin.java.clustering.dendogram.Dendogram;
 import com.drin.java.clustering.dendogram.DendogramNode;
 import com.drin.java.clustering.dendogram.DendogramLeaf;
 
+import com.drin.java.util.Logger;
+
 import java.util.Collection;
 
 public class HCluster extends Cluster {
@@ -22,17 +24,40 @@ public class HCluster extends Cluster {
       mDendogram = new DendogramLeaf(elem);
    }
 
+   public void computeStatistics() {
+      double minSim = Double.MAX_VALUE, total = 0;
+      int numComparisons = 0;
+
+      for (Clusterable<?> elem_A : mElements) {
+         for (Clusterable<?> elem_B : mElements) {
+            if (elem_A.getName().equals(elem_B.getName())) { continue; }
+
+            double comparison = elem_A.compareTo(elem_B);
+
+            total += comparison;
+            numComparisons++;
+
+            if (comparison < minSim) { minSim = comparison; }
+         }
+      }
+
+      mDiameter = minSim;
+      mMean = numComparisons > 0 ? total / numComparisons : 0;
+   }
+
    public Cluster join(Cluster otherClust) {
       if (otherClust instanceof HCluster) {
          Cluster newCluster = new HCluster(this.mMetric);
 
          Collection<Clusterable<?>> otherData = ((HCluster)otherClust).mElements;
-         Dendogram otherDend = ((HCluster)otherClust).mDendogram;
 
          newCluster.mElements.addAll(this.mElements);
          newCluster.mElements.addAll(otherData);
 
-         newCluster.mDendogram = new DendogramNode(this.mDendogram, otherDend);
+         newCluster.computeStatistics();
+
+         Dendogram otherDend = ((HCluster)otherClust).mDendogram;
+         newCluster.mDendogram = new DendogramNode(this.mDendogram, otherDend, newCluster);
 
          return newCluster;
       }
