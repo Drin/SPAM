@@ -17,8 +17,10 @@ public class ITSRegion extends Clusterable<Pyroprint> {
    public ITSRegion(String regionName, double alpha, double beta,
                     DataMetric<ITSRegion> metric) {
       super(regionName, new HashSet<Pyroprint>());
+
       mAlpha = alpha;
       mBeta = beta;
+
       mMetric = metric;
    }
 

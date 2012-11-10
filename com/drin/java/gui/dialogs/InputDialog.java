@@ -207,77 +207,70 @@ public class InputDialog extends JDialog {
       return dialogControls;
    }
 
+   private List<Map<String, Object>> queryData() {
+      List<Map<String, Object>> dataList = null;
+      String dataSet = mDataSet.getText();
+
+      if (String.valueOf(mDataSetType.getSelectedItem()).equals(DATA_TYPE_VALUES[0])) {
+         try {
+            dataList = mConn.getDataByIsoID(dataSet);
+         }
+         catch (java.sql.SQLException sqlErr) {
+            System.out.println("SQLException:\nExiting...");
+            sqlErr.printStackTrace();
+            System.exit(1);
+         }
+      }
+
+      else if (String.valueOf(mDataSetType.getSelectedItem()).equals(DATA_TYPE_VALUES[1])) {
+         try {
+            dataList = mConn.getDataByPyroID(dataSet);
+         }
+         catch (java.sql.SQLException sqlErr) {
+            System.out.println("SQLException:\nExiting...");
+            sqlErr.printStackTrace();
+            System.exit(1);
+         }
+      }
+
+      return dataList;
+   }
+
+   private boolean doWork() {
+      Ontology ontology = null;
+      Clusterer clusterer = null;
+      Set<Cluster> clusters = new HashSet<Cluster>();
+
+      Map<String, Isolate> isoMap = constructIsolates(queryData());
+
+      //TODO
+
+      for (Map.Entry<String, Isolate> isoEntry : isoMap.entrySet()) {
+         clusters.add(new IsolateCluster(isoEntry.getKey(), isoEntry.getValue()));
+      }
+
+      clusterer = new AgglomerativeClusterer(clusters);
+
+      AnalysisWorker worker = new AnalysisWorker(clusterer,
+       MainWindow.getMainFrame().getOutputCanvas());
+
+      worker.setOutputFile("TestOut");
+      worker.execute();
+
+      return true;
+   }
+
    private JButton createOkayButton() {
       JButton okayButton = new JButton("Okay");
 
       okayButton.addActionListener(new ActionListener(){
          public void actionPerformed(ActionEvent e) {
-            List<Map<String, Object>> dataList = null;
-            String dataSet = mDataSet.getText();
-
-            if (dataSet.equals("")) {
+            if (mDataSet.getText().equals("")) {
                System.out.printf("No data selected.\n");
                return;
             }
 
-            if (String.valueOf(mDataSetType.getSelectedItem()).equals(DATA_TYPE_VALUES[0])) {
-               try {
-                  dataList = mConn.getDataByIsoID(dataSet);
-               }
-               catch (java.sql.SQLException sqlErr) {
-                  System.out.println("SQLException:\nExiting...");
-                  sqlErr.printStackTrace();
-                  System.exit(1);
-               }
-            }
-
-            else if (String.valueOf(mDataSetType.getSelectedItem()).equals(DATA_TYPE_VALUES[1])) {
-               try {
-                  dataList = mConn.getDataByPyroID(dataSet);
-               }
-               catch (java.sql.SQLException sqlErr) {
-                  System.out.println("SQLException:\nExiting...");
-                  sqlErr.printStackTrace();
-                  System.exit(1);
-               }
-            }
-
-            else if (String.valueOf(mDataSetType.getSelectedItem()).equals(DATA_TYPE_VALUES[2])) {
-               ;
-            }
-
-            //construct a representation for all isolates retrieved from the
-            //database
-            Map<String, Isolate> isoMap = constructIsolates(dataList);
-
-            ITSRegionMetric regMetric1 = new ITSRegionAverageMetric(new PyroprintComparator(), new PyroprintPearsonMetric());
-            ITSRegionMetric regMetric2 = new ITSRegionAverageMetric(new PyroprintComparator(), new PyroprintPearsonMetric());
-
-            IsolateMetric isoMetric = new IsolateAverageMetric(new ITSRegionComparator(), regMetric1, regMetric2);
-
-            DataMetric<Isolate> clustIsoMetric = new ClusterIsolateMetric(new IsolateComparator(), isoMetric);
-
-            try {
-               Set<Cluster> clusterSet = new HashSet<Cluster>();
-
-               for (Map.Entry<String, Isolate> isoEntry : isoMap.entrySet()) {
-                  clusterSet.add(new IsolateCluster(isoEntry.getKey(), isoEntry.getValue()));
-               }
-
-               HierarchicalClusterer clusterer = new AgglomerativeClusterer(clusterSet, clustIsoMetric, new ClusterIsolateComparator());
-               //ClusterAnalyzer analyzer = new ClusterAnalyzer(isoMetric);
-               ClusterAnalyzer analyzer = new ClusterAnalyzer(clustIsoMetric);
-
-               AnalysisWorker worker = new AnalysisWorker(analyzer, clusterer,
-                MainWindow.getMainFrame().getOutputCanvas());
-
-               worker.setOutputFile("TestOut");
-               worker.execute();
-            }
-
-            catch (NullPointerException emptyValErr) {
-               emptyValErr.printStackTrace();
-            }
+            doWork();
 
             dispose();
          }
@@ -299,8 +292,25 @@ public class InputDialog extends JDialog {
       return cancelButton;
    }
 
+   /*
+    * TODO:
+    * do a single pass over the data. This should allow for ITSRegions and
+    * Isolates to be constructed.
+    * Then do 1 large query to the database (instead of 1 per pyroprint).
+    * The pyroprint data will then be scanned and pyroprints will be
+    * constructed, and added to the appropriate ITS region. 
+    * Then a map of isolate IDs to isolates will be returned where each isolate
+    * has a set of ITSRegions (different) and each region has a set of
+    * pyroprints.
+    */
    private Map<String, Isolate> constructIsolates(List<Map<String, Object>> dataList) {
       Map<String, Isolate> isoMap = new HashMap<String, Isolate>();
+      double tmp_alpha = .99, tmp_beta = .995;
+
+      DataMetric<Isolate> isoMetric = new IsolateAverageMetric();
+      DataMetric<ITSRegion> regionMetric = new ITSRegionAverageMetric(tmp_alpha, tmp_beta);
+
+      Set<ITSRegion> isolateRegions = new HashSet<ITSRegion>();
 
       for (Map<String, Object> dataMap : dataList) {
          String isoID = String.valueOf(dataMap.get("isolate"));
@@ -308,19 +318,12 @@ public class InputDialog extends JDialog {
          String wellID = String.valueOf(dataMap.get("well"));
          int pyroID = Integer.parseInt(String.valueOf(dataMap.get("pyroprint")));
 
+         isolateRegions.add(new ITSRegion(regName, tmp_alpha, tmp_beta,
+                                          regionMetric));
+
          //Retrieve Isolate
          if (!isoMap.containsKey(isoID)) {
-            isoMap.put(isoID, new Isolate(isoID));
-         }
-
-         /*
-          * Retrive ITSRegion, add to Isolate if necessary
-          */
-         ITSRegion tmpRegion = isoMap.get(isoID).getRegion(regName);
-
-         if (tmpRegion == null) {
-            tmpRegion = new ITSRegion(regName);
-            isoMap.get(isoID).getRegions().add(tmpRegion);
+            isoMap.put(isoID, new Isolate(isoID, isolateRegions, isoMetric));
          }
 
          /*
