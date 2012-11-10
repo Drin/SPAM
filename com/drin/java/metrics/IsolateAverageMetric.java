@@ -11,12 +11,8 @@ import java.util.Collection;
 import java.util.Iterator;
 
 public class IsolateAverageMetric extends DataMetric<Isolate> {
-   private DataMetric<Isolate> mMetric;
-
-   public IsolateAverageMetric(DataMetric<Isolate> metric) {
+   public IsolateAverageMetric() {
       super();
-
-      mMetric = metric;
    }
 
    @Override

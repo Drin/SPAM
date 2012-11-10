@@ -195,8 +195,6 @@ public class ClusterFileDialog extends JDialog {
 
       okayButton.addActionListener(new ActionListener(){
          public void actionPerformed(ActionEvent e) {
-            int clusterNum = 0;
-
             if (mData_A.getText().equals("")  || mData_B.getText().equals("") ||
                 mAlpha_A.getText().equals("") || mBeta_A.getText().equals("") ||
                 mAlpha_B.getText().equals("") || mBeta_B.getText().equals("")) {

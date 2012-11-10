@@ -19,10 +19,17 @@ public abstract class Clusterable<E> {
    @Override
    public int hashCode() { return mName.hashCode(); }
 
-   public String getName() { return mName; }
+   @Override
+   public boolean equals(Object obj) {
+      if (obj instanceof Clusterable) {
+         return mName.equals(((Clusterable)obj).getName());
+      }
+
+      return false;
+   }
 
    public int size() { return mData.size(); }
-
+   public String getName() { return mName; }
    public Collection<E> getData() { return mData; }
 
    public abstract double compareTo(Clusterable<?> otherData);
