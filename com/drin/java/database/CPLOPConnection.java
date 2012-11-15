@@ -555,9 +555,10 @@ public class CPLOPConnection {
       ResultSet results = null;
 
       String query = String.format(
-       "SELECT pyroID, isoID, appliedRegion, wellID " +
-       "FROM Pyroprints join Isolates using (isoID) " +
-       "WHERE %s in (%s) and pyroID in (Select distinct pyroID from Histograms)",
+       "SELECT pyroID, isoID, appliedRegion, wellID, pHeight, nucleotide " +
+       "FROM Pyroprints join Isolates using (isoID) join Histograms using (pyroID) " +
+       "WHERE %s in (%s) and pyroID in (Select distinct pyroID from Histograms)" + 
+       "ORDER BY pyroID, isoID asc",
        searchID, searchSet);
 
       try {
@@ -570,6 +571,8 @@ public class CPLOPConnection {
             tuple.put("isolate", results.getString(2)); 
             tuple.put("region", results.getString(3)); 
             tuple.put("well", results.getString(4));
+            tuple.put("pHeight", results.getString(5));
+            tuple.put("nucleotide", results.getString(6));
 
             rtn.add(tuple);
          }

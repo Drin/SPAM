@@ -33,7 +33,7 @@ public class DataQueryButtonListener implements ActionListener {
 
    private JDialog mDialog = null;
    private Container mPane = null;
-   private JComboBox<String> mDataTypeOptions = null;
+   private JComboBox mDataTypeOptions = null;
    private JTextField mDataSetField = null;
    private JTable mTable = null;
 
@@ -44,7 +44,7 @@ public class DataQueryButtonListener implements ActionListener {
 
    private CPLOPConnection mConn = null;
 
-   public DataQueryButtonListener(JTextField textField, JComboBox<String> dataTypeOptions,
+   public DataQueryButtonListener(JTextField textField, JComboBox dataTypeOptions,
     CPLOPConnection conn) {
       mDataTypeOptions = dataTypeOptions;
       mDataSetField = textField;

@@ -4,12 +4,15 @@ import com.drin.java.biology.Isolate;
 import com.drin.java.biology.ITSRegion;
 import com.drin.java.biology.Pyroprint;
 import com.drin.java.clustering.Cluster;
+import com.drin.java.clustering.HCluster;
 
 import com.drin.java.metrics.ClusterAverageMetric;
 import com.drin.java.metrics.IsolateAverageMetric;
 import com.drin.java.metrics.ITSRegionAverageMetric;
 import com.drin.java.metrics.PyroprintUnstablePearsonMetric;
 
+import com.drin.java.ontology.Ontology;
+import com.drin.java.analysis.clustering.Clusterer;
 import com.drin.java.analysis.clustering.HierarchicalClusterer;
 import com.drin.java.analysis.clustering.AgglomerativeClusterer;
 
@@ -68,7 +71,7 @@ public class InputDialog extends JDialog {
     */
    private Container mPane = null, mOwner = null;
    private JDialog mDialog = null;
-   private JComboBox<String> mDataSetType;
+   private JComboBox mDataSetType;
    private JTextField mDataSet, mDataHierarchy;
 
    private CPLOPConnection mConn;
@@ -92,7 +95,7 @@ public class InputDialog extends JDialog {
       mDataSet = new JTextField(20);
       mDataHierarchy = new JTextField(20);
 
-      mDataSetType = new JComboBox<String>(DATA_TYPE_VALUES);
+      mDataSetType = new JComboBox(DATA_TYPE_VALUES);
 
       try {
          mConn = new CPLOPConnection();
@@ -139,7 +142,7 @@ public class InputDialog extends JDialog {
       mPane.validate();
    }
 
-   private JPanel prepareDataSetField(JComboBox<String> dataTypeOptions, JTextField dataField) {
+   private JPanel prepareDataSetField(JComboBox dataTypeOptions, JTextField dataField) {
       JPanel dataSetField = new JPanel();
 
       dataSetField.setLayout(new FlowLayout(FlowLayout.LEADING));
@@ -162,7 +165,7 @@ public class InputDialog extends JDialog {
       return dataHierarchyField;
    }
 
-   private JButton prepareDataQueryButton(JTextField dataSetField, JComboBox<String> dataTypeOptions) {
+   private JButton prepareDataQueryButton(JTextField dataSetField, JComboBox dataTypeOptions) {
       final JButton dataQueryButton = new JButton("Choose " + dataTypeOptions.getSelectedItem());
 
       dataTypeOptions.addItemListener(new ItemListener() {
@@ -242,11 +245,12 @@ public class InputDialog extends JDialog {
       Set<Cluster> clusters = new HashSet<Cluster>();
 
       Map<String, Isolate> isoMap = constructIsolates(queryData());
-
+      
+      ClusterAverageMetric clustMetric = new ClusterAverageMetric();
       //TODO
 
       for (Map.Entry<String, Isolate> isoEntry : isoMap.entrySet()) {
-         clusters.add(new IsolateCluster(isoEntry.getKey(), isoEntry.getValue()));
+         clusters.add(new HCluster(clustMetric, isoEntry.getValue()));
       }
 
       clusterer = new AgglomerativeClusterer(clusters);
@@ -292,65 +296,60 @@ public class InputDialog extends JDialog {
       return cancelButton;
    }
 
-   /*
-    * TODO:
-    * do a single pass over the data. This should allow for ITSRegions and
-    * Isolates to be constructed.
-    * Then do 1 large query to the database (instead of 1 per pyroprint).
-    * The pyroprint data will then be scanned and pyroprints will be
-    * constructed, and added to the appropriate ITS region. 
-    * Then a map of isolate IDs to isolates will be returned where each isolate
-    * has a set of ITSRegions (different) and each region has a set of
-    * pyroprints.
-    */
+   @SuppressWarnings("unchecked")
    private Map<String, Isolate> constructIsolates(List<Map<String, Object>> dataList) {
       Map<String, Isolate> isoMap = new HashMap<String, Isolate>();
+      Map<String, Object[]> pyroDataMap = new HashMap<String, Object[]>();
       double tmp_alpha = .99, tmp_beta = .995;
 
-      DataMetric<Isolate> isoMetric = new IsolateAverageMetric();
-      DataMetric<ITSRegion> regionMetric = new ITSRegionAverageMetric(tmp_alpha, tmp_beta);
-
-      Set<ITSRegion> isolateRegions = new HashSet<ITSRegion>();
-
+      //First pass over the data where ITSRegions and Isolates are constructed.
+      String pyroList = "";
       for (Map<String, Object> dataMap : dataList) {
          String isoID = String.valueOf(dataMap.get("isolate"));
          String regName = String.valueOf(dataMap.get("region"));
          String wellID = String.valueOf(dataMap.get("well"));
          int pyroID = Integer.parseInt(String.valueOf(dataMap.get("pyroprint")));
+         double peakHeight = Double.parseDouble(String.valueOf(dataMap.get("pHeight")));
+         String nucleotide = String.valueOf(dataMap.get("nucleotide"));
 
-         isolateRegions.add(new ITSRegion(regName, tmp_alpha, tmp_beta,
-                                          regionMetric));
 
          //Retrieve Isolate
          if (!isoMap.containsKey(isoID)) {
-            isoMap.put(isoID, new Isolate(isoID, isolateRegions, isoMetric));
+            isoMap.put(isoID, new Isolate(isoID, new HashSet<ITSRegion>(),
+                                          new IsolateAverageMetric()));
+         }
+         isoMap.get(isoID).getData().add(new ITSRegion(regName, tmp_alpha, tmp_beta,
+                                         new ITSRegionAverageMetric(tmp_alpha, tmp_beta)));
+
+         if (!pyroDataMap.containsKey(isoID)) {
+            pyroDataMap.put(isoID, new Object[] {pyroID, wellID, "",
+                                                 new ArrayList<Double>(),
+                                                 regName});
          }
 
-         /*
-          * Construct Pyroprint
-          */
-         List<Double> peakList = new ArrayList<Double>(104);
-         String peakDisp = "";
-         List<Map<String, Object>> peakMapList = null;
+         Object[] pyroData = pyroDataMap.get(isoID);
 
-         try {
-            peakMapList = mConn.getHistogram(pyroID);
+
+         if (pyroData[2] instanceof String) {
+            pyroData[2] = String.valueOf(pyroData[2]).concat(nucleotide);
          }
-         catch (java.sql.SQLException sqlErr) {
-            System.out.println("SQLException:\nExiting...");
-            sqlErr.printStackTrace();
-            System.exit(1);
+         if (pyroData[3] instanceof List<?>) {
+            List peakList = (List<?>) pyroData[3];
+            peakList.add(peakHeight);
          }
+      }
 
-         for (Map<String, Object> peakMap : peakMapList) {
-            peakList.add((Double) peakMap.get("peakHeight"));
-            peakDisp += String.valueOf(peakMap.get("nucleotide"));
+      for (Map.Entry<String, Object[]> pyroEntry : pyroDataMap.entrySet()) {
+         Object[] pyroData = pyroEntry.getValue();
+         Pyroprint newPyro = new Pyroprint(Integer.parseInt(String.valueOf(pyroData[0])),
+                                           String.valueOf(pyroData[1]),
+                                           String.valueOf(pyroData[2]),
+                                           (List<Double>) pyroData[3],
+                                           new PyroprintUnstablePearsonMetric());
+
+         for (ITSRegion region : isoMap.get(pyroEntry.getKey()).getData()) {
+            if (region.equals(pyroData[4])) { region.getData().add(newPyro); }
          }
-
-         Pyroprint tmpPyro = new Pyroprint(pyroID, wellID, peakDisp, peakList);
-
-         //add pyroprint to current ITSRegion
-         tmpRegion.getPyroprints().add(tmpPyro);
       }
 
       return isoMap;
