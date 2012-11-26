@@ -13,13 +13,15 @@ import com.drin.java.metrics.PyroprintUnstablePearsonMetric;
 
 import com.drin.java.ontology.Ontology;
 import com.drin.java.analysis.clustering.Clusterer;
-import com.drin.java.analysis.clustering.HierarchicalClusterer;
 import com.drin.java.analysis.clustering.AgglomerativeClusterer;
+import com.drin.java.analysis.clustering.OHClusterer;
 
 import com.drin.java.gui.MainWindow;
 import com.drin.java.gui.listeners.DataQueryButtonListener;
 import com.drin.java.gui.components.AnalysisWorker;
 import com.drin.java.database.CPLOPConnection;
+
+import com.drin.java.util.Logger;
 
 import java.awt.Component;
 import java.awt.ComponentOrientation;
@@ -45,6 +47,8 @@ import javax.swing.JComboBox;
 import javax.swing.JTable;
 import javax.swing.JSeparator;
 import javax.swing.BoxLayout;
+import javax.swing.JFileChooser;
+import javax.swing.JComponent;
 
 import java.io.File;
 
@@ -71,8 +75,9 @@ public class InputDialog extends JDialog {
     */
    private Container mPane = null, mOwner = null;
    private JDialog mDialog = null;
-   private JComboBox mDataSetType;
-   private JTextField mDataSet, mDataHierarchy;
+   private JComboBox<String> mDataSetType;
+   private JTextField mDataSet, mDataHierarchy, mOutFile, mOntology;
+   private String mRecentDir;
 
    private CPLOPConnection mConn;
 
@@ -95,7 +100,12 @@ public class InputDialog extends JDialog {
       mDataSet = new JTextField(20);
       mDataHierarchy = new JTextField(20);
 
-      mDataSetType = new JComboBox(DATA_TYPE_VALUES);
+      mOutFile = new JTextField(20);
+      mOntology = new JTextField(15);
+
+      mRecentDir = "";
+
+      mDataSetType = new JComboBox<String>(DATA_TYPE_VALUES);
 
       try {
          mConn = new CPLOPConnection();
@@ -125,6 +135,8 @@ public class InputDialog extends JDialog {
    }
 
    public void init() {
+      mPane.add(headerSection(mOutFile, mOntology));
+
       JLabel dataSetLabel = new JLabel("Select Data Set:");
       JPanel dataSetField = prepareDataSetField(mDataSetType, mDataSet);
 
@@ -142,7 +154,67 @@ public class InputDialog extends JDialog {
       mPane.validate();
    }
 
-   private JPanel prepareDataSetField(JComboBox dataTypeOptions, JTextField dataField) {
+   private JPanel headerSection(JTextField outfile, JTextField ontology) {
+      JPanel ontologySection = null, layout = new JPanel();
+
+      layout.setLayout(new BoxLayout(layout, BoxLayout.Y_AXIS));
+
+      ontologySection = horizontal_input("Experimental Hierarchy", ontology);
+      ontologySection.add(fileBrowseButton(ontology, null));
+
+      layout.add(horizontal_input("Output file name:", outfile));
+      //layout.add(horizontal_input("Clustering Method:", method));
+      layout.add(ontologySection);
+      layout.setAlignmentY(Component.CENTER_ALIGNMENT);
+
+      return layout;
+   }
+
+   private JButton fileBrowseButton(final JTextField infile, final JTextField outfile) {
+      JButton fileBrowse = new JButton("Browse");
+
+      fileBrowse.addActionListener(new ActionListener() {
+         public void actionPerformed(ActionEvent e) {
+            JFileChooser chooser = new JFileChooser();
+            //chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+
+            if (mRecentDir != "") {
+               File curDir = new File(mRecentDir);
+               chooser.setCurrentDirectory(curDir);
+            }
+            
+            int returnVal = chooser.showOpenDialog(chooser);
+            
+            if (returnVal == JFileChooser.APPROVE_OPTION) {
+               File dataFile = chooser.getSelectedFile();
+               infile.setText(dataFile.getAbsolutePath());
+
+               if (outfile != null && outfile.getText().equals("")) {
+                  outfile.setText(dataFile.getName().substring(0,
+                                  dataFile.getName().indexOf(".csv")));
+               }
+
+               mRecentDir = chooser.getSelectedFile().getPath();
+            }
+         }
+      });
+
+      return fileBrowse;
+   }
+
+   private JPanel horizontal_input(String label, JComponent component) {
+      JPanel panel = new JPanel();
+
+      panel.setLayout(new FlowLayout(FlowLayout.LEADING));
+      panel.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
+      panel.add(new JLabel(label));
+      panel.add(component);
+      panel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+      return panel;
+   }
+
+   private JPanel prepareDataSetField(JComboBox<String> dataTypeOptions, JTextField dataField) {
       JPanel dataSetField = new JPanel();
 
       dataSetField.setLayout(new FlowLayout(FlowLayout.LEADING));
@@ -165,7 +237,7 @@ public class InputDialog extends JDialog {
       return dataHierarchyField;
    }
 
-   private JButton prepareDataQueryButton(JTextField dataSetField, JComboBox dataTypeOptions) {
+   private JButton prepareDataQueryButton(JTextField dataSetField, JComboBox<String> dataTypeOptions) {
       final JButton dataQueryButton = new JButton("Choose " + dataTypeOptions.getSelectedItem());
 
       dataTypeOptions.addItemListener(new ItemListener() {
@@ -244,21 +316,25 @@ public class InputDialog extends JDialog {
       Clusterer clusterer = null;
       Set<Cluster> clusters = new HashSet<Cluster>();
 
+      if (!mOntology.getText().equals("")) {
+         ontology = Ontology.createOntology(mOntology.getText());
+      }
+
       Map<String, Isolate> isoMap = constructIsolates(queryData());
       
       ClusterAverageMetric clustMetric = new ClusterAverageMetric();
-      //TODO
 
       for (Map.Entry<String, Isolate> isoEntry : isoMap.entrySet()) {
          clusters.add(new HCluster(clustMetric, isoEntry.getValue()));
       }
 
-      clusterer = new AgglomerativeClusterer(clusters);
+      if (mOntology != null) { clusterer = new OHClusterer(clusters, ontology); }
+      else if (mOntology == null) { clusterer = new AgglomerativeClusterer(clusters); }
 
       AnalysisWorker worker = new AnalysisWorker(clusterer,
        MainWindow.getMainFrame().getOutputCanvas());
 
-      worker.setOutputFile("TestOut");
+      worker.setOutputFile(mOutFile.getText());
       worker.execute();
 
       return true;
@@ -299,7 +375,9 @@ public class InputDialog extends JDialog {
    @SuppressWarnings("unchecked")
    private Map<String, Isolate> constructIsolates(List<Map<String, Object>> dataList) {
       Map<String, Isolate> isoMap = new HashMap<String, Isolate>();
-      Map<String, Object[]> pyroDataMap = new HashMap<String, Object[]>();
+      Map<String, Map<Integer, Object[]>> pyroDataMap =
+         new HashMap<String, Map<Integer, Object[]>>();
+
       double tmp_alpha = .99, tmp_beta = .995;
 
       //First pass over the data where ITSRegions and Isolates are constructed.
@@ -308,7 +386,7 @@ public class InputDialog extends JDialog {
          String isoID = String.valueOf(dataMap.get("isolate"));
          String regName = String.valueOf(dataMap.get("region"));
          String wellID = String.valueOf(dataMap.get("well"));
-         int pyroID = Integer.parseInt(String.valueOf(dataMap.get("pyroprint")));
+         Integer pyroID = new Integer(String.valueOf(dataMap.get("pyroprint")));
          double peakHeight = Double.parseDouble(String.valueOf(dataMap.get("pHeight")));
          String nucleotide = String.valueOf(dataMap.get("nucleotide"));
 
@@ -318,37 +396,73 @@ public class InputDialog extends JDialog {
             isoMap.put(isoID, new Isolate(isoID, new HashSet<ITSRegion>(),
                                           new IsolateAverageMetric()));
          }
+
          isoMap.get(isoID).getData().add(new ITSRegion(regName, tmp_alpha, tmp_beta,
                                          new ITSRegionAverageMetric(tmp_alpha, tmp_beta)));
 
          if (!pyroDataMap.containsKey(isoID)) {
-            pyroDataMap.put(isoID, new Object[] {pyroID, wellID, "",
-                                                 new ArrayList<Double>(),
-                                                 regName});
+            pyroDataMap.put(isoID, new HashMap<Integer, Object[]>());
          }
 
-         Object[] pyroData = pyroDataMap.get(isoID);
+         Map<Integer, Object[]> pyroMap = pyroDataMap.get(isoID);
 
+         if (!pyroMap.containsKey(pyroID)) {
+            pyroMap.put(pyroID, new Object[] {pyroID, wellID, "",
+                                              new ArrayList<Double>(),
+                                              regName});
+         }
+
+         Object[] pyroData = pyroMap.get(pyroID);
 
          if (pyroData[2] instanceof String) {
             pyroData[2] = String.valueOf(pyroData[2]).concat(nucleotide);
          }
          if (pyroData[3] instanceof List<?>) {
-            List peakList = (List<?>) pyroData[3];
-            peakList.add(peakHeight);
+            List<Double> peakList = (List<Double>) pyroData[3];
+            peakList.add(new Double(peakHeight));
          }
       }
 
-      for (Map.Entry<String, Object[]> pyroEntry : pyroDataMap.entrySet()) {
-         Object[] pyroData = pyroEntry.getValue();
-         Pyroprint newPyro = new Pyroprint(Integer.parseInt(String.valueOf(pyroData[0])),
-                                           String.valueOf(pyroData[1]),
-                                           String.valueOf(pyroData[2]),
-                                           (List<Double>) pyroData[3],
-                                           new PyroprintUnstablePearsonMetric());
+      for (Map.Entry<String, Map<Integer, Object[]>> pyroDataEntry : pyroDataMap.entrySet()) {
 
-         for (ITSRegion region : isoMap.get(pyroEntry.getKey()).getData()) {
-            if (region.equals(pyroData[4])) { region.getData().add(newPyro); }
+         for (Map.Entry<Integer, Object[]> pyroEntry : pyroDataEntry.getValue().entrySet()) {
+            Object[] pyroData = pyroEntry.getValue();
+
+            Pyroprint newPyro = new Pyroprint(Integer.parseInt(String.valueOf(pyroData[0])),
+                                              String.valueOf(pyroData[1]),
+                                              String.valueOf(pyroData[2]),
+                                              (List<Double>) pyroData[3],
+                                              new PyroprintUnstablePearsonMetric());
+
+            for (ITSRegion region : isoMap.get(pyroDataEntry.getKey()).getData()) {
+               if (region.getName().equals(pyroData[4])) {
+                  region.getData().add(newPyro);
+               }
+            }
+         }
+
+      }
+
+      Map<String, Isolate> finalIsoMap = new HashMap<String, Isolate>();
+
+      Logger.debug("Isolates retrieved from CPLOP:");
+      for (Map.Entry<String, Isolate> isoEntry : isoMap.entrySet()) {
+         Logger.debug(String.format("%s: %s\n", isoEntry.getKey(),
+                                    isoEntry.getValue().toString()));
+
+         boolean isCompleteIsolate = true;
+
+         for (ITSRegion region : isoEntry.getValue().getData()) {
+            if (region.getData().isEmpty()) {
+               Logger.debug(String.format("%s[%s] has no pyroprints\n",
+                                          isoEntry.getValue().getName(),
+                                          region.getName()));
+               isCompleteIsolate = false;
+            }
+         }
+
+         if (isCompleteIsolate) {
+            finalIsoMap.put(isoEntry.getKey(), isoEntry.getValue());
          }
       }
 

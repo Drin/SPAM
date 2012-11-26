@@ -14,12 +14,12 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Map;
 
-public class OHClustering extends AgglomerativeClusterer {
+public class OHClusterer extends AgglomerativeClusterer {
    protected Ontology mOntology;
 
    //TODO the 2nd param to super (single threshold for hierarchical clustering)
    //should not be 0...
-   public OHClustering(Set<Cluster> clusters, Ontology ontology) {
+   public OHClusterer(Set<Cluster> clusters, Ontology ontology) {
       super(clusters);
 
       mOntology = ontology;
