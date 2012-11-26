@@ -558,7 +558,7 @@ public class CPLOPConnection {
        "SELECT pyroID, isoID, appliedRegion, wellID, pHeight, nucleotide " +
        "FROM Pyroprints join Isolates using (isoID) join Histograms using (pyroID) " +
        "WHERE %s in (%s) and pyroID in (Select distinct pyroID from Histograms)" + 
-       "ORDER BY pyroID, isoID asc",
+       "ORDER BY isoID, pyroID, position asc",
        searchID, searchSet);
 
       try {

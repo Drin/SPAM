@@ -92,7 +92,7 @@ public class Pyroprint extends Clusterable<Double> {
     */
    @Override
    public String toString() {
-      String str = mDisp + "\n\t";
+      String str = this.getName() + ": " + mDisp + "\n\t";
 
       for (Double peak : mData) {
          str += peak.doubleValue() + ", ";

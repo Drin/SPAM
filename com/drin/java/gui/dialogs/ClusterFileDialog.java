@@ -14,7 +14,7 @@ import com.drin.java.clustering.HCluster;
 
 import com.drin.java.analysis.clustering.Clusterer;
 import com.drin.java.analysis.clustering.AgglomerativeClusterer;
-import com.drin.java.analysis.clustering.OHClustering;
+import com.drin.java.analysis.clustering.OHClusterer;
 
 import com.drin.java.ontology.Ontology;
 
@@ -65,7 +65,7 @@ public class ClusterFileDialog extends JDialog {
    private final String[] ITS_REGIONS = new String[] { "16s-23s", "23s-5s" };
    /*
    private final String[] CLUSTER_METHODS = new String[] {"Hierarchical",
-                                                          "OHClustering"};
+                                                          "Ontological"};
    */
 
    /*
@@ -73,7 +73,7 @@ public class ClusterFileDialog extends JDialog {
     */
    private String mRecentDir;
    private Container mPane = null;
-   private JComboBox mMethod, mRegion_A, mRegion_B;
+   private JComboBox<String> mMethod, mRegion_A, mRegion_B;
    private JTextField mData_A, mData_B, mOutFile, mOntology,
                       mAlpha_A, mAlpha_B, mBeta_A, mBeta_B;
 
@@ -99,8 +99,8 @@ public class ClusterFileDialog extends JDialog {
       mPane.setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
 
       //mMethod = new JComboBox(CLUSTER_METHODS);
-      mRegion_A = new JComboBox(ITS_REGIONS);
-      mRegion_B = new JComboBox(ITS_REGIONS);
+      mRegion_A = new JComboBox<String>(ITS_REGIONS);
+      mRegion_B = new JComboBox<String>(ITS_REGIONS);
 
       mData_A = new JTextField(20);
       mData_B = new JTextField(20);
@@ -141,7 +141,7 @@ public class ClusterFileDialog extends JDialog {
 
       layout.setLayout(new BoxLayout(layout, BoxLayout.Y_AXIS));
 
-      ontologySection = horizontal_input("Experimental Organization", ontology);
+      ontologySection = horizontal_input("Experimental Hierarchy", ontology);
       ontologySection.add(fileBrowseButton(ontology, null));
 
       layout.add(horizontal_input("Output file name:", outfile));
@@ -152,7 +152,7 @@ public class ClusterFileDialog extends JDialog {
       return layout;
    }
 
-   public JPanel inputField(JComboBox region, JTextField input,
+   public JPanel inputField(JComboBox<String> region, JTextField input,
     JTextField alpha, JTextField beta, JTextField outfile) {
       JPanel selection = new JPanel(), fileInput = new JPanel(),
              fileInputPanel = new JPanel();
@@ -345,7 +345,7 @@ public class ClusterFileDialog extends JDialog {
          }
       }
 
-      if (mOntology != null) { clusterer = new OHClustering(clusters, ontology); }
+      if (mOntology != null) { clusterer = new OHClusterer(clusters, ontology); }
       else if (mOntology == null) { clusterer = new AgglomerativeClusterer(clusters); }
 
       AnalysisWorker worker = new AnalysisWorker(clusterer,
