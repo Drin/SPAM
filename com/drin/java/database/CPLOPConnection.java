@@ -561,6 +561,8 @@ public class CPLOPConnection {
        "ORDER BY isoID, pyroID, position asc",
        searchID, searchSet);
 
+      System.err.println("query:\n" + query);
+
       try {
          stmt = conn.createStatement();
          results = stmt.executeQuery(query);
