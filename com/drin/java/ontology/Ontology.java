@@ -32,8 +32,8 @@ public class Ontology {
    }
 
    public void addData(Cluster element) {
-      mRoot.addData(element);
-      if (System.getenv().containsKey("DEBUG")) {
+      boolean dataAdded = mRoot.addData(element);
+      if (System.getenv().containsKey("DEBUG") && dataAdded) {
          System.out.printf("added element: '%s' to Ontology \n",
                            element.getName());
       }
@@ -49,32 +49,6 @@ public class Ontology {
       }
 
       else { mRoot = new OntologyTerm(newTerm); }
-   }
-
-   public String printClusters() {
-      return Ontology.printClusters(mRoot, "root", "");
-   }
-
-   public static String printClusters(OntologyTerm term, String partitionName, String prefix) {
-      if (term == null) { return ""; }
-
-      String ontologyStr = String.format("%s%s:\n", prefix, partitionName);
-
-      if (term.getClusters() != null) {
-         for (Cluster element : term.getClusters()) {
-            ontologyStr += element.prettyPrint(prefix + "   ");
-         }
-
-         ontologyStr += "\n";
-      }
-
-      if (term.getPartitions() != null) {
-         for (Map.Entry<String, OntologyTerm> feature : term.getPartitions().entrySet()) {
-            ontologyStr += Ontology.printClusters(feature.getValue(), feature.getKey(), prefix + "   ");
-         }
-      }
-
-      return ontologyStr;
    }
 
    private static void addTerm(OntologyTerm root, OntologyTerm newTerm) {
@@ -111,6 +85,46 @@ public class Ontology {
       return ontologyStr;
    }
 
+   public String printClusters() {
+      return Ontology.printClusters(mRoot, "root", "");
+   }
+
+   public static String printClusters(OntologyTerm term, String partitionName, String prefix) {
+      if (term == null) { return ""; }
+
+      String ontologyStr = String.format("%s%s:\n", prefix, partitionName);
+
+      if (term.getClusters() != null) {
+         for (Cluster element : term.getClusters()) {
+            ontologyStr += element.prettyPrint(prefix + "   ");
+         }
+
+         ontologyStr += "\n";
+      }
+
+      if (term.getPartitions() != null) {
+         for (Map.Entry<String, OntologyTerm> feature : term.getPartitions().entrySet()) {
+            ontologyStr += Ontology.printClusters(feature.getValue(), feature.getKey(), prefix + "   ");
+         }
+      }
+
+      return ontologyStr;
+   }
+
+   public static Ontology constructOntology(String ontologyStr) {
+      Ontology ont = new Ontology();
+      OntologyParser parser = new OntologyParser();
+      Scanner termScanner = new Scanner(ontologyStr).useDelimiter("\n");
+
+      while (termScanner.hasNextLine()) {
+         String term = termScanner.nextLine();
+   
+         if (parser.matchString(term)) { ont.addTerm(parser.getTerm()); }
+      }
+
+      return ont;
+   }
+
    public static Ontology createOntology(String fileName) {
       if (fileName == null) { return null; }
 
@@ -136,7 +150,13 @@ public class Ontology {
    }
 
    public static void main(String[] args) {
-      Ontology ont = Ontology.createOntology(args[0]);
+      String testOntology = String.format("%s\n%s\n%s",
+         "Host(): cw, sw;",
+         "Location():R1, R2, MorroBay;",
+         "Day(TimeSensitive):     1,2,3,\t4,5,6,7,10;"
+      );
+
+      Ontology ont = Ontology.constructOntology(testOntology);
       System.out.println("ontology :\n" + ont);
    }
 }

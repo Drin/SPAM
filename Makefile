@@ -21,7 +21,7 @@ runSpam:
 	$(ENGINE) $(SPAM_MAIN)
 	@echo "finished running."
 
-spamGUI: SpamGUI.java ClusterInterface.java
+spamGUI: SpamGUI.java
 	@echo "-------------------------------"
 	find $(PACKAGE_PATH) -name $^ | xargs $(CC) $(JFLAGS) $(CLASSES)
 	@echo "-------------------------------"

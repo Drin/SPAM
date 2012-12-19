@@ -19,10 +19,10 @@ import java.sql.SQLException;
  */
 public class CPLOPConnection {
    private static final String DB_DRIVER = "com.mysql.jdbc.Driver";
-   private static final String DB_URL = "jdbc:mysql://abra.csc.calpoly.edu/cplop?autoReconnect=true";
-   private static final String DB_INFO_URL = "jdbc:mysql://abra.csc.calpoly.edu/information_schema?autoReconnect=true";
-   private static final String DB_USER = "csc570";
-   private static final String DB_PASS = "ilovedata570";
+   private static final String DB_URL = "jdbc:mysql://cslvm96.csc.calpoly.edu/CPLOP?autoReconnect=true";
+   private static final String DB_INFO_URL = "jdbc:mysql://cslvm96.csc.calpoly.edu/information_schema?autoReconnect=true";
+   private static final String DB_USER = "amontana";
+   private static final String DB_PASS = "ILoveData#";
 
    private Connection conn, schemaConn;
 

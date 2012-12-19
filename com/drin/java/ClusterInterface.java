@@ -34,6 +34,7 @@ public class ClusterInterface {
                                                            "Experiments"};
 
    private CPLOPConnection mConn;
+   private long startTime;
 
    public ClusterInterface() {
       try {
@@ -55,9 +56,15 @@ public class ClusterInterface {
    public static void main(String[] args) {
       ClusterInterface testInterface = new ClusterInterface();
 
+      String testOntology = String.format("%s\n%s\n%s",
+         "Host(): cw, sw;",
+         "Location():R1, R2, MorroBay;",
+         "Day(TimeSensitive):     1,2,3,\t4,5,6,7,10;"
+      );
+
       String testDataSet = "'Sw-029', 'Sw-030', 'Sw-018', 'Sw-019', 'Sw-020'";
 
-      ClusterResults results = testInterface.clusterData(null, testDataSet, "Isolates");
+      ClusterResults results = testInterface.clusterData(testOntology, testDataSet, "Isolates");
 
       System.out.println(results);
    }
@@ -68,7 +75,7 @@ public class ClusterInterface {
       Set<Cluster> clusters = new HashSet<Cluster>();
 
       if (ontologyStr != null) {
-         ontology = Ontology.createOntology(ontologyStr);
+         ontology = Ontology.constructOntology(ontologyStr);
       }
 
       Map<String, Isolate> isoMap = constructIsolates(queryData(selectedData, tableName));
@@ -76,7 +83,10 @@ public class ClusterInterface {
       ClusterAverageMetric clustMetric = new ClusterAverageMetric();
 
       for (Map.Entry<String, Isolate> isoEntry : isoMap.entrySet()) {
-         clusters.add(new HCluster(clustMetric, isoEntry.getValue()));
+         Cluster tmpClust = new HCluster(clustMetric, isoEntry.getValue());
+         clusters.add(tmpClust);
+
+         if (ontology != null) { ontology.addData(tmpClust); }
       }
 
       if (ontology != null) { clusterer = new OHClusterer(clusters, ontology); }
@@ -182,7 +192,6 @@ public class ClusterInterface {
                }
             }
          }
-
       }
 
       Map<String, Isolate> finalIsoMap = new HashMap<String, Isolate>();

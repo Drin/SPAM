@@ -80,6 +80,7 @@ public class InputDialog extends JDialog {
    private String mRecentDir;
 
    private CPLOPConnection mConn;
+   private long startTime;
 
    public InputDialog(Frame owner, String title) {
       super(owner, title);
@@ -283,6 +284,8 @@ public class InputDialog extends JDialog {
    }
 
    private List<Map<String, Object>> queryData() {
+      long queryStart = System.currentTimeMillis();
+
       List<Map<String, Object>> dataList = null;
       String dataSet = mDataSet.getText();
 
@@ -308,6 +311,8 @@ public class InputDialog extends JDialog {
          }
       }
 
+      System.out.println("time to query: " + (System.currentTimeMillis() - queryStart));
+
       return dataList;
    }
 
@@ -319,6 +324,8 @@ public class InputDialog extends JDialog {
       if (!mOntology.getText().equals("")) {
          ontology = Ontology.createOntology(mOntology.getText());
       }
+
+      startTime = System.currentTimeMillis();
 
       Map<String, Isolate> isoMap = constructIsolates(queryData());
       
@@ -336,6 +343,8 @@ public class InputDialog extends JDialog {
 
       worker.setOutputFile(mOutFile.getText());
       worker.execute();
+
+      System.out.println("Time to do work: " + (System.currentTimeMillis() - startTime));
 
       return true;
    }
@@ -374,6 +383,8 @@ public class InputDialog extends JDialog {
 
    @SuppressWarnings("unchecked")
    private Map<String, Isolate> constructIsolates(List<Map<String, Object>> dataList) {
+      long constructStart = System.currentTimeMillis();
+
       Map<String, Isolate> isoMap = new HashMap<String, Isolate>();
       Map<String, Map<Integer, Object[]>> pyroDataMap =
          new HashMap<String, Map<Integer, Object[]>>();
@@ -465,6 +476,8 @@ public class InputDialog extends JDialog {
             finalIsoMap.put(isoEntry.getKey(), isoEntry.getValue());
          }
       }
+
+      System.out.println("Time to construct Isolates: " + (System.currentTimeMillis() - constructStart));
 
       return isoMap;
    }
