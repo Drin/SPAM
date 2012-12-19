@@ -67,7 +67,7 @@ public class OntologyParser {
 
    public String getTermName() {
       if (mRegexMatch != null && mRegexMatch.matches()) {
-         return mRegexMatch.group(NAME_NDX);
+         return mRegexMatch.group(NAME_NDX).trim();
       }
 
       return "";
@@ -77,7 +77,7 @@ public class OntologyParser {
       Map<String, Boolean> optionMap = new HashMap<String, Boolean>();
 
       if (mRegexMatch != null && mRegexMatch.matches()) {
-         String[] optionArr = mRegexMatch.group(OPTION_NDX).replace(" ", "").split(OPTION_DELIM);
+         String[] optionArr = mRegexMatch.group(OPTION_NDX).replaceAll("\\s", "").split(OPTION_DELIM);
 
          for (int optionNdx = 0; optionNdx < optionArr.length; optionNdx++) {
             optionMap.put(optionArr[optionNdx], Boolean.TRUE);
@@ -91,7 +91,7 @@ public class OntologyParser {
       List<String> valueList = new ArrayList<String>();
 
       if (mRegexMatch != null && mRegexMatch.matches()) {
-         String[] valueArr = mRegexMatch.group(VALUE_NDX).replace(" ", "").split(VALUE_DELIM);
+         String[] valueArr = mRegexMatch.group(VALUE_NDX).replaceAll("\\s", "").split(VALUE_DELIM);
 
          for (int valNdx = 0; valNdx < valueArr.length; valNdx++) {
             valueList.add(valueArr[valNdx]);
@@ -102,7 +102,7 @@ public class OntologyParser {
    }
 
    public void printOntology() {
-      String feature = String.format("Name: %s\n", mRegexMatch.group(NAME_NDX));
+      String feature = String.format("Name: %s\n", mRegexMatch.group(NAME_NDX).trim());
       Map<String, Boolean> optionMap = getTermOptions();
       List<String> valueList = getTermValues();
 

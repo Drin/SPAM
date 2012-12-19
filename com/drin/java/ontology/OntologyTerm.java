@@ -10,6 +10,12 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.HashSet;
 
+/**
+ * The mPartitions Map is a map of edge/branch names to an OntologyTerm
+ * (ontology node). The keys of the mPartitions map denote the distinct values
+ * for the partition whereas the node itself denotes the data points that match
+ * the name of the partition.
+ */
 public class OntologyTerm {
    private static final String TIME_OPTION_KEY = "TimeSensitive",
                                SCHEME_NAME_DELIMITER = "-";
@@ -65,10 +71,12 @@ public class OntologyTerm {
       }
    }
 
-   public void addData(Cluster element) {
+   public boolean addData(Cluster element) {
+      boolean dataAdded = false;
+
       if (mPartitions != null) {
          for (Map.Entry<String, OntologyTerm> partition : mPartitions.entrySet()) {
-            int keyNdx = element.getName().indexOf(partition.getKey());
+            int keyNdx = element.getName().toLowerCase().indexOf(partition.getKey());
       
             if (System.getenv().containsKey("DEBUG")) {
                System.out.printf("element '%s' has keyNdx %d(%s) but the end of its " +
@@ -79,6 +87,7 @@ public class OntologyTerm {
             if (keyNdx != -1 && keyNdx < element.getName().indexOf(SCHEME_NAME_DELIMITER)) {
                if (partition.getValue() == null) {
                   partition.setValue(new OntologyTerm(element));
+                  dataAdded = true;
                }
                else {
                   partition.getValue().addData(element);
@@ -88,7 +97,10 @@ public class OntologyTerm {
       }
       else {
          mData.add(element);
+         dataAdded = true;
       }
+
+      return dataAdded;
    }
 
    public void setClusters(Set<Cluster> clusterSet) {

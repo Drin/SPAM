@@ -24,6 +24,21 @@ public class HCluster extends Cluster {
       mDendogram = new DendogramLeaf(elem);
    }
 
+   /*
+   @Override
+   public String getDesignation() {
+      //Since elements is a set it's necessary to use the iterator.. quite a
+      //bit of overhead but maybe this will be fixed later.
+      if (mElements.size() == 1) {
+         for (Clusterable<?> clust : mElements) {
+            return clust.getDesignation();
+         }
+      }
+
+      return "";
+   }
+   */
+
    public void computeStatistics() {
       double minSim = Double.MAX_VALUE, total = 0;
       int numComparisons = 0;

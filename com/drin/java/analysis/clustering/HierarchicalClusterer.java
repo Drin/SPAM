@@ -26,6 +26,7 @@ public abstract class HierarchicalClusterer implements Clusterer {
       System.out.println("Hierarchical Clustering...");
 
       while (newClustSet.size() > 1) {
+         System.out.println("Number of clusters left: " + newClustSet.size());
          Cluster[] closeClusters = findCloseClusters(newClustSet);
 
          if (closeClusters != null) {

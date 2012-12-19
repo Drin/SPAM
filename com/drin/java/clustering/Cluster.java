@@ -35,6 +35,7 @@ public abstract class Cluster {
    public String getName() { return mName; }
    public double getDiameter() { return mDiameter; }
    public double getMean() { return mMean; }
+   //public abstract String getDesignation();
 
    public abstract void computeStatistics();
    public abstract Cluster join(Cluster otherClust);
