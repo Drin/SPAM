@@ -1,0 +1,43 @@
+SPAM - Suite of Pyroprint Analysis Methods
+
+
+TODO list:
+   De-couple xml/raw pyrosequencing methods
+   fix visualization of two histograms
+   clean up code
+
+File Organization:
+
+   gui
+      This directory contains the main GUI classes:
+         MainWindow - initial main window
+         Histogram - Draws the pane containing pyrograms
+
+   guiListeners
+      This directory contains miscellaneous listeners:
+         ExitListener - Closes the program
+         ImportDataListener - Creates a dialog for opening a pyrogram file
+         SaveFileListener - Creates a dialog for writing a pyrogram to a file
+
+   outputHandlers
+      This directory contains files for outputting in particular formats:
+         MetricsDisplay - writes comparison results to a CSV file
+
+   parsers
+      This directory contains files for parsing particular formats:
+         PolyParse - parses dna files in the format:
+            >description
+            dna string
+            ...
+         SequenceParser - parses dispensation sequence strings
+
+   pyrogramStructures
+      This directory contains files describing pyrograms and how to compare them:
+         PyrogramComparer - how to compare pyrograms
+         Pyrogram - pyrogram object definition
+
+   rawHandlers
+      This directory contains files for displaying/comparing pyrograms from raw text files:
+         
+   xmlHandlers
+      This directory contains files for displaying/comparing pyrograms from xml files:

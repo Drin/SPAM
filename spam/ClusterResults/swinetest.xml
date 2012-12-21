@@ -1,0 +1,60 @@
+<Clusters>
+<Isolate name="Sw-062"/>
+   <Cluster diameter="0.9986" mean="0.9986">
+      <Isolate name="Sw-042"/>
+      <Isolate name="Sw-041"/>
+   </Cluster>
+   <Cluster diameter="0.9994" mean="0.9994">
+      <Isolate name="Sw-054"/>
+      <Isolate name="Sw-053"/>
+   </Cluster>
+<Isolate name="Sw-040"/>
+<Isolate name="Sw-063"/>
+<Isolate name="Sw-057"/>
+<Isolate name="Sw-056"/>
+   <Cluster diameter="0.9974" mean="0.9980">
+      <Isolate name="Sw-049"/>
+      <Cluster diameter="0.9983" mean="0.9983">
+         <Isolate name="Sw-047"/>
+         <Isolate name="Sw-055"/>
+      </Cluster>
+   </Cluster>
+<Isolate name="Sw-051"/>
+   <Cluster diameter="0.9972" mean="0.9984">
+      <Cluster diameter="0.9990" mean="0.9992">
+         <Isolate name="Sw-059"/>
+         <Cluster diameter="0.9994" mean="0.9994">
+            <Isolate name="Sw-060"/>
+            <Isolate name="Sw-045"/>
+         </Cluster>
+      </Cluster>
+      <Isolate name="Sw-046"/>
+   </Cluster>
+<Isolate name="Sw-064"/>
+   <Cluster diameter="0.9979" mean="0.9979">
+      <Isolate name="Sw-050"/>
+      <Isolate name="Sw-048"/>
+   </Cluster>
+<Isolate name="Sw-061"/>
+   <Cluster diameter="0.9971" mean="0.9971">
+      <Isolate name="Sw-034"/>
+      <Isolate name="Sw-033"/>
+   </Cluster>
+   <Cluster diameter="0.9934" mean="0.9934">
+      <Isolate name="Sw-058"/>
+      <Isolate name="Sw-038"/>
+   </Cluster>
+<Isolate name="Sw-043"/>
+<Isolate name="Sw-036"/>
+<Isolate name="Sw-052"/>
+   <Cluster diameter="0.9990" mean="0.9990">
+      <Isolate name="Sw-066"/>
+      <Isolate name="Sw-065"/>
+   </Cluster>
+   <Cluster diameter="0.9919" mean="0.9919">
+      <Isolate name="Sw-044"/>
+      <Isolate name="Sw-039"/>
+   </Cluster>
+<Isolate name="Sw-035"/>
+<Isolate name="Sw-037"/>
+</Clusters>

@@ -1,0 +1,14 @@
+<Clusters>
+   <Cluster diameter="0.9994" mean="0.9994">
+      <Isolate name="sw-068"/>
+      <Isolate name="sw-069"/>
+   </Cluster>
+<Isolate name="sw-067"/>
+<Isolate name="sw-066"/>
+<Isolate name="cw-043"/>
+<Isolate name="cw-044"/>
+   <Cluster diameter="0.9965" mean="0.9965">
+      <Isolate name="cw-041"/>
+      <Isolate name="cw-042"/>
+   </Cluster>
+</Clusters>
