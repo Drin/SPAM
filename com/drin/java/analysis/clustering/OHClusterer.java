@@ -5,7 +5,6 @@ import com.drin.java.analysis.clustering.AgglomerativeClusterer;
 import com.drin.java.ontology.Ontology;
 import com.drin.java.ontology.OntologyTerm;
 
-import com.drin.java.clustering.Clusterable;
 import com.drin.java.clustering.Cluster;
 
 import com.drin.java.util.Logger;
@@ -13,6 +12,8 @@ import com.drin.java.util.Logger;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Map;
+
+import javax.swing.JTextArea;
 
 public class OHClusterer extends AgglomerativeClusterer {
    protected Ontology mOntology;
@@ -28,30 +29,31 @@ public class OHClusterer extends AgglomerativeClusterer {
    private void printOntology() {
       System.out.printf("cluster tree:\n%s\n", mOntology.printClusters());
    }
-
+   
+   //TODO Canvas is a hack in order to indicate progress
    @Override
-   public void clusterData() {
-      if (mOntology == null) { super.clusterData(); }
+   public void clusterData(JTextArea canvas) {
+      if (mOntology == null) { super.clusterData(canvas); }
       else {
-         for (Cluster cluster : ontologicalCluster(mOntology.getRoot())) {
+         for (Cluster cluster : ontologicalCluster(mOntology.getRoot(), canvas)) {
             mResultClusters.add(cluster);
          }
       }
    }
 
-   private Set<Cluster> ontologicalCluster(OntologyTerm root) {
+   private Set<Cluster> ontologicalCluster(OntologyTerm root, JTextArea canvas) {
       if (root == null) { return new HashSet<Cluster>(); }
 
       Set<Cluster> clusters = new HashSet<Cluster>();
 
       if (root.getPartitions() != null) {
          for (Map.Entry<String, OntologyTerm> partition : root.getPartitions().entrySet()) {
-            clusters.addAll(ontologicalCluster(partition.getValue()));
+            clusters.addAll(ontologicalCluster(partition.getValue(), canvas));
       
             if (root.isTimeSensitive()) {
                Logger.debug("Clustering time sensitive clusters...");
 
-               clusters = clusterDataSet(clusters);
+               clusters = clusterDataSet(clusters, canvas);
                root.setClusters(clusters);
 
                printOntology();
@@ -61,7 +63,7 @@ public class OHClusterer extends AgglomerativeClusterer {
          if (!root.isTimeSensitive()) {
             Logger.debug("Clustering non time sensitive clusters...");
 
-            clusters = clusterDataSet(clusters);
+            clusters = clusterDataSet(clusters, canvas);
             root.setClusters(clusters);
 
             printOntology();
@@ -74,7 +76,7 @@ public class OHClusterer extends AgglomerativeClusterer {
          Logger.debug("percolating leaf cluster sets");
 
          clusters.addAll(root.getData());
-         clusters = clusterDataSet(clusters);
+         clusters = clusterDataSet(clusters, canvas);
          root.setClusters(clusters);
 
          printOntology();
@@ -85,7 +87,8 @@ public class OHClusterer extends AgglomerativeClusterer {
 
 
    @Override
-   protected Cluster[] findCloseClusters(Set<Cluster> clusters) {
+   protected Cluster[] findCloseClusters(Map<String, Map<String, Double>> distMap,
+                                         Set<Cluster> clusters) {
       double maxSim = 0;
       Cluster closeClust_A = null, closeClust_B = null;
 
@@ -107,7 +110,6 @@ public class OHClusterer extends AgglomerativeClusterer {
       }
 
       if (closeClust_A != null && closeClust_B != null) {
-         @SuppressWarnings(value={"unchecked", "rawtypes"})
          Cluster[] closeClusters = new Cluster[] {closeClust_A, closeClust_B};
          return closeClusters;
       }
