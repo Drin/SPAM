@@ -10,7 +10,6 @@ import com.drin.java.util.Logger;
 import javax.swing.SwingWorker;
 import javax.swing.JTextArea;
 
-import java.util.Set;
 import java.util.List;
 
 public class AnalysisWorker extends SwingWorker<String[], Integer> {
@@ -30,9 +29,12 @@ public class AnalysisWorker extends SwingWorker<String[], Integer> {
 
    @Override
    public String[] doInBackground() {
-      mClusterer.clusterData();
+      long startTime = System.currentTimeMillis();
+      mClusterer.clusterData(mCanvas);
+      String clustInfo = String.format("Elapsed Time: %d\n\n",
+                                       System.currentTimeMillis() - startTime);
 
-      String clustInfo = "", dendInfo = "<Clusters>\n";
+      String dendInfo = "<Clusters>\n";
       for (Cluster cluster : mClusterer.getClusters()) {
          /*
           * Dendogram Information
@@ -42,9 +44,9 @@ public class AnalysisWorker extends SwingWorker<String[], Integer> {
          /*
           * Cluster Information
           */
-         clustInfo += String.format("Cluster %s:\n", cluster.getName());
+         //clustInfo += String.format("Cluster %s:\n", cluster.getName());
          for (Clusterable<?> elem : cluster.getElements()) {
-            clustInfo += String.format("\t,%s\n", elem.getName());
+            clustInfo += String.format("Cluster %s, %s\n", cluster.getName(), elem.getName());
          }
       }
 

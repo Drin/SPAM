@@ -11,6 +11,7 @@ import com.drin.java.util.Logger;
 import java.util.Iterator;
 
 import java.util.Map;
+import java.util.HashMap;
 import java.util.Set;
 import java.util.HashSet;
 
@@ -22,11 +23,13 @@ public class Isolate extends Clusterable<ITSRegion> {
    private static final int ALPHA_NDX = 0, BETA_NDX = 1;
    private DataMetric<Isolate> mMetric;
    private Map<String, double[]> mThresholds;
+   private Map<String, Double> mComparisonCache;
 
    public Isolate(String isoId, Set<ITSRegion> regions, DataMetric<Isolate> metric) {
       super(isoId, regions);
 
       mMetric = metric;
+      mComparisonCache = new HashMap<String, Double>();
    }
 
    public Isolate(String isoId, Map<String, double[]> threshMap,
@@ -34,21 +37,26 @@ public class Isolate extends Clusterable<ITSRegion> {
       super(isoId, null);
 
       mMetric = metric;
-
       mThresholds = threshMap;
+      mComparisonCache = new HashMap<String, Double>();
    }
 
    @Override
    public double compareTo(Clusterable<?> otherObj) {
       if (otherObj instanceof Isolate) {
-         mMetric.apply(this, (Isolate) otherObj);
+         if (!mComparisonCache.containsKey(otherObj.getName())) {
+            mMetric.apply(this, (Isolate) otherObj);
+            double comparison = mMetric.result();
 
-         double comparison = mMetric.result();
+            mComparisonCache.put(otherObj.getName(), new Double(comparison));
 
-         Logger.debug(String.format("'%s' and '%s' => [%.05f]", this.getName(),
-                                    otherObj.getName(), comparison));
+            Logger.debug(String.format("'%s' and '%s' => [%.05f]", this.getName(),
+                                       otherObj.getName(), comparison));
+            return comparison;
+         }
 
-         return comparison;
+         Double compVal = mComparisonCache.get(otherObj.getName());
+         if (compVal != null) { return compVal.doubleValue(); }
       }
 
       return -2;
