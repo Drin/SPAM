@@ -3,7 +3,6 @@ package com.drin.java.gui.dialogs;
 import com.drin.java.gui.components.SchemaTree;
 import com.drin.java.gui.components.ExperimentTree;
 
-import java.awt.ComponentOrientation;
 import java.awt.Container;
 import java.awt.Dialog;
 import java.awt.event.ActionEvent;
@@ -11,15 +10,10 @@ import java.awt.event.ActionListener;
 import java.awt.FlowLayout;
 
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 import javax.swing.JDialog;
-import javax.swing.JOptionPane;
 import javax.swing.JButton;
 import javax.swing.JTextField;
 import javax.swing.BoxLayout;
-
-import java.util.List;
-import java.util.ArrayList;
 
 @SuppressWarnings("serial")
 public class DataOrganizationDialog extends JDialog {

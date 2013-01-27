@@ -63,22 +63,26 @@ public class ClusterInterface {
       );
 
       String testDataSet = "'Sw-029', 'Sw-030', 'Sw-018', 'Sw-019', 'Sw-020'";
+      double tmp_alpha = .99, tmp_beta = .995;
 
-      ClusterResults results = testInterface.clusterData(testOntology, testDataSet, "Isolates");
+      ClusterResults results = testInterface.clusterData(testOntology, testDataSet,
+                                                         "Isolates", tmp_alpha, tmp_beta);
 
       System.out.println(results);
    }
 
-   public ClusterResults clusterData(String ontologyStr, String selectedData, String tableName) {
+   public ClusterResults clusterData(String ontologyStr, String selectedData,
+                                     String tableName, double alphaThresh, double betaThresh) {
       Ontology ontology = null;
       Clusterer clusterer = null;
-      Set<Cluster> clusters = new HashSet<Cluster>();
+      List<Cluster> clusters = new ArrayList<Cluster>();
 
       if (ontologyStr != null) {
          ontology = Ontology.constructOntology(ontologyStr);
       }
 
-      Map<String, Isolate> isoMap = constructIsolates(queryData(selectedData, tableName));
+      Map<String, Isolate> isoMap = constructIsolates(queryData(selectedData, tableName),
+                                                      alphaThresh, betaThresh);
       
       ClusterAverageMetric clustMetric = new ClusterAverageMetric();
 
@@ -92,7 +96,7 @@ public class ClusterInterface {
       if (ontology != null) { clusterer = new OHClusterer(clusters, ontology); }
       else if (ontology == null) { clusterer = new AgglomerativeClusterer(clusters); }
 
-      clusterer.clusterData();
+      clusterer.clusterData(null);
 
       return new ClusterResults(clusterer.getClusters());
    }
@@ -125,12 +129,11 @@ public class ClusterInterface {
       return dataList;
    }
 
-   private Map<String, Isolate> constructIsolates(List<Map<String, Object>> dataList) {
+   private Map<String, Isolate> constructIsolates(List<Map<String, Object>> dataList,
+                                                  double alphaThresh, double betaThresh) {
       Map<String, Isolate> isoMap = new HashMap<String, Isolate>();
       Map<String, Map<Integer, Object[]>> pyroDataMap =
          new HashMap<String, Map<Integer, Object[]>>();
-
-      double tmp_alpha = .99, tmp_beta = .995;
 
       //First pass over the data where ITSRegions and Isolates are constructed.
       String pyroList = "";
@@ -142,15 +145,14 @@ public class ClusterInterface {
          double peakHeight = Double.parseDouble(String.valueOf(dataMap.get("pHeight")));
          String nucleotide = String.valueOf(dataMap.get("nucleotide"));
 
-
          //Retrieve Isolate
          if (!isoMap.containsKey(isoID)) {
             isoMap.put(isoID, new Isolate(isoID, new HashSet<ITSRegion>(),
                                           new IsolateAverageMetric()));
          }
 
-         isoMap.get(isoID).getData().add(new ITSRegion(regName, tmp_alpha, tmp_beta,
-                                         new ITSRegionAverageMetric(tmp_alpha, tmp_beta)));
+         isoMap.get(isoID).getData().add(new ITSRegion(regName, alphaThresh, betaThresh,
+                                         new ITSRegionAverageMetric(alphaThresh, betaThresh)));
 
          if (!pyroDataMap.containsKey(isoID)) {
             pyroDataMap.put(isoID, new HashMap<Integer, Object[]>());
@@ -170,6 +172,7 @@ public class ClusterInterface {
             pyroData[2] = String.valueOf(pyroData[2]).concat(nucleotide);
          }
          if (pyroData[3] instanceof List<?>) {
+            @SuppressWarnings("unchecked")
             List<Double> peakList = (List<Double>) pyroData[3];
             peakList.add(new Double(peakHeight));
          }
@@ -180,6 +183,7 @@ public class ClusterInterface {
          for (Map.Entry<Integer, Object[]> pyroEntry : pyroDataEntry.getValue().entrySet()) {
             Object[] pyroData = pyroEntry.getValue();
 
+            @SuppressWarnings("unchecked")
             Pyroprint newPyro = new Pyroprint(Integer.parseInt(String.valueOf(pyroData[0])),
                                               String.valueOf(pyroData[1]),
                                               String.valueOf(pyroData[2]),

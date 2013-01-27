@@ -9,8 +9,8 @@ import com.drin.java.clustering.Cluster;
 
 import com.drin.java.util.Logger;
 
-import java.util.Set;
-import java.util.HashSet;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 
 import javax.swing.JTextArea;
@@ -18,12 +18,14 @@ import javax.swing.JTextArea;
 public class OHClusterer extends AgglomerativeClusterer {
    protected Ontology mOntology;
 
-   //TODO the 2nd param to super (single threshold for hierarchical clustering)
-   //should not be 0...
-   public OHClusterer(Set<Cluster> clusters, Ontology ontology) {
+   public OHClusterer(List<Cluster> clusters, Ontology ontology) {
       super(clusters);
 
+      //mSimType affects how close clusters are determined. See findCloseCluster()
+      //in com.drin.java.analysis.clustering.AgglomerativeClusterer
       mOntology = ontology;
+
+      if (ontology != null) { mSimType = CLUST_SIMILARITY.SIMILAR; }
    }
 
    private void printOntology() {
@@ -41,12 +43,15 @@ public class OHClusterer extends AgglomerativeClusterer {
       }
    }
 
-   private Set<Cluster> ontologicalCluster(OntologyTerm root, JTextArea canvas) {
-      if (root == null) { return new HashSet<Cluster>(); }
+   //TODO be sure that the clusters that are not above the upper threshold get
+   //added at the end or the result clusters are in a state ready to be
+   //clustered again using hierarchical
+   private List<Cluster> ontologicalCluster(OntologyTerm root, JTextArea canvas) {
+      List<Cluster> clusters = new ArrayList<Cluster>();
 
-      Set<Cluster> clusters = new HashSet<Cluster>();
+      if (root == null) { return clusters; }
 
-      if (root.getPartitions() != null) {
+      else if (root.getPartitions() != null) {
          for (Map.Entry<String, OntologyTerm> partition : root.getPartitions().entrySet()) {
             clusters.addAll(ontologicalCluster(partition.getValue(), canvas));
       
@@ -83,61 +88,5 @@ public class OHClusterer extends AgglomerativeClusterer {
       }
 
       return clusters;
-   }
-
-
-   @Override
-   protected Cluster[] findCloseClusters(Map<String, Map<String, Double>> distMap,
-                                         Set<Cluster> clusters) {
-      double maxSim = 0;
-      Cluster closeClust_A = null, closeClust_B = null;
-
-      Logger.debug("finding close clusters...");
-
-      for (Cluster clust_A : clusters) {
-         for (Cluster clust_B : clusters) {
-            if (clust_A.getName().equals(clust_B.getName())) { continue; }
-
-            double dist = clust_A.compareTo(clust_B);
-
-            if (dist > maxSim && clust_A.isSimilar(clust_B)) {
-               closeClust_A = clust_A;
-               closeClust_B = clust_B;
-
-               maxSim = dist;
-            }
-         }
-      }
-
-      if (closeClust_A != null && closeClust_B != null) {
-         Cluster[] closeClusters = new Cluster[] {closeClust_A, closeClust_B};
-         return closeClusters;
-      }
-
-      return null;
-   }
-
-   @Override
-   protected Set<Cluster> combineClusters(Cluster[] closeClusters,
-                                          Set<Cluster> clusters) {
-      Set<Cluster> newClusters = super.combineClusters(closeClusters, clusters);
-
-      if (closeClusters.length != CLUSTER_PAIR_SIZE) {
-         Logger.error(-1, "No cluster distances were recomputed");
-      }
-
-      /*
-       * TODO: figure out recomputing distances...
-      for (Cluster cluster : newClusters) {
-         if (cluster.isSimilar(closeClusters[0])) { continue; }
-
-         Logger.debug(String.format("recomputing clusters '%s' and '%s'\n",
-                                    cluster.getName(), closeClusters[0].getName()));
-   
-         mClusterMetric.recompute(closeClusters[0], cluster);
-      }
-      */
-
-      return newClusters;
    }
 }

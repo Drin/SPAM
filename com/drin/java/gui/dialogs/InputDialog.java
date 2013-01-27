@@ -66,7 +66,10 @@ public class InputDialog extends JDialog {
     * CONSTANTS
     */
    private final static String DEFAULT_TITLE = "Parameter Input Dialog";
-   private final int DIALOG_HEIGHT = 400, DIALOG_WIDTH = 500;
+   private final int DIALOG_HEIGHT = 400, DIALOG_WIDTH = 550;
+   private final String ALPHA_VAL = "99.5", BETA_VAL = "99.0", PYRO_LEN = "94";
+
+   private final String[] ITS_REGIONS = new String[] { "16-23", "23-5" };
    private final String[] DATA_TYPE_VALUES = new String[] {"Isolates",
                                                            "Pyroprints",
                                                            "Experiments"};
@@ -75,8 +78,10 @@ public class InputDialog extends JDialog {
     */
    private Container mPane = null, mOwner = null;
    private JDialog mDialog = null;
-   private JComboBox<String> mDataSetType;
-   private JTextField mDataSet, mDataHierarchy, mOutFile, mOntology;
+   private JComboBox<String> mDataSetType, mRegion_A, mRegion_B;
+   private JTextField mDataSet, mOutFile, mOntology,
+                      mAlpha_A, mAlpha_B, mBeta_A, mBeta_B,
+                      mPyroLen_A, mPyroLen_B;
    private String mRecentDir;
 
    private CPLOPConnection mConn;
@@ -99,10 +104,22 @@ public class InputDialog extends JDialog {
       setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 
       mDataSet = new JTextField(20);
-      mDataHierarchy = new JTextField(20);
 
       mOutFile = new JTextField(20);
       mOntology = new JTextField(15);
+
+      mRegion_A = new JComboBox<String>(ITS_REGIONS);
+      mRegion_B = new JComboBox<String>(ITS_REGIONS);
+      mRegion_B.setSelectedIndex(1);
+
+      mAlpha_A = new JTextField(ALPHA_VAL, 20);
+      mAlpha_B = new JTextField(ALPHA_VAL, 20);
+
+      mBeta_A  = new JTextField(BETA_VAL, 20);
+      mBeta_B  = new JTextField(BETA_VAL, 20);
+
+      mPyroLen_A = new JTextField(PYRO_LEN, 10);
+      mPyroLen_B = new JTextField(PYRO_LEN, 10);
 
       mRecentDir = "";
 
@@ -141,14 +158,16 @@ public class InputDialog extends JDialog {
       JLabel dataSetLabel = new JLabel("Select Data Set:");
       JPanel dataSetField = prepareDataSetField(mDataSetType, mDataSet);
 
-      JLabel dataHierarchyLabel = new JLabel("Set Data Clustering Hierarchy:");
-      JPanel dataHierarchyField = prepareDataHierarchyField(mDataHierarchy);
+      JLabel thresholdSetLabel = new JLabel("Input Region Thresholds:");
+      JPanel thresholdField_A = inputField(mRegion_A, mPyroLen_A, mAlpha_A, mBeta_A);
+      JPanel thresholdField_B = inputField(mRegion_B, mPyroLen_B, mAlpha_B, mBeta_B);
 
       mPane.add(dataSetLabel);
       mPane.add(dataSetField);
 
-      mPane.add(dataHierarchyLabel);
-      mPane.add(dataHierarchyField);
+      mPane.add(thresholdSetLabel);
+      mPane.add(thresholdField_A);
+      mPane.add(thresholdField_B);
 
       mPane.add(initControls());
 
@@ -169,6 +188,32 @@ public class InputDialog extends JDialog {
       layout.setAlignmentY(Component.CENTER_ALIGNMENT);
 
       return layout;
+   }
+
+   public JPanel inputField(JComboBox<String> region, JTextField pyro_len, JTextField alpha, JTextField beta) {
+      JPanel selection = new JPanel(), fileInput = new JPanel(), fileInputPanel = new JPanel();
+
+      selection.setLayout(new BoxLayout(selection, BoxLayout.Y_AXIS));
+      selection.add(new JLabel("ITS Region:"));
+      selection.add(region);
+      //pyro_len is how much of the pyroprint's dispensations to consider for
+      //constructing a pyroprint
+      selection.add(new JLabel("Disp Length:"));
+      selection.add(pyro_len);
+      selection.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+      fileInput.setLayout(new BoxLayout(fileInput, BoxLayout.Y_AXIS));
+      fileInput.add(new JLabel("Thresholds:"));
+      fileInput.add(alpha);
+      fileInput.add(beta);
+      fileInput.setAlignmentY(Component.CENTER_ALIGNMENT);
+
+      fileInputPanel.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
+      fileInputPanel.add(selection);
+      fileInputPanel.add(fileInput);
+      fileInputPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+      return fileInputPanel;
    }
 
    private JButton fileBrowseButton(final JTextField infile, final JTextField outfile) {
@@ -225,17 +270,6 @@ public class InputDialog extends JDialog {
       dataSetField.add(prepareDataQueryButton(dataField, dataTypeOptions));
 
       return dataSetField;
-   }
-
-   private JPanel prepareDataHierarchyField(JTextField dataSchema) {
-      JPanel dataHierarchyField = new JPanel();
-
-      dataHierarchyField.setLayout(new FlowLayout(FlowLayout.LEADING));
-
-      dataHierarchyField.add(dataSchema);
-      dataHierarchyField.add(prepareSchemaButton(dataSchema, "Choose Parameters"));
-
-      return dataHierarchyField;
    }
 
    private JButton prepareDataQueryButton(JTextField dataSetField, JComboBox<String> dataTypeOptions) {
@@ -319,7 +353,7 @@ public class InputDialog extends JDialog {
    private boolean doWork() {
       Ontology ontology = null;
       Clusterer clusterer = null;
-      Set<Cluster> clusters = new HashSet<Cluster>();
+      List<Cluster> clusters = new ArrayList<Cluster>();
 
       if (!mOntology.getText().equals("")) {
          ontology = Ontology.createOntology(mOntology.getText());
@@ -382,14 +416,36 @@ public class InputDialog extends JDialog {
    }
 
    @SuppressWarnings("unchecked")
+   //TODO construct hierarchy here by adding partition values as "tags" to
+   //Isolate (implements Lableable).
    private Map<String, Isolate> constructIsolates(List<Map<String, Object>> dataList) {
+      System.out.println("Constructing Isolates...");
+
       long constructStart = System.currentTimeMillis();
 
       Map<String, Isolate> isoMap = new HashMap<String, Isolate>();
-      Map<String, Map<Integer, Object[]>> pyroDataMap =
-         new HashMap<String, Map<Integer, Object[]>>();
+      Map<String, double[]> threshMap = new HashMap<String, double[]>();
+      Map<String, Map<Integer, Object[]>> pyroDataMap = new HashMap<String, Map<Integer, Object[]>>();
 
-      double tmp_alpha = .99, tmp_beta = .995;
+      double pyrolen_A = Double.parseDouble(mPyroLen_A.getText());
+      double pyrolen_B = Double.parseDouble(mPyroLen_B.getText());
+
+      double alpha_A  = Double.parseDouble(mAlpha_A.getText());
+      double beta_A   = Double.parseDouble(mBeta_A.getText());
+
+      double alpha_B  = Double.parseDouble(mAlpha_B.getText());
+      double beta_B   = Double.parseDouble(mBeta_B.getText());
+
+      alpha_A = alpha_A > 1 ? alpha_A / 100 : alpha_A;
+      beta_A  = beta_A  > 1 ? beta_A  / 100 : beta_A;
+      alpha_B = alpha_B > 1 ? alpha_B / 100 : alpha_B;
+      beta_B  = beta_B  > 1 ? beta_B  / 100 : beta_B;
+
+      threshMap.put(String.valueOf(mRegion_A.getSelectedItem()),
+                                   new double[] {alpha_A, beta_A, pyrolen_A});
+
+      threshMap.put(String.valueOf(mRegion_B.getSelectedItem()),
+                                   new double[] {alpha_B, beta_B, pyrolen_B});
 
       //First pass over the data where ITSRegions and Isolates are constructed.
       String pyroList = "";
@@ -401,6 +457,9 @@ public class InputDialog extends JDialog {
          double peakHeight = Double.parseDouble(String.valueOf(dataMap.get("pHeight")));
          String nucleotide = String.valueOf(dataMap.get("nucleotide"));
 
+         double alphaThresh = threshMap.get(regName)[0];
+         double betaThresh  = threshMap.get(regName)[1];
+         int pyro_len       = (int) threshMap.get(regName)[2];
 
          //Retrieve Isolate
          if (!isoMap.containsKey(isoID)) {
@@ -408,8 +467,8 @@ public class InputDialog extends JDialog {
                                           new IsolateAverageMetric()));
          }
 
-         isoMap.get(isoID).getData().add(new ITSRegion(regName, tmp_alpha, tmp_beta,
-                                         new ITSRegionAverageMetric(tmp_alpha, tmp_beta)));
+         isoMap.get(isoID).getData().add(new ITSRegion(regName, alphaThresh, betaThresh,
+                                         new ITSRegionAverageMetric(alphaThresh, betaThresh)));
 
          if (!pyroDataMap.containsKey(isoID)) {
             pyroDataMap.put(isoID, new HashMap<Integer, Object[]>());
@@ -426,11 +485,15 @@ public class InputDialog extends JDialog {
          Object[] pyroData = pyroMap.get(pyroID);
 
          if (pyroData[2] instanceof String) {
-            pyroData[2] = String.valueOf(pyroData[2]).concat(nucleotide);
+            if (String.valueOf(pyroData[2]).length() < pyro_len) {
+               pyroData[2] = String.valueOf(pyroData[2]).concat(nucleotide);
+            }
          }
          if (pyroData[3] instanceof List<?>) {
             List<Double> peakList = (List<Double>) pyroData[3];
-            peakList.add(new Double(peakHeight));
+            if (peakList.size() < pyro_len) {
+               peakList.add(new Double(peakHeight));
+            }
          }
       }
 

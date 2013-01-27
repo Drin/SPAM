@@ -7,7 +7,6 @@ import com.drin.java.metrics.DataMetric;
 
 import com.drin.java.util.Logger;
 
-import java.util.Set;
 import java.util.HashSet;
 
 public class ITSRegion extends Clusterable<Pyroprint> {

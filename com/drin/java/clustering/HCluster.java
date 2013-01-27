@@ -9,8 +9,6 @@ import com.drin.java.clustering.dendogram.Dendogram;
 import com.drin.java.clustering.dendogram.DendogramNode;
 import com.drin.java.clustering.dendogram.DendogramLeaf;
 
-import com.drin.java.util.Logger;
-
 import java.util.Collection;
 
 public class HCluster extends Cluster {
@@ -23,21 +21,6 @@ public class HCluster extends Cluster {
       mElements.add(elem);
       mDendogram = new DendogramLeaf(elem);
    }
-
-   /*
-   @Override
-   public String getDesignation() {
-      //Since elements is a set it's necessary to use the iterator.. quite a
-      //bit of overhead but maybe this will be fixed later.
-      if (mElements.size() == 1) {
-         for (Clusterable<?> clust : mElements) {
-            return clust.getDesignation();
-         }
-      }
-
-      return "";
-   }
-   */
 
    public void computeStatistics() {
       double minSim = Double.MAX_VALUE, total = 0;
@@ -68,6 +51,9 @@ public class HCluster extends Cluster {
 
          newCluster.mElements.addAll(this.mElements);
          newCluster.mElements.addAll(otherData);
+
+         newCluster.mClusterLabel.addAll(this.mClusterLabel);
+         newCluster.mClusterLabel.addAll(otherClust.mClusterLabel);
 
          newCluster.computeStatistics();
 

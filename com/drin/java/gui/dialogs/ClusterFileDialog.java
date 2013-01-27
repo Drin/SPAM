@@ -3,9 +3,6 @@ package com.drin.java.gui.dialogs;
 import com.drin.java.parsers.MatrixParser;
 
 import com.drin.java.biology.Isolate;
-import com.drin.java.biology.ITSRegion;
-import com.drin.java.biology.Pyroprint;
-
 import com.drin.java.metrics.IsolateSimpleMetric;
 import com.drin.java.metrics.ClusterAverageMetric;
 
@@ -27,8 +24,6 @@ import java.awt.Container;
 import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
 import java.awt.FlowLayout;
 
 import javax.swing.JPanel;
@@ -48,11 +43,9 @@ import java.io.File;
 import java.util.Map;
 import java.util.Set;
 import java.util.List;
-
 import java.util.HashMap;
 import java.util.HashSet;
-
-import java.lang.reflect.Constructor;
+import java.util.ArrayList;
 
 @SuppressWarnings("serial")
 public class ClusterFileDialog extends JDialog {
@@ -101,6 +94,7 @@ public class ClusterFileDialog extends JDialog {
       //mMethod = new JComboBox(CLUSTER_METHODS);
       mRegion_A = new JComboBox<String>(ITS_REGIONS);
       mRegion_B = new JComboBox<String>(ITS_REGIONS);
+      mRegion_B.setSelectedIndex(1);
 
       mData_A = new JTextField(20);
       mData_B = new JTextField(20);
@@ -291,7 +285,7 @@ public class ClusterFileDialog extends JDialog {
    private boolean takeAction() {
       Ontology ontology = null;
       Clusterer clusterer = null;
-      Set<Cluster> clusters = new HashSet<Cluster>();
+      List<Cluster> clusters = new ArrayList<Cluster>();
       Map<String, double[]> threshMap = new HashMap<String, double[]>();
       
       if (!mOntology.getText().equals("")) {

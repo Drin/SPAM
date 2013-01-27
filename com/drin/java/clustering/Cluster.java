@@ -1,5 +1,8 @@
 package com.drin.java.clustering;
 
+import com.drin.java.ontology.Labelable;
+import com.drin.java.ontology.OntologyLabel;
+
 import com.drin.java.clustering.Clusterable;
 import com.drin.java.clustering.dendogram.Dendogram;
 
@@ -10,11 +13,12 @@ import com.drin.java.util.Logger;
 import java.util.Set;
 import java.util.HashSet;
 
-public abstract class Cluster {
+public abstract class Cluster implements Labelable {
    private static int CLUST_ID = 1;
    private String mName;
    protected double mDiameter, mMean;
 
+   protected OntologyLabel mClusterLabel;
    protected DataMetric<Cluster> mMetric;
    protected Dendogram mDendogram;
    protected Set<Clusterable<?>> mElements;
@@ -27,6 +31,7 @@ public abstract class Cluster {
       
       mElements = new HashSet<Clusterable<?>>();
       mDendogram = null;
+      mClusterLabel = new OntologyLabel();
 
       mDiameter = -2;
       mMean = -2;
@@ -35,14 +40,22 @@ public abstract class Cluster {
    public String getName() { return mName; }
    public double getDiameter() { return mDiameter; }
    public double getMean() { return mMean; }
-   //public abstract String getDesignation();
 
    public abstract void computeStatistics();
+   //join must also define how to merge labels (relatively easy thing to do)
    public abstract Cluster join(Cluster otherClust);
 
    public Dendogram getDendogram() { return mDendogram; }
    public Set<Clusterable<?>> getElements() { return mElements; }
    public void add(Clusterable<?> element) { mElements.add(element); }
+
+   public void addLabel(String labelName) {
+      mClusterLabel.addLabel(labelName);
+   }
+
+   public boolean hasLabel(String labelName) {
+      return mClusterLabel.hasLabel(labelName);
+   }
 
    @Override
    public boolean equals(Object otherObj) {
