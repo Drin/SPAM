@@ -4,11 +4,10 @@ import com.drin.java.clustering.Cluster;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.HashSet;
+import java.util.ArrayList;
 
 /**
  * The mPartitions Map is a map of edge/branch names to an OntologyTerm
@@ -22,7 +21,7 @@ public class OntologyTerm {
    private String mName;
    private Map<String, Boolean> mOptions;
    private Map<String, OntologyTerm> mPartitions;
-   private Set<Cluster> mData, mClusters;
+   private List<Cluster> mData, mClusters;
 
    public OntologyTerm(String name) {
       mName = name;
@@ -50,7 +49,7 @@ public class OntologyTerm {
       mOptions = null;
       mPartitions = null;
 
-      mData = new HashSet<Cluster>();
+      mData = new ArrayList<Cluster>();
       mData.add(element);
    }
 
@@ -76,25 +75,28 @@ public class OntologyTerm {
 
       if (mPartitions != null) {
          for (Map.Entry<String, OntologyTerm> partition : mPartitions.entrySet()) {
-            int keyNdx = element.getName().toLowerCase().indexOf(partition.getKey());
-      
-            if (System.getenv().containsKey("DEBUG")) {
-               System.out.printf("element '%s' has keyNdx %d(%s) but the end of its " +
-                "naming scheme is at %d(%s)\n", element.getName(), keyNdx, partition.getKey(),
-                element.getName().indexOf(SCHEME_NAME_DELIMITER), SCHEME_NAME_DELIMITER);
+            boolean isPartitionMatch = false;
+
+            if (element instanceof Labelable) {
+               isPartitionMatch = ((Labelable) element).hasLabel(partition.getKey());
+            }
+            else {
+               String elementName = element.getName().toLowerCase();
+               int keyNdx = elementName.indexOf(partition.getKey());
+               int delimNdx = elementName.indexOf(SCHEME_NAME_DELIMITER);
+               isPartitionMatch = (keyNdx != -1 && keyNdx < delimNdx);
             }
       
-            if (keyNdx != -1 && keyNdx < element.getName().indexOf(SCHEME_NAME_DELIMITER)) {
+            if (isPartitionMatch) {
                if (partition.getValue() == null) {
                   partition.setValue(new OntologyTerm(element));
                   dataAdded = true;
                }
-               else {
-                  partition.getValue().addData(element);
-               }
+               else { partition.getValue().addData(element); }
             }
          }
       }
+
       else {
          mData.add(element);
          dataAdded = true;
@@ -103,13 +105,13 @@ public class OntologyTerm {
       return dataAdded;
    }
 
-   public void setClusters(Set<Cluster> clusterSet) {
-      mClusters = clusterSet;
+   public void setClusters(List<Cluster> clusters) {
+      mClusters = clusters;
    }
 
    public void percolateCluster(Cluster element) {
       if (mData == null) {
-         mData = new HashSet<Cluster>();
+         mData = new ArrayList<Cluster>();
       }
 
       mData.add(element);
@@ -119,11 +121,11 @@ public class OntologyTerm {
       return mName;
    }
 
-   public Set<Cluster> getData() {
+   public List<Cluster> getData() {
       return mData;
    }
 
-   public Set<Cluster> getClusters() {
+   public List<Cluster> getClusters() {
       return mClusters;
    }
 

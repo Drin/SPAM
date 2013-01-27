@@ -1,5 +1,8 @@
 package com.drin.java.biology;
 
+import com.drin.java.ontology.Labelable;
+import com.drin.java.ontology.OntologyLabel;
+
 import com.drin.java.clustering.Clusterable;
 import com.drin.java.biology.ITSRegion;
 import com.drin.java.biology.Pyroprint;
@@ -19,16 +22,19 @@ import java.util.HashSet;
  * Isolate represents a bacterial isolate collected by a biologist.
  *
  */
-public class Isolate extends Clusterable<ITSRegion> {
+public class Isolate extends Clusterable<ITSRegion> implements Labelable {
    private static final int ALPHA_NDX = 0, BETA_NDX = 1;
    private DataMetric<Isolate> mMetric;
    private Map<String, double[]> mThresholds;
    private Map<String, Double> mComparisonCache;
 
+   protected OntologyLabel mLabel;
+
    public Isolate(String isoId, Set<ITSRegion> regions, DataMetric<Isolate> metric) {
       super(isoId, regions);
 
       mMetric = metric;
+      mLabel = new OntologyLabel();
       mComparisonCache = new HashMap<String, Double>();
    }
 
@@ -38,7 +44,16 @@ public class Isolate extends Clusterable<ITSRegion> {
 
       mMetric = metric;
       mThresholds = threshMap;
+      mLabel = new OntologyLabel();
       mComparisonCache = new HashMap<String, Double>();
+   }
+
+   public void addLabel(String labelName) {
+      mLabel.addLabel(labelName);
+   }
+
+   public boolean hasLabel(String labelName) {
+      return mLabel.hasLabel(labelName);
    }
 
    @Override

@@ -49,8 +49,8 @@ public class PyroprintStablePearsonMetric extends DataMetric<Pyroprint> {
 
    public void apply(Pyroprint elem_A, Pyroprint elem_B) {
       if (!elem_A.hasSameProtocol(elem_B)) {
-         System.out.printf("%s and %s have different protocols",
-                           elem_A.getName(), elem_B.getName());
+         Logger.debug(String.format("%s and %s have different protocols",
+                                    elem_A.getName(), elem_B.getName()));
          return;
       }
 

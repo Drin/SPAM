@@ -6,70 +6,87 @@ import com.drin.java.clustering.Cluster;
 
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Set;
-import java.util.HashSet;
+import java.util.List;
+import java.util.ArrayList;
 
 import javax.swing.JTextArea;
 
 public abstract class HierarchicalClusterer implements Clusterer {
-   protected Set<Cluster> mClusters;
-   protected Set<Cluster> mResultClusters;
+   protected CLUST_SIMILARITY mSimType;
+   protected List<Cluster> mClusters;
+   protected List<Cluster> mResultClusters;
 
-   public HierarchicalClusterer(Set<Cluster> clusters) {
+   public HierarchicalClusterer(List<Cluster> clusters) {
       mClusters = clusters;
 
-      mResultClusters = new HashSet<Cluster>();
+      mSimType = CLUST_SIMILARITY.SQUISHY;
    }
 
-   protected Set<Cluster> clusterDataSet(Set<Cluster> clusterSet, JTextArea canvas) {
-      Set<Cluster> newClustSet = new HashSet<Cluster>(clusterSet);
-      Map<String, Map<String, Double>> clust_distances =
-              new HashMap<String, Map<String, Double>>();
-
-      //TODO hack in order to have some indicator of progress
-      double percentIncr = 100.0/newClustSet.size();
-      double percentComplete = 0;
-      System.out.println("Hierarchical Clustering...");
-
-      while (newClustSet.size() > 1) {
-         //TODO hack in order to have some indicator of progress
-         canvas.setText(String.format("\n\n\t\t%.02f%% Complete!", percentComplete));
-         percentComplete += percentIncr;
-
-         Cluster[] closeClusters = findCloseClusters(null, newClustSet);
-
-         if (closeClusters != null) {
-            newClustSet = combineClusters(closeClusters, newClustSet);
-         }
-
-         else {
-            canvas.setText(String.format("\n\t\tNo more similar clusters...\n\t\t100%% Complete!"));
-            break;
-         }
-      }
-
-      return newClustSet;
-   }
+   public List<Cluster> getClusters() { return mResultClusters; }
 
    @Override
    public void clusterData(JTextArea canvas) {
-      for (Cluster cluster : clusterDataSet(mClusters, canvas)) {
-         mResultClusters.add(cluster);
-      }
+      mResultClusters = new ArrayList<Cluster>();
+      mResultClusters.addAll(clusterDataSet(mClusters, canvas));
    }
 
-   public Set<Cluster> getClusters() {
-      Set<Cluster> resultClusters = new HashSet<Cluster>();
+   protected List<Cluster> clusterDataSet(List<Cluster> clusters, JTextArea canvas) {
+      List<Cluster> newClusters = new ArrayList<Cluster>(clusters);
+      Map<String, Map<String, Double>> clust_distances;
 
-      for (Cluster cluster : mResultClusters) {
-         resultClusters.add(cluster);
+      //TODO hack in order to have some indicator of progress
+      double percentIncr = 100.0/newClusters.size();
+      double percentComplete = 0;
+
+      /*
+       * //Populate list
+       * for (Cluster clust_A : clusters)
+       *    for (Cluster clust_B : clusters)
+       *       candidate_pair = argmax(compare(clust_A, clust_B))
+       *
+       *    if one cluster in candidate_pair is already in list
+       *       remove old candidate_pair
+       *
+       *    add candidate_pair to list of cluster candidates
+       *
+       * //cluster list, and re-populate on each iteration
+       * do
+       *    closeClusters = best candidate_pair (hopefully list is a pQueue)
+       *    combine(closeClusters)
+       *    candidate_pair = recompute(closeClusters)
+       *
+       *    if one cluster in candidate_pair is already in list
+       *       remove old candidate_pair
+       *    add candidate_pair
+       *
+       *    if peek_candidate_pair() == null: break
+       *
+       * while (newClusters.size() > 1)
+       *
+       */
+
+      clust_distances = new HashMap<String, Map<String, Double>>();
+
+      while (newClusters.size() > 1) {
+         //TODO hack in order to have some indicator of progress
+         if (canvas != null) {
+            canvas.setText(String.format("\n\n\t\t%.02f%% Complete!", percentComplete));
+            percentComplete += percentIncr;
+         }
+
+         Cluster[] closeClusters = findCloseClusters(new HashMap<String, Map<String, Double>>(), newClusters);
+
+         if (closeClusters != null) { combineClusters(closeClusters, newClusters); }
+         else { break; }
       }
 
-      return resultClusters;
+      return newClusters;
    }
 
-   protected abstract Cluster[] findCloseClusters(Map<String, Map<String, Double>> distMap,
-                                                  Set<Cluster> clusterSet);
-   protected abstract Set<Cluster> combineClusters(Cluster[] closeClusters,
-                                                   Set<Cluster> clusterSet);
+   protected abstract Cluster[] findCloseClusters(Map<String, Map<String, Double>> distMap, List<Cluster> clusters);
+   protected abstract void combineClusters(Cluster[] closeClusters, List<Cluster> clusters);
+
+   protected enum CLUST_SIMILARITY {
+      SIMILAR, SQUISHY
+   }
 }

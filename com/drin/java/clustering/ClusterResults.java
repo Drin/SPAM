@@ -3,12 +3,12 @@ package com.drin.java.clustering;
 import com.drin.java.clustering.Cluster;
 import com.drin.java.clustering.Clusterable;
 
-import java.util.Set;
+import java.util.List;
 
 public class ClusterResults {
-   private Set<Cluster> mClusters;
+   private List<Cluster> mClusters;
 
-   public ClusterResults(Set<Cluster> finalClusters) {
+   public ClusterResults(List<Cluster> finalClusters) {
       mClusters = finalClusters;
    }
 
