@@ -345,6 +345,17 @@ public class InputDialog extends JDialog {
          }
       }
 
+      else if (String.valueOf(mDataSetType.getSelectedItem()).equals(DATA_TYPE_VALUES[2])) {
+         try {
+            dataList = mConn.getDataByExperimentName(dataSet);
+         }
+         catch (java.sql.SQLException sqlErr) {
+            System.out.println("SQLException:\nExiting...");
+            sqlErr.printStackTrace();
+            System.exit(1);
+         }
+      }
+
       System.out.println("time to query: " + (System.currentTimeMillis() - queryStart));
 
       return dataList;
@@ -359,9 +370,21 @@ public class InputDialog extends JDialog {
          ontology = Ontology.createOntology(mOntology.getText());
       }
 
+      double alpha_A  = Double.parseDouble(mAlpha_A.getText());
+      double beta_A   = Double.parseDouble(mBeta_A.getText());
+
+      double alpha_B  = Double.parseDouble(mAlpha_B.getText());
+      double beta_B   = Double.parseDouble(mBeta_B.getText());
+
+      alpha_A = alpha_A > 1 ? alpha_A / 100 : alpha_A;
+      beta_A  = beta_A  > 1 ? beta_A  / 100 : beta_A;
+      alpha_B = alpha_B > 1 ? alpha_B / 100 : alpha_B;
+      beta_B  = beta_B  > 1 ? beta_B  / 100 : beta_B;
+
       startTime = System.currentTimeMillis();
 
-      Map<String, Isolate> isoMap = constructIsolates(queryData());
+      Map<String, Isolate> isoMap = constructIsolates(queryData(), alpha_A, beta_A,
+                                                      alpha_B, beta_B);
       
       ClusterAverageMetric clustMetric = new ClusterAverageMetric();
 
@@ -369,8 +392,47 @@ public class InputDialog extends JDialog {
          clusters.add(new HCluster(clustMetric, isoEntry.getValue()));
       }
 
-      if (mOntology != null) { clusterer = new OHClusterer(clusters, ontology); }
-      else if (mOntology == null) { clusterer = new AgglomerativeClusterer(clusters); }
+      isoMap = null;
+
+
+      if (mOntology != null) {
+         List<Cluster> coreClusters = new ArrayList<Cluster>();
+         List<Cluster> boundaryClusters = new ArrayList<Cluster>();
+         Map<Integer, String> promotedClusters = new HashMap<Integer, String>();
+
+         for (int ndx_A = 0; ndx_A < clusters.size(); ndx_A++) {
+            Cluster clust_A = clusters.get(ndx_A);
+
+            for (int ndx_B = ndx_A + 1; ndx_B < clusters.size(); ndx_B++) {
+               Cluster clust_B = clusters.get(ndx_B);
+
+               if (clust_A.compareTo(clust_B) > alpha_A) {
+                  if (!promotedClusters.containsKey(new Integer(ndx_A))) {
+                     coreClusters.add(clust_A);
+                     promotedClusters.put(ndx_A, clust_A.getName());
+                  }
+
+                  if (!promotedClusters.containsKey(new Integer(ndx_B))) {
+                     coreClusters.add(clust_B);
+                     promotedClusters.put(ndx_B, clust_B.getName());
+                  }
+               }
+            }
+         }
+
+         for (int clustNdx = 0; clustNdx < clusters.size(); clustNdx++) {
+            if (!promotedClusters.containsKey(clustNdx)) {
+               boundaryClusters.add(clusters.get(clustNdx));
+            }
+         }
+
+         clusters = null;
+         clusterer = new OHClusterer(coreClusters, boundaryClusters,
+                                     ontology, alpha_A, beta_A);
+      }
+      else if (mOntology == null) {
+         clusterer = new AgglomerativeClusterer(clusters, beta_A);
+      }
 
       AnalysisWorker worker = new AnalysisWorker(clusterer,
        MainWindow.getMainFrame().getOutputCanvas());
@@ -415,10 +477,17 @@ public class InputDialog extends JDialog {
       return cancelButton;
    }
 
+   //TODO need this for when clustering pyroprints
+   private Map<String, Pyroprint> constructPyroprints() {
+      return null;
+   }
+
    @SuppressWarnings("unchecked")
    //TODO construct hierarchy here by adding partition values as "tags" to
    //Isolate (implements Lableable).
-   private Map<String, Isolate> constructIsolates(List<Map<String, Object>> dataList) {
+   private Map<String, Isolate> constructIsolates(List<Map<String, Object>> dataList,
+                                                  double alpha_A, double beta_A,
+                                                  double alpha_B, double beta_B) {
       System.out.println("Constructing Isolates...");
 
       long constructStart = System.currentTimeMillis();
@@ -429,17 +498,6 @@ public class InputDialog extends JDialog {
 
       double pyrolen_A = Double.parseDouble(mPyroLen_A.getText());
       double pyrolen_B = Double.parseDouble(mPyroLen_B.getText());
-
-      double alpha_A  = Double.parseDouble(mAlpha_A.getText());
-      double beta_A   = Double.parseDouble(mBeta_A.getText());
-
-      double alpha_B  = Double.parseDouble(mAlpha_B.getText());
-      double beta_B   = Double.parseDouble(mBeta_B.getText());
-
-      alpha_A = alpha_A > 1 ? alpha_A / 100 : alpha_A;
-      beta_A  = beta_A  > 1 ? beta_A  / 100 : beta_A;
-      alpha_B = alpha_B > 1 ? alpha_B / 100 : alpha_B;
-      beta_B  = beta_B  > 1 ? beta_B  / 100 : beta_B;
 
       threshMap.put(String.valueOf(mRegion_A.getSelectedItem()),
                                    new double[] {alpha_A, beta_A, pyrolen_A});
@@ -470,6 +528,9 @@ public class InputDialog extends JDialog {
          isoMap.get(isoID).getData().add(new ITSRegion(regName, alphaThresh, betaThresh,
                                          new ITSRegionAverageMetric(alphaThresh, betaThresh)));
 
+         //maintain pyroprint information based on isoID as we iterate over
+         //tuples.
+
          if (!pyroDataMap.containsKey(isoID)) {
             pyroDataMap.put(isoID, new HashMap<Integer, Object[]>());
          }
@@ -497,6 +558,9 @@ public class InputDialog extends JDialog {
          }
       }
 
+      //using the pyroprint information we have accumulated, we now know
+      //we have iterated over all the data and so can add complete pyroprint
+      //objects to isolates
       for (Map.Entry<String, Map<Integer, Object[]>> pyroDataEntry : pyroDataMap.entrySet()) {
 
          for (Map.Entry<Integer, Object[]> pyroEntry : pyroDataEntry.getValue().entrySet()) {
@@ -514,9 +578,12 @@ public class InputDialog extends JDialog {
                }
             }
          }
-
       }
 
+      pyroDataMap = null;
+
+      //now we must ensure that only "complete" isolates (i.e. has both regions
+      //and no region is empty) are passed on to clustering
       Map<String, Isolate> finalIsoMap = new HashMap<String, Isolate>();
 
       Logger.debug("Isolates retrieved from CPLOP:");
@@ -524,7 +591,8 @@ public class InputDialog extends JDialog {
          Logger.debug(String.format("%s: %s\n", isoEntry.getKey(),
                                     isoEntry.getValue().toString()));
 
-         boolean isCompleteIsolate = true;
+         //have to have 2 regions
+         boolean isCompleteIsolate = isoEntry.getValue().getData().size() == 2;
 
          for (ITSRegion region : isoEntry.getValue().getData()) {
             if (region.getData().isEmpty()) {

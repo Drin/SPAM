@@ -16,12 +16,12 @@ import java.util.HashSet;
 public abstract class Cluster implements Labelable {
    private static int CLUST_ID = 1;
    private String mName;
-   protected double mDiameter, mMean;
 
-   protected OntologyLabel mClusterLabel;
+   protected OntologyLabel mLabel;
    protected DataMetric<Cluster> mMetric;
    protected Dendogram mDendogram;
    protected Set<Clusterable<?>> mElements;
+   protected double mDiameter, mMean;
 
    public Cluster(DataMetric<Cluster> metric) { this(CLUST_ID++, metric); }
 
@@ -31,7 +31,7 @@ public abstract class Cluster implements Labelable {
       
       mElements = new HashSet<Clusterable<?>>();
       mDendogram = null;
-      mClusterLabel = new OntologyLabel();
+      mLabel = new OntologyLabel();
 
       mDiameter = -2;
       mMean = -2;
@@ -42,20 +42,18 @@ public abstract class Cluster implements Labelable {
    public double getMean() { return mMean; }
 
    public abstract void computeStatistics();
-   //join must also define how to merge labels (relatively easy thing to do)
    public abstract Cluster join(Cluster otherClust);
 
    public Dendogram getDendogram() { return mDendogram; }
    public Set<Clusterable<?>> getElements() { return mElements; }
    public void add(Clusterable<?> element) { mElements.add(element); }
 
-   public void addLabel(String labelName) {
-      mClusterLabel.addLabel(labelName);
-   }
-
-   public boolean hasLabel(String labelName) {
-      return mClusterLabel.hasLabel(labelName);
-   }
+   /*
+    * This is for ontological labels. Clusters should have a set of labels that
+    * is a superset of the labels of its data points.
+    */
+   public void addLabel(String label) { mLabel.addLabel(label); }
+   public boolean hasLabel(String label) { return mLabel.hasLabel(label); }
 
    @Override
    public boolean equals(Object otherObj) {
@@ -66,11 +64,65 @@ public abstract class Cluster implements Labelable {
             if (!otherClust.mElements.contains(elem)) { return false; }
          }
 
-         //return this.getName().equals(otherClust.getName());
          return true;
       }
 
       return false;
+   }
+
+   public double compareTo(Cluster otherClust) {
+      mMetric.apply(this, otherClust);
+      double comparison = mMetric.result();
+
+      Logger.error(mMetric.getError(), String.format("error computing metric" +
+                                       " between '%s' and '%s'\n", this.mName,
+                                       otherClust.mName));
+
+      return comparison;
+   }
+
+   /**
+    * Compares two clusters to determine if they are <b>similar</b>.
+    * Similar is defined based on the data points contained in the cluster.
+    * If each pair of data points between the clusters are similar, then the 
+    * clusters are similar. However, if any two data points are
+    * not similar, then the two clusters are not considered similar.
+    *
+    * @param otherClust The cluster being compared to.
+    * @return True if this cluster is similar to the other cluster. False
+    * otherwise.
+    */
+   public boolean isSimilar(Cluster otherClust) {
+      for (Clusterable<?> elem_A : mElements) {
+         for (Clusterable<?> elem_B : otherClust.mElements) {
+
+            if (!elem_A.isSimilar(elem_B)) { return false; }
+         }
+      }
+
+      return true;
+   }
+
+   /**
+    * Compares two clusters to determine if they are <b>different</b>.
+    * Different is defined based on the data points contained in the cluster.
+    * If each pair of data points between the clusters are different, then the 
+    * clusters are considered different. However, if any two data points are
+    * not different, then the two clusters are not considered different.
+    *
+    * @param otherClust The cluster being compared to.
+    * @return True if this cluster is different from the other cluster. False
+    * otherwise.
+    */
+   public boolean isDifferent(Cluster otherClust) {
+      for (Clusterable<?> elem_A : mElements) {
+         for (Clusterable<?> elem_B : otherClust.mElements) {
+
+            if (!elem_A.isDifferent(elem_B)) { return false; }
+         }
+      }
+
+      return true;
    }
 
    @Override
@@ -94,38 +146,4 @@ public abstract class Cluster implements Labelable {
       return str;
    }
 
-   public double compareTo(Cluster otherClust) {
-      mMetric.apply(this, otherClust);
-
-      double comparison = mMetric.result();
-
-      Logger.error(mMetric.getError(),
-                   String.format("error computing metric between '%s' " +
-                                 "and '%s'\n", this.mName,
-                                 otherClust.mName));
-
-      return comparison;
-   }
-
-   public boolean isSimilar(Cluster otherClust) {
-      for (Clusterable<?> elem_A : mElements) {
-         for (Clusterable<?> elem_B : otherClust.mElements) {
-
-            if (!elem_A.isSimilar(elem_B)) { return false; }
-         }
-      }
-
-      return true;
-   }
-
-   public boolean isDifferent(Cluster otherClust) {
-      for (Clusterable<?> elem_A : mElements) {
-         for (Clusterable<?> elem_B : otherClust.mElements) {
-
-            if (!elem_A.isDifferent(elem_B)) { return false; }
-         }
-      }
-
-      return true;
-   }
 }

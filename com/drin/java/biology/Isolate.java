@@ -149,11 +149,13 @@ public class Isolate extends Clusterable<ITSRegion> implements Labelable {
 
    @Override
    public String toString() {
-      String str = "";
+      String str = String.format("isolate '%s' [%d regions]:\n",
+                                 this.getName(), mData.size());
 
       if (this.getData() != null) {
          for (ITSRegion region : mData) {
-            str += String.format("region '%s':\n", region.getName());
+            str += String.format("region '%s' [%d pyroprints]:\n",
+                                 region.getName(), region.getData().size());
 
             for (Pyroprint pyro : region.getData()) {
                str += String.format("\tpyroprint %s\n\n", pyro);

@@ -93,8 +93,44 @@ public class ClusterInterface {
          if (ontology != null) { ontology.addData(tmpClust); }
       }
 
-      if (ontology != null) { clusterer = new OHClusterer(clusters, ontology); }
-      else if (ontology == null) { clusterer = new AgglomerativeClusterer(clusters); }
+      if (ontology != null) {
+         List<Cluster> coreClusters = new ArrayList<Cluster>();
+         List<Cluster> boundaryClusters = new ArrayList<Cluster>();
+         Map<Integer, String> promotedClusters = new HashMap<Integer, String>();
+
+         for (int ndx_A = 0; ndx_A < clusters.size(); ndx_A++) {
+            Cluster clust_A = clusters.get(ndx_A);
+
+            for (int ndx_B = ndx_A + 1; ndx_B < clusters.size(); ndx_B++) {
+               Cluster clust_B = clusters.get(ndx_B);
+
+               if (clust_A.compareTo(clust_B) > alphaThresh) {
+                  if (!promotedClusters.containsKey(new Integer(ndx_A))) {
+                     coreClusters.add(clust_A);
+                     promotedClusters.put(ndx_A, clust_A.getName());
+                  }
+
+                  if (!promotedClusters.containsKey(new Integer(ndx_B))) {
+                     coreClusters.add(clust_B);
+                     promotedClusters.put(ndx_B, clust_B.getName());
+                  }
+               }
+            }
+         }
+
+         for (int clustNdx = 0; clustNdx < clusters.size(); clustNdx++) {
+            if (!promotedClusters.containsKey(clustNdx)) {
+               boundaryClusters.add(clusters.get(clustNdx));
+            }
+         }
+
+         clusters = null;
+         clusterer = new OHClusterer(coreClusters, boundaryClusters,
+                                     ontology, alphaThresh, betaThresh);
+      }
+      else if (ontology == null) {
+         clusterer = new AgglomerativeClusterer(clusters, betaThresh);
+      }
 
       clusterer.clusterData(null);
 

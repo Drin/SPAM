@@ -3,6 +3,8 @@ package com.drin.java.analysis.clustering;
 import com.drin.java.analysis.clustering.Clusterer;
 
 import com.drin.java.clustering.Cluster;
+import com.drin.java.clustering.CandidatePair;
+import com.drin.java.clustering.CandidateQueue;
 
 import java.util.Map;
 import java.util.HashMap;
@@ -16,8 +18,11 @@ public abstract class HierarchicalClusterer implements Clusterer {
    protected List<Cluster> mClusters;
    protected List<Cluster> mResultClusters;
 
-   public HierarchicalClusterer(List<Cluster> clusters) {
+   protected double mBetaThreshold;
+
+   public HierarchicalClusterer(List<Cluster> clusters, double threshold) {
       mClusters = clusters;
+      mBetaThreshold = threshold;
 
       mSimType = CLUST_SIMILARITY.SQUISHY;
    }
@@ -26,67 +31,65 @@ public abstract class HierarchicalClusterer implements Clusterer {
 
    @Override
    public void clusterData(JTextArea canvas) {
-      mResultClusters = new ArrayList<Cluster>();
-      mResultClusters.addAll(clusterDataSet(mClusters, canvas));
+      mResultClusters = new ArrayList<Cluster>(mClusters);
+      clusterDataSet(mResultClusters, mBetaThreshold, canvas);
    }
 
-   protected List<Cluster> clusterDataSet(List<Cluster> clusters, JTextArea canvas) {
-      List<Cluster> newClusters = new ArrayList<Cluster>(clusters);
-      Map<String, Map<String, Double>> clust_distances;
+   /*
+    * //cluster list, and re-populate on each iteration
+    * do
+    *    closeClusters = best candidate_pair (hopefully list is a pQueue)
+    *    combine(closeClusters)
+    *    candidate_pair = recompute(closeClusters)
+    *
+    *    //this should be implemented in the data structure
+    *    if one cluster in candidate_pair is already in list
+    *       remove old candidate_pair
+    *    add candidate_pair
+    *
+    *    if peek_candidate_pair() == null: break
+    *
+    * while (clusters.size() > 1)
+    *
+    */
+   //This takes a threshold parameter so that it's easier for OHClust! to pass
+   //mAlphaThreshold rather than having to overwrite the entire method
+   protected void clusterDataSet(List<Cluster> clusters, double threshold, JTextArea canvas) {
+      double percentIncr = 100.0/clusters.size(), percentComplete = 0;
 
-      //TODO hack in order to have some indicator of progress
-      double percentIncr = 100.0/newClusters.size();
-      double percentComplete = 0;
+      CandidateQueue clusterCandidates = findCandidatePairs(clusters, threshold);
 
-      /*
-       * //Populate list
-       * for (Cluster clust_A : clusters)
-       *    for (Cluster clust_B : clusters)
-       *       candidate_pair = argmax(compare(clust_A, clust_B))
-       *
-       *    if one cluster in candidate_pair is already in list
-       *       remove old candidate_pair
-       *
-       *    add candidate_pair to list of cluster candidates
-       *
-       * //cluster list, and re-populate on each iteration
-       * do
-       *    closeClusters = best candidate_pair (hopefully list is a pQueue)
-       *    combine(closeClusters)
-       *    candidate_pair = recompute(closeClusters)
-       *
-       *    if one cluster in candidate_pair is already in list
-       *       remove old candidate_pair
-       *    add candidate_pair
-       *
-       *    if peek_candidate_pair() == null: break
-       *
-       * while (newClusters.size() > 1)
-       *
-       */
+      while (clusters.size() > 1) {
+         CandidatePair closeClusters = clusterCandidates.dequeue();
+         Cluster combinedCluster = combineClusters(closeClusters, clusters);
 
-      clust_distances = new HashMap<String, Map<String, Double>>();
+         clusterCandidates.addAllCandidates(recompute(combinedCluster, clusters, threshold));
 
-      while (newClusters.size() > 1) {
-         //TODO hack in order to have some indicator of progress
-         if (canvas != null) {
-            canvas.setText(String.format("\n\n\t\t%.02f%% Complete!", percentComplete));
-            percentComplete += percentIncr;
-         }
-
-         Cluster[] closeClusters = findCloseClusters(new HashMap<String, Map<String, Double>>(), newClusters);
-
-         if (closeClusters != null) { combineClusters(closeClusters, newClusters); }
-         else { break; }
+         //we call peek because we don't know that combinedCluster is the best
+         //candidate
+         if (clusterCandidates.peek() == null) { break; }
       }
-
-      return newClusters;
    }
 
-   protected abstract Cluster[] findCloseClusters(Map<String, Map<String, Double>> distMap, List<Cluster> clusters);
-   protected abstract void combineClusters(Cluster[] closeClusters, List<Cluster> clusters);
+   protected abstract CandidateQueue findCandidatePairs(List<Cluster> clusters, double threshold);
+   protected abstract CandidateQueue recompute(Cluster combinedCluster, List<Cluster> clusters, double threshold);
+   protected abstract Cluster combineClusters(CandidatePair closeClusters, List<Cluster> clusters);
 
    protected enum CLUST_SIMILARITY {
       SIMILAR, SQUISHY
    }
 }
+
+/*
+while (clusters.size() > 1) {
+   if (canvas != null) {
+      canvas.setText(String.format("\n\n\t\t%.02f%% Complete!", percentComplete));
+      percentComplete += percentIncr;
+   }
+
+   Cluster[] closeClusters = findCloseClusters(clusters);
+
+   if (closeClusters != null) { combineClusters(closeClusters, clusters); }
+   else { break; }
+}
+*/
