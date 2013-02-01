@@ -1,6 +1,8 @@
 package com.drin.java.analysis.clustering;
 
 import com.drin.java.clustering.Cluster;
+import com.drin.java.clustering.CandidatePair;
+import com.drin.java.clustering.CandidateQueue;
 
 import com.drin.java.util.Logger;
 
@@ -12,17 +14,108 @@ import java.util.ArrayList;
 public class AgglomerativeClusterer extends HierarchicalClusterer {
    protected static final int CLUSTER_PAIR_SIZE = 2;
 
-   public AgglomerativeClusterer(List<Cluster> clusters) {
-      super(clusters);
+   public AgglomerativeClusterer(List<Cluster> clusters, double threshold) {
+      super(clusters, threshold);
    }
 
    /*
-    * distMap persists across calls to findCloseClusters() as a cache for the 
-    * cluster distance matrix. clustDistMap is used so that new references are
-    * not created for each outer mapping.
+    * //Populate list
+    * for (Cluster clust_A : clusters)
+    *    for (Cluster clust_B : clusters)
+    *       candidate_pair = argmax(compare(clust_A, clust_B))
+    *
+    *    //this should be implemented in the data structure
+    *    if one cluster in candidate_pair is already in list
+    *       remove old candidate_pair
+    *
+    *    add candidate_pair to list of cluster candidates
     */
    @Override
-   protected Cluster[] findCloseClusters(Map<String, Map<String, Double>> distMap, List<Cluster> clusters) {
+   protected CandidateQueue findCandidatePairs(List<Cluster> clusters, double threshold) {
+      CandidateQueue clusterCandidates = new CandidateQueue();
+
+      for (int clustNdx_A = 0; clustNdx_A < clusters.size(); clustNdx_A++) {
+         Cluster clust_A = clusters.get(clustNdx_A);
+
+         for (int clustNdx_B = clustNdx_A + 1; clustNdx_B < clusters.size(); clustNdx_B++) {
+            Cluster clust_B = clusters.get(clustNdx_B);
+            double clustSim = clust_A.compareTo(clust_B);
+
+            if (clustSim > threshold) {
+               clusterCandidates.addCandidate(new CandidatePair(clust_A, clust_B, clustSim));
+            }
+         }
+      }
+
+      return clusterCandidates;
+   }
+
+   @Override
+   protected CandidateQueue recompute(Cluster combinedCluster, List<Cluster> clusters, double threshold) {
+      CandidateQueue clusterCandidates = new CandidateQueue();
+
+      for (Cluster otherClust : clusters) {
+         if (combinedCluster.getName().equals(otherClust.getName())) { continue; }
+
+         double clustSim = combinedCluster.compareTo(otherClust);
+
+         if (clustSim > threshold) {
+            clusterCandidates.addCandidate(new CandidatePair(combinedCluster, otherClust, clustSim));
+         }
+      }
+
+      return clusterCandidates;
+   }
+
+   @Override
+   protected Cluster combineClusters(CandidatePair closeClusters, List<Cluster> clusters) {
+      Logger.debug(String.format("combining clusters '%s' and '%s'\n\n---\n%s\n---\n\n---\n%s\n---\n\n",
+                                 closeClusters.getLeftClusterName(),
+                                 closeClusters.getRightClusterName(),
+                                 closeClusters.getLeftCluster(),
+                                 closeClusters.getRightCluster()));
+
+      int removeNdx = -1;
+      Cluster combinedCluster = null;
+
+      for (int clustNdx = 0; clustNdx < clusters.size(); clustNdx++) {
+         Cluster tmpClust = clusters.get(clustNdx);
+
+         if (tmpClust.getName().equals(closeClusters.getLeftClusterName())) {
+            combinedCluster = tmpClust.join(closeClusters.getRightCluster());
+
+            if (combinedCluster == null) {
+               System.err.println("wtf couldn't join clusters");
+            }
+
+            clusters.set(clustNdx, combinedCluster);
+         }
+
+         else if (tmpClust.getName().equals(closeClusters.getRightClusterName())) {
+            removeNdx = clustNdx;
+         }
+      }
+
+      if (removeNdx != -1) {
+         clusters.remove(removeNdx);
+      }
+      else {
+         Logger.debug("Remove Index is -1. Error during clustering.\nCluster List:\n");
+         for (Cluster clust : clusters) {
+            if (clust == null) {
+               System.err.println("wtf null cluster");
+            }
+            Logger.debug(String.format("\n--\n%s\n--\n", clust));
+         }
+      }
+
+      return combinedCluster;
+   }
+}
+
+/*
+   @Override
+   protected Cluster[] findCloseClusters(List<Cluster> clusters) {
       Map<String, Double> clustDistMap = null;
       Cluster close_A = null, close_B = null;
       double maxSim = 0;
@@ -31,36 +124,16 @@ public class AgglomerativeClusterer extends HierarchicalClusterer {
       for (int ndx_A = 0; ndx_A < clusters.size(); ndx_A++) {
          Cluster clust_A = clusters.get(ndx_A);
 
-         //clustDistMap is a reference to a Map in distMap. Any changes to
-         //clustDistMap hereafter are persisted to distMap.
-         if (distMap != null && distMap.containsKey(clust_A.getName())) {
-            clustDistMap = distMap.get(clust_A.getName());
-         }
-         else if (distMap != null) {
-            clustDistMap = new HashMap<String, Double>();
-            distMap.put(clust_A.getName(), clustDistMap);
-         }
-
          for (int ndx_B = ndx_A + 1; ndx_B < clusters.size(); ndx_B++) {
             Cluster clust_B = clusters.get(ndx_B);
-
-            double clustDist = -2;
-
-            //Here we need to determine the cluster distance, clustDist. If no
-            //previous distance was computed, then store clustDist to
-            //clustDistMap, which will persist in distMap
-            if (clustDistMap != null && clustDistMap.containsKey(clust_B.getName())) {
-               clustDist = clustDistMap.get(clust_B.getName());
-            }
-            else if (clustDistMap != null) {
-               clustDist = clust_A.compareTo(clust_B);
-               clustDistMap.put(clust_B.getName(), clustDist);
-            }
+            double clustDist = clust_A.compareTo(clust_B);
 
             //This switch is to minimize code duplication for hierarchical and
             //OHClustering
             isClose = clustDist > maxSim;
 
+            //TODO SIMILAR should mean that cluster similarity is above alpha
+            //SQUISHY should mean that cluster similarity is not below beta
             switch (mSimType) {
                case SIMILAR:
                   isClose = isClose && clust_A.isSimilar(clust_B);
@@ -90,33 +163,4 @@ public class AgglomerativeClusterer extends HierarchicalClusterer {
 
       return null;
    }
-
-   @Override
-   protected void combineClusters(Cluster[] closeClusters, List<Cluster> clusters) {
-      if (closeClusters.length != CLUSTER_PAIR_SIZE) {
-         Logger.error(-1, "Invalid cluster candidates\n");
-      }
-
-      Logger.debug(String.format("combining clusters '%s' and '%s'",
-                                 closeClusters[0], closeClusters[1]));
-
-      int removeNdx = -1;
-
-      for (int clustNdx = 0; clustNdx < clusters.size(); clustNdx++) {
-         Cluster tmpClust = clusters.get(clustNdx);
-
-         if (tmpClust.getName().equals(closeClusters[0].getName())) {
-            clusters.set(clustNdx, tmpClust.join(closeClusters[1]));
-         }
-
-         else if (tmpClust.getName().equals(closeClusters[1].getName())) {
-            removeNdx = clustNdx;
-         }
-      }
-
-      if (removeNdx != -1) {
-         clusters.remove(removeNdx);
-      }
-      else { Logger.debug("Remove Index is -1. Error during clustering"); }
-   }
-}
+*/

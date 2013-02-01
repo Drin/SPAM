@@ -101,8 +101,6 @@ public class PyroprintUnstablePearsonMetric extends DataMetric<Pyroprint> {
 
       if (result == -2) { setError(-1); }
 
-      Logger.error(mErrCode, String.format("Correlation: %.04f", result));
-
       reset();
       return result;
    }

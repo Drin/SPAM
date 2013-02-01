@@ -339,8 +339,44 @@ public class ClusterFileDialog extends JDialog {
          }
       }
 
-      if (mOntology != null) { clusterer = new OHClusterer(clusters, ontology); }
-      else if (mOntology == null) { clusterer = new AgglomerativeClusterer(clusters); }
+      if (mOntology != null) {
+         List<Cluster> coreClusters = new ArrayList<Cluster>();
+         List<Cluster> boundaryClusters = new ArrayList<Cluster>();
+         Map<Integer, String> promotedClusters = new HashMap<Integer, String>();
+
+         for (int ndx_A = 0; ndx_A < clusters.size(); ndx_A++) {
+            Cluster clust_A = clusters.get(ndx_A);
+
+            for (int ndx_B = ndx_A + 1; ndx_B < clusters.size(); ndx_B++) {
+               Cluster clust_B = clusters.get(ndx_B);
+
+               if (clust_A.compareTo(clust_B) > alpha_A) {
+                  if (!promotedClusters.containsKey(new Integer(ndx_A))) {
+                     coreClusters.add(clust_A);
+                     promotedClusters.put(ndx_A, clust_A.getName());
+                  }
+
+                  if (!promotedClusters.containsKey(new Integer(ndx_B))) {
+                     coreClusters.add(clust_B);
+                     promotedClusters.put(ndx_B, clust_B.getName());
+                  }
+               }
+            }
+         }
+
+         for (int clustNdx = 0; clustNdx < clusters.size(); clustNdx++) {
+            if (!promotedClusters.containsKey(clustNdx)) {
+               boundaryClusters.add(clusters.get(clustNdx));
+            }
+         }
+
+         clusters = null;
+         clusterer = new OHClusterer(coreClusters, boundaryClusters,
+                                     ontology, alpha_A, beta_A);
+      }
+      else if (mOntology == null) {
+         clusterer = new AgglomerativeClusterer(clusters, beta_A);
+      }
 
       AnalysisWorker worker = new AnalysisWorker(clusterer,
        MainWindow.getMainFrame().getOutputCanvas());

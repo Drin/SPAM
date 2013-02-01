@@ -1,6 +1,6 @@
 package com.drin.java.clustering;
 
-public class CandidatePair implements Comparable<CandidatePair> {
+public class CandidatePair {
    private Cluster mLeftClust, mRightClust;
    private double mCandidateSim;
 
@@ -14,12 +14,17 @@ public class CandidatePair implements Comparable<CandidatePair> {
    public Cluster getLeftCluster() { return mLeftClust; }
    public Cluster getRightCluster() { return mRightClust; }
 
-   public Cluster getLeftClusterName() { return mLeftClust.getName(); }
-   public Cluster getRightClusterName() { return mRightClust.getName(); }
+   public String getLeftClusterName() { return mLeftClust.getName(); }
+   public String getRightClusterName() { return mRightClust.getName(); }
 
    public double getPairDistance() { return mCandidateSim; }
 
-   public int compareTo(CandidatePair otherPair) {
+   public double compareTo(CandidatePair otherPair) {
       return mCandidateSim - otherPair.mCandidateSim;
+   }
+
+   public String toString() {
+      return String.format("similarity:%.02f\nleft:\n--\n%s\n--\nright:\n--\n%s\n--\n",
+                           mCandidateSim, mLeftClust, mRightClust);
    }
 }

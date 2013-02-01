@@ -52,8 +52,8 @@ public class HCluster extends Cluster {
          newCluster.mElements.addAll(this.mElements);
          newCluster.mElements.addAll(otherData);
 
-         newCluster.mClusterLabel.addAll(this.mClusterLabel);
-         newCluster.mClusterLabel.addAll(otherClust.mClusterLabel);
+         newCluster.mLabel.addAll(this.mLabel);
+         newCluster.mLabel.addAll(otherClust.mLabel);
 
          newCluster.computeStatistics();
 

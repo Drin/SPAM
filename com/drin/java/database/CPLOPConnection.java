@@ -434,7 +434,8 @@ public class CPLOPConnection {
 
       String query = "SELECT i.isoID, i.commonName, i.hostID, i.sampleID, " +
                      "i.dateStored, i.pyroprintDate " +
-                     "FROM Isolates i join Pyroprints p1 on (i.isoID = p1.isoID) join Pyroprints p2 on (i.isoID = p2.isoID and p1.pyroID != p2.pyroID) " +
+                     "FROM Isolates i join Pyroprints p1 on (i.isoID = p1.isoID) join " +
+                           "Pyroprints p2 on (i.isoID = p2.isoID and p1.pyroID != p2.pyroID) " +
                      "WHERE p1.appliedRegion != p2.appliedRegion and p1.pyroID and " +
                      "p1.pyroID in (SELECT DISTINCT pyroID FROM Histograms) and " +
                      "p2.pyroID in (SELECT DISTINCT pyroID FROM Histograms) " +
@@ -473,6 +474,47 @@ public class CPLOPConnection {
       }
 
       return isolateMap;
+   }
+
+   public List<Map<String, Object>> getExperimentDataSet() throws SQLException {
+      List<Map<String, Object>> experimentMap = new ArrayList<Map<String, Object>>();
+      Statement statement = null;
+      ResultSet results = null;
+
+      String query = "SELECT Name, count(*) as NumIsolates " +
+                     "FROM Experiments e join ExperimentPyroPrintLink ep using (ExperimentID) join " +
+                           "Pyroprints p on (PyroprintID = pyroID) " +
+                     "GROUP BY Name";
+
+      try {
+         statement = conn.createStatement();
+         results = statement.executeQuery(query);
+
+         while (results.next()) {
+            Map<String, Object> tuple = new HashMap<String, Object>();
+
+            tuple.put("name", results.getString(1));
+            tuple.put("isolate count", new Integer(results.getInt(2)));
+
+            experimentMap.add(tuple);
+         }
+      }
+
+      catch (SQLException sqlEx) {
+         throw sqlEx;
+      }
+
+      finally {
+         if (results != null) {
+            results.close();
+         }
+
+         if (statement != null) {
+            statement.close();
+         }
+      }
+
+      return experimentMap;
    }
 
    /**
@@ -598,6 +640,46 @@ public class CPLOPConnection {
    {
       String searchID = "pyroID";
       return getData(searchID, pyroIds);
+   }
+
+   public List<Map<String, Object>> getDataByExperimentName(String experiments) throws SQLException
+   {
+      List<Map<String, Object>> rtn = new ArrayList<Map<String, Object>>();
+      Statement stmt = null;
+      ResultSet results = null;
+
+      String query = String.format(
+       "SELECT pyroID, isoID, appliedRegion, wellID, pHeight, nucleotide " +
+       "FROM Experiments e join ExperimentPyroPrintLink ep using (ExperimentID) " +
+             "join Pyroprints p on (PyroprintID = pyroID) join Histograms using (pyroID) " +
+       "WHERE e.name in (%s) and pyroID in (Select distinct pyroID from Histograms)" + 
+       "ORDER BY isoID, pyroID, position asc", experiments);
+
+      try {
+         stmt = conn.createStatement();
+         results = stmt.executeQuery(query);
+
+         while (results.next()) {
+            Map<String, Object> tuple = new HashMap<String, Object>();
+
+            tuple.put("pyroprint", results.getString(1)); 
+            tuple.put("isolate", results.getString(2)); 
+            tuple.put("region", results.getString(3)); 
+            tuple.put("well", results.getString(4));
+            tuple.put("pHeight", results.getString(5));
+            tuple.put("nucleotide", results.getString(6));
+
+            rtn.add(tuple);
+         }
+      }
+      catch (SQLException sqlEx) { throw sqlEx; }
+      finally
+      {
+         if (results != null) { results.close(); }
+         if (stmt != null) { stmt.close(); }
+      }
+
+      return rtn;
    }
 
    /**
