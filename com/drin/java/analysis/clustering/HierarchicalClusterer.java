@@ -35,11 +35,31 @@ public abstract class HierarchicalClusterer implements Clusterer {
    public void clusterData(JTextArea canvas) {
       mResultClusters = new ArrayList<Cluster>(mClusters);
       clusterDataSet(mResultClusters, mBetaThreshold, canvas);
+      //experimentalclusterDataSet(mResultClusters, mBetaThreshold, canvas);
+   }
+
+   //This method is the more basic way of clustering. It is primarily being
+   //used to compare against the priority queue method
+   protected void clusterDataSet(List<Cluster> clusters, double threshold, JTextArea canvas) {
+      double percentIncr = 100.0/clusters.size(), percentComplete = 0;
+      Map<String, Map<String, Double>> clustDistMap = new HashMap<String, Map<String, Double>>();
+
+      CandidatePair closeClusters = findCloseClusters(clustDistMap, clusters, threshold);
+
+      for (; closeClusters != null && clusters.size() > 1;
+           closeClusters = findCloseClusters(clustDistMap, clusters, threshold)) {
+         if (canvas != null) {
+            canvas.setText(String.format("\n\n\t\t%.02f%% Complete!", percentComplete));
+            percentComplete += percentIncr;
+         }
+
+         combineClusters(closeClusters, clusters);
+      }
    }
 
    //This takes a threshold parameter so that it's easier for OHClust! to pass
    //mAlphaThreshold rather than having to overwrite the entire method
-   protected void clusterDataSet(List<Cluster> clusters, double threshold, JTextArea canvas) {
+   protected void experimentalClusterDataSet(List<Cluster> clusters, double threshold, JTextArea canvas) {
       double percentIncr = 100.0/clusters.size(), percentComplete = 0;
 
       if (canvas != null) {
@@ -51,7 +71,6 @@ public abstract class HierarchicalClusterer implements Clusterer {
       CandidatePair closeClusters = clusterCandidates.dequeue();
 
       for (; closeClusters != null; closeClusters = clusterCandidates.dequeue()) {
-
          if (canvas != null) {
             canvas.setText(String.format("\n\n\t\t%.02f%% Complete!", percentComplete));
             percentComplete += percentIncr;
@@ -63,6 +82,8 @@ public abstract class HierarchicalClusterer implements Clusterer {
    }
 
    protected abstract CandidateQueue findCandidatePairs(List<Cluster> clusters, double threshold);
+   protected abstract CandidatePair findCloseClusters(Map<String, Map<String, Double>> distMap, List<Cluster> clusters, double threshold);
+
    protected abstract CandidateQueue recompute(Cluster combinedCluster, List<Cluster> clusters, double threshold);
    protected abstract Cluster combineClusters(CandidatePair closeClusters, List<Cluster> clusters);
 

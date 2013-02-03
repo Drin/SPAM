@@ -3,6 +3,8 @@ package com.drin.java.gui.dialogs;
 import com.drin.java.biology.Isolate;
 import com.drin.java.biology.ITSRegion;
 import com.drin.java.biology.Pyroprint;
+
+import com.drin.java.clustering.Clusterable;
 import com.drin.java.clustering.Cluster;
 import com.drin.java.clustering.HCluster;
 
@@ -27,19 +29,14 @@ import java.awt.Component;
 import java.awt.ComponentOrientation;
 import java.awt.Container;
 import java.awt.Frame;
-import java.awt.Dialog;
-import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.FlowLayout;
 
-import javax.swing.JFrame;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 import javax.swing.JDialog;
-import javax.swing.JOptionPane;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 import javax.swing.JButton;
@@ -58,7 +55,6 @@ import java.util.Set;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Enumeration;
 
 @SuppressWarnings("serial")
 public class InputDialog extends JDialog {
@@ -366,10 +362,6 @@ public class InputDialog extends JDialog {
       Clusterer clusterer = null;
       List<Cluster> clusters = new ArrayList<Cluster>();
 
-      if (!mOntology.getText().equals("")) {
-         ontology = Ontology.createOntology(mOntology.getText());
-      }
-
       double alpha_A  = Double.parseDouble(mAlpha_A.getText());
       double beta_A   = Double.parseDouble(mBeta_A.getText());
 
@@ -381,19 +373,24 @@ public class InputDialog extends JDialog {
       alpha_B = alpha_B > 1 ? alpha_B / 100 : alpha_B;
       beta_B  = beta_B  > 1 ? beta_B  / 100 : beta_B;
 
+      if (!mOntology.getText().equals("")) {
+         ontology = Ontology.createOntology(mOntology.getText());
+      }
+
       startTime = System.currentTimeMillis();
 
-      Map<String, Isolate> isoMap = constructIsolates(queryData(), alpha_A, beta_A,
-                                                      alpha_B, beta_B);
+      Map<String, Clusterable<?>> entityMap = constructEntities(queryData(),
+                                                                alpha_A, beta_A,
+                                                                alpha_B, beta_B);
       
       ClusterAverageMetric clustMetric = new ClusterAverageMetric();
 
-      for (Map.Entry<String, Isolate> isoEntry : isoMap.entrySet()) {
-         Logger.debug(String.format("adding Isolate %s\n", isoEntry.getValue()));
-         clusters.add(new HCluster(clustMetric, isoEntry.getValue()));
+      for (Map.Entry<String, Clusterable<?>> mapEntry : entityMap.entrySet()) {
+         Logger.debug(String.format("adding Isolate %s\n", mapEntry.getValue()));
+         clusters.add(new HCluster(clustMetric, mapEntry.getValue()));
       }
 
-      isoMap = null;
+      entityMap = null;
 
 
       if (ontology != null) {
@@ -487,7 +484,7 @@ public class InputDialog extends JDialog {
    @SuppressWarnings("unchecked")
    //TODO construct hierarchy here by adding partition values as "tags" to
    //Isolate (implements Lableable).
-   private Map<String, Isolate> constructIsolates(List<Map<String, Object>> dataList,
+   private Map<String, Clusterable<?>> constructEntities(List<Map<String, Object>> dataList,
                                                   double alpha_A, double beta_A,
                                                   double alpha_B, double beta_B) {
       System.out.println("Constructing Isolates...");
@@ -586,14 +583,14 @@ public class InputDialog extends JDialog {
 
       //now we must ensure that only "complete" isolates (i.e. has both regions
       //and no region is empty) are passed on to clustering
-      Map<String, Isolate> finalIsoMap = new HashMap<String, Isolate>();
+      Map<String, Clusterable<?>> finalEntityMap = new HashMap<String, Clusterable<?>>();
 
       Logger.debug("Isolates retrieved from CPLOP:");
       for (Map.Entry<String, Isolate> isoEntry : isoMap.entrySet()) {
          Logger.debug(String.format("%s: %s\n", isoEntry.getKey(),
                                     isoEntry.getValue().toString()));
 
-         //have to have 2 regions
+         //TODO have to have 2 regions but shouldn't be hardcoded to 2
          boolean isCompleteIsolate = isoEntry.getValue().getData().size() == 2;
 
          for (ITSRegion region : isoEntry.getValue().getData()) {
@@ -606,12 +603,12 @@ public class InputDialog extends JDialog {
          }
 
          if (isCompleteIsolate) {
-            finalIsoMap.put(isoEntry.getKey(), isoEntry.getValue());
+            finalEntityMap.put(isoEntry.getKey(), isoEntry.getValue());
          }
       }
 
       System.out.println("Time to construct Isolates: " + (System.currentTimeMillis() - constructStart));
 
-      return isoMap;
+      return finalEntityMap;
    }
 }

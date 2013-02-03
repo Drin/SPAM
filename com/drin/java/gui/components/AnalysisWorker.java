@@ -1,10 +1,9 @@
 package com.drin.java.gui.components;
 
 import com.drin.java.clustering.Cluster;
-import com.drin.java.clustering.Clusterable;
-
 import com.drin.java.analysis.clustering.Clusterer;
 import com.drin.java.output.ClusterWriter;
+
 import com.drin.java.util.Logger;
 
 import javax.swing.SwingWorker;
@@ -12,9 +11,7 @@ import javax.swing.JTextArea;
 
 import java.util.List;
 
-public class AnalysisWorker extends SwingWorker<String[], Integer> {
-   private static final int DENDOGRAM_INFO = 0,
-                            CLUSTER_INFO = 1;
+public class AnalysisWorker extends SwingWorker<AnalysisWorker.TaskResult, Integer> {
    private Clusterer mClusterer;
    private JTextArea mCanvas;
    private String mOutFile;
@@ -28,39 +25,20 @@ public class AnalysisWorker extends SwingWorker<String[], Integer> {
    public void setOutputFile(String outFileName) { mOutFile = outFileName; }
 
    @Override
-   public String[] doInBackground() {
+   public TaskResult doInBackground() {
       long startTime = System.currentTimeMillis();
+
       mClusterer.clusterData(mCanvas);
-      String clustInfo = String.format("Elapsed Time: %d\n\n",
-                                       System.currentTimeMillis() - startTime);
-
-      String dendInfo = "<Clusters>\n";
-      for (Cluster cluster : mClusterer.getClusters()) {
-         /*
-          * Dendogram Information
-          */
-         dendInfo += cluster.getDendogram().toString();
-
-         /*
-          * Cluster Information
-          */
-         //clustInfo += String.format("Cluster %s:\n", cluster.getName());
-         for (Clusterable<?> elem : cluster.getElements()) {
-            clustInfo += String.format("Cluster %s, %s\n", cluster.getName(), elem.getName());
-         }
-      }
-
-      dendInfo += "</Clusters>\n";
-
-      return new String[] {dendInfo, clustInfo};
+      return new TaskResult(System.currentTimeMillis() - startTime,
+                            mClusterer.getClusters());
    }
 
    @Override
    protected void done() {
-      String[] resultArr = null;
+      TaskResult result = null;
 
       try {
-         resultArr = get();
+         result = get();
       }
       catch(InterruptedException interrErr) {
          Logger.error(-1, "Analysis worker interrupted while waiting for " +
@@ -72,12 +50,17 @@ public class AnalysisWorker extends SwingWorker<String[], Integer> {
          execErr.printStackTrace();
       }
 
-      if (resultArr != null) {
-         writeDendogram(resultArr[DENDOGRAM_INFO]);
-         writeElements(resultArr[CLUSTER_INFO]);
-      
-         mCanvas.setText(resultArr[DENDOGRAM_INFO]);
-         mCanvas.setText(resultArr[CLUSTER_INFO]);
+      if (result != null) {
+         ClusterWriter writer = new ClusterWriter(result.mClusterData);
+         String elapsedTime = String.format("Elapsed Time: %d\n\n",
+                                            result.mElapsedTime);
+
+         if (mOutFile != null) {
+            writer.writeData(mOutFile + ClusterWriter.FileType.CSV, writer.getClustInfo());
+            writer.writeData(mOutFile + ClusterWriter.FileType.XML, writer.getDendInfo());
+         }
+
+         mCanvas.setText(elapsedTime + writer.getClustInfo());
       }
 
       Logger.debug("Analysis Worker finished!");
@@ -86,25 +69,18 @@ public class AnalysisWorker extends SwingWorker<String[], Integer> {
    @Override
    protected void process(List<Integer> chunks) {
       System.out.printf("%d clusters remaining...\n");
+
       mCanvas.setText(String.format("%d clusters remaining...\n",
-       chunks.get(chunks.size() - 1)));
+                      chunks.get(chunks.size() - 1)));
    }
 
-   private void writeElements(String elementStr) {
-      ClusterWriter writer = null;
+   public class TaskResult {
+      public long mElapsedTime;
+      public List<Cluster> mClusterData;
 
-      if (mOutFile != null) {
-         writer = new ClusterWriter(mOutFile + ClusterWriter.FileType.CSV);
-         writer.writeData(elementStr);
-      }
-   }
-
-   private void writeDendogram(String dendogramStr) {
-      ClusterWriter writer = null;
-
-      if (mOutFile != null) {
-         writer = new ClusterWriter(mOutFile + ClusterWriter.FileType.XML);
-         writer.writeData(dendogramStr);
+      public TaskResult(long time, List<Cluster> clusters) {
+         mElapsedTime = time;
+         mClusterData = clusters;
       }
    }
 }
