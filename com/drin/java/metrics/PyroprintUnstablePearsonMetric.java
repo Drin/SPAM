@@ -78,10 +78,12 @@ public class PyroprintUnstablePearsonMetric extends DataMetric<Pyroprint> {
    }
 
    private String debugState() {
-      return String.format("numElements: %d, pyro_A_sum: %.04f, pyro_B_sum: " +
-                           "%.04f, pyroA_squared_sum: %.04f, " +
-                           "pyroB_squared_sum: %.04f", mPeakCount, mPyro_A_sum,
-                           mPyro_B_sum, mPyro_A_squared_sum, mPyro_B_squared_sum);
+      return String.format("numElements: %d, pyro_A_sum: %.06f, pyro_B_sum: " +
+                           "%.06f, pyroA_squared_sum: %.06f, " +
+                           "pyroB_squared_sum: %.06f, product_AB: %.06f",
+                           mPeakCount, mPyro_A_sum, mPyro_B_sum,
+                           mPyro_A_squared_sum, mPyro_B_squared_sum,
+                           mProduct_AB);
    }
 
    private double getUnstablePearson() {

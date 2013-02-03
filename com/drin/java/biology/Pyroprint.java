@@ -29,14 +29,14 @@ public class Pyroprint extends Clusterable<Double> {
       mMetric = metric;
    }
 
+   public int getDispLen() { return mDisp.length(); }
+
    /**
     * Get the dispensation sequence used to construct this pyroprint.
     *
     * @return String The dispensation sequence of this pyroprint.
     */
-   public String getDispSeq() {
-      return mDisp;
-   }
+   public String getDispSeq() { return mDisp; }
 
    /**
     * Check to see if this Pyroprint has the same protocol parameters as the

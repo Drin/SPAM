@@ -38,6 +38,7 @@ public abstract class Cluster implements Labelable {
    }
 
    public String getName() { return mName; }
+   public int size() { return mElements.size(); }
    public double getDiameter() { return mDiameter; }
    public double getMean() { return mMean; }
 

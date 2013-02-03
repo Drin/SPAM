@@ -39,6 +39,47 @@ public class AgglomerativeClusterer extends HierarchicalClusterer {
    }
 
    @Override
+   protected CandidatePair findCloseClusters(Map<String, Map<String, Double>> distMap, List<Cluster> clusters, double threshold) {
+      Map<String, Double> clustDistMap = null;
+      Cluster close_A = null, close_B = null;
+      double maxSim = 0;
+
+      for (int ndx_A = 0; ndx_A < clusters.size(); ndx_A++) {
+         Cluster clust_A = clusters.get(ndx_A);
+
+         if (!distMap.containsKey(clust_A.getName())) {
+            distMap.put(clust_A.getName(), new HashMap<String, Double>());
+         }
+
+         clustDistMap = distMap.get(clust_A.getName());
+
+         for (int ndx_B = ndx_A + 1; ndx_B < clusters.size(); ndx_B++) {
+            Cluster clust_B = clusters.get(ndx_B);
+
+            if (!clustDistMap.containsKey(clust_B.getName())) {
+               clustDistMap.put(clust_B.getName(), clust_A.compareTo(clust_B));
+            }
+
+            double clustDist = clustDistMap.get(clust_B.getName());
+
+            if (clustDist > maxSim && clustDist > threshold) {
+               close_A = clust_A;
+               close_B = clust_B;
+               maxSim = clustDist;
+            }
+         }
+
+         clustDistMap = null;
+      }
+
+      if (close_A != null && close_B != null) {
+         return new CandidatePair(close_A, close_B, maxSim);
+      }
+
+      return null;
+   }
+
+   @Override
    protected CandidateQueue recompute(Cluster combinedCluster, List<Cluster> clusters, double threshold) {
       CandidateQueue clusterCandidates = new CandidateQueue();
 

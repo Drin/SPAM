@@ -41,8 +41,9 @@ public class ITSRegionAverageMetric extends DataMetric<ITSRegion> {
 
                Logger.debug(String.format("ITSRegionAverageMetric:\n\t" +
                                           "comparison between '%s' and " +
-                                          "'%s': %.04f", pyro_A.getName(),
-                                          pyro_B.getName(), result));
+                                          "'%s' [%d]: %.04f", pyro_A.getName(),
+                                          pyro_B.getName(), pyro_A.getDispLen(),
+                                          result));
 
                mResult += result;
                mPairCount++;
