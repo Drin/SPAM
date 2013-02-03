@@ -10,6 +10,7 @@ public class Logger {
                                ERR_PREFIX = "*ERROR*",
                                DEBUG_PREFIX = "DEBUG",
                                WARNING_PREFIX = "WARNING";
+   private static final boolean DEBUG_MODE = false;
 
    private static Logger mLogger = null;
 
@@ -26,19 +27,22 @@ public class Logger {
    }
 
    private Logger(String filename) {
-      this(filename, true);
+      this(filename, DEBUG_MODE);
    }
 
    private Logger(String filename, boolean debugMode) {
       mDebug = debugMode;
-      mLogFile = new File(filename);
 
-      try {
-         mWriter = new FileWriter(mLogFile);
-      }
-      catch (java.io.IOException ioErr) {
-         System.err.printf("IO Error when opening file '%s'\n", filename);
-         ioErr.printStackTrace();
+      if (mDebug) {
+         mLogFile = new File(filename);
+
+         try {
+            mWriter = new FileWriter(mLogFile);
+         }
+         catch (java.io.IOException ioErr) {
+            System.err.printf("IO Error when opening file '%s'\n", filename);
+            ioErr.printStackTrace();
+         }
       }
    }
 

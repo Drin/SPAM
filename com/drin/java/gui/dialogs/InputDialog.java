@@ -389,13 +389,15 @@ public class InputDialog extends JDialog {
       ClusterAverageMetric clustMetric = new ClusterAverageMetric();
 
       for (Map.Entry<String, Isolate> isoEntry : isoMap.entrySet()) {
+         Logger.debug(String.format("adding Isolate %s\n", isoEntry.getValue()));
          clusters.add(new HCluster(clustMetric, isoEntry.getValue()));
       }
 
       isoMap = null;
 
 
-      if (mOntology != null) {
+      if (ontology != null) {
+         Logger.debug("OHClust!");
          List<Cluster> coreClusters = new ArrayList<Cluster>();
          List<Cluster> boundaryClusters = new ArrayList<Cluster>();
          Map<Integer, String> promotedClusters = new HashMap<Integer, String>();
@@ -430,7 +432,8 @@ public class InputDialog extends JDialog {
          clusterer = new OHClusterer(coreClusters, boundaryClusters,
                                      ontology, alpha_A, beta_A);
       }
-      else if (mOntology == null) {
+      else if (ontology == null) {
+         Logger.debug("Normal Clustering");
          clusterer = new AgglomerativeClusterer(clusters, beta_A);
       }
 
@@ -440,7 +443,7 @@ public class InputDialog extends JDialog {
       worker.setOutputFile(mOutFile.getText());
       worker.execute();
 
-      System.out.println("Time to do work: " + (System.currentTimeMillis() - startTime));
+      System.out.println("Time to prepare clusterer: " + (System.currentTimeMillis() - startTime));
 
       return true;
    }
@@ -456,7 +459,6 @@ public class InputDialog extends JDialog {
             }
 
             doWork();
-
             dispose();
          }
       });
