@@ -6,6 +6,8 @@ import com.drin.java.clustering.Cluster;
 import com.drin.java.clustering.CandidatePair;
 import com.drin.java.clustering.CandidateQueue;
 
+import com.drin.java.util.Logger;
+
 import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
@@ -35,39 +37,28 @@ public abstract class HierarchicalClusterer implements Clusterer {
       clusterDataSet(mResultClusters, mBetaThreshold, canvas);
    }
 
-   /*
-    * //cluster list, and re-populate on each iteration
-    * do
-    *    closeClusters = best candidate_pair (hopefully list is a pQueue)
-    *    combine(closeClusters)
-    *    candidate_pair = recompute(closeClusters)
-    *
-    *    //this should be implemented in the data structure
-    *    if one cluster in candidate_pair is already in list
-    *       remove old candidate_pair
-    *    add candidate_pair
-    *
-    *    if peek_candidate_pair() == null: break
-    *
-    * while (clusters.size() > 1)
-    *
-    */
    //This takes a threshold parameter so that it's easier for OHClust! to pass
    //mAlphaThreshold rather than having to overwrite the entire method
    protected void clusterDataSet(List<Cluster> clusters, double threshold, JTextArea canvas) {
       double percentIncr = 100.0/clusters.size(), percentComplete = 0;
 
+      if (canvas != null) {
+         canvas.setText(String.format("\n\n\t\t%.02f%% Complete!", percentComplete));
+         percentComplete += percentIncr;
+      }
+
       CandidateQueue clusterCandidates = findCandidatePairs(clusters, threshold);
+      CandidatePair closeClusters = clusterCandidates.dequeue();
 
-      while (clusters.size() > 1) {
-         CandidatePair closeClusters = clusterCandidates.dequeue();
+      for (; closeClusters != null; closeClusters = clusterCandidates.dequeue()) {
+
+         if (canvas != null) {
+            canvas.setText(String.format("\n\n\t\t%.02f%% Complete!", percentComplete));
+            percentComplete += percentIncr;
+         }
+
          Cluster combinedCluster = combineClusters(closeClusters, clusters);
-
          clusterCandidates.addAllCandidates(recompute(combinedCluster, clusters, threshold));
-
-         //we call peek because we don't know that combinedCluster is the best
-         //candidate
-         if (clusterCandidates.peek() == null) { break; }
       }
    }
 
@@ -79,17 +70,3 @@ public abstract class HierarchicalClusterer implements Clusterer {
       SIMILAR, SQUISHY
    }
 }
-
-/*
-while (clusters.size() > 1) {
-   if (canvas != null) {
-      canvas.setText(String.format("\n\n\t\t%.02f%% Complete!", percentComplete));
-      percentComplete += percentIncr;
-   }
-
-   Cluster[] closeClusters = findCloseClusters(clusters);
-
-   if (closeClusters != null) { combineClusters(closeClusters, clusters); }
-   else { break; }
-}
-*/

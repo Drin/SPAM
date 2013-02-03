@@ -1,5 +1,7 @@
 package com.drin.java.clustering;
 
+import com.drin.java.util.Logger;
+
 import java.util.Map;
 
 import java.util.LinkedList;
@@ -46,6 +48,7 @@ public class CandidateQueue {
             mRemovedCandidates.put(rightCluster, new Boolean(true));
             break;
          }
+         else { bestCandidate = null; }
       }
 
       return bestCandidate;
