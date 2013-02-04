@@ -285,21 +285,6 @@ public class InputDialog extends JDialog {
       return dataQueryButton;
    }
 
-   private JButton prepareSchemaButton(final JTextField schemaField, String buttonText) {
-      JButton dataHierarchyButton = new JButton(buttonText);
-
-      dataHierarchyButton.addActionListener(new ActionListener() {
-         public void actionPerformed(ActionEvent e) {
-            DataOrganizationDialog newDialog = new DataOrganizationDialog(schemaField);
-
-            newDialog.init();
-            newDialog.setVisible(true);
-         }
-      });
-
-      return dataHierarchyButton;
-   }
-
    public JPanel initControls() {
       JPanel dialogControls = new JPanel();
 
