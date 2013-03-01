@@ -6,8 +6,6 @@ import com.drin.java.clustering.Cluster;
 import com.drin.java.clustering.CandidatePair;
 import com.drin.java.clustering.CandidateQueue;
 
-import com.drin.java.util.Logger;
-
 import java.util.Map;
 import java.util.HashMap;
 import java.util.List;

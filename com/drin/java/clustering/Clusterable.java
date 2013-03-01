@@ -1,9 +1,6 @@
 package com.drin.java.clustering;
 
-import com.drin.java.metrics.DataMetric;
-
 import java.util.Collection;
-import java.util.Map;
 
 public abstract class Clusterable<E> {
    protected String mName;
@@ -23,7 +20,7 @@ public abstract class Clusterable<E> {
    @Override
    public boolean equals(Object obj) {
       if (obj instanceof Clusterable) {
-         return mName.equals(((Clusterable)obj).getName());
+         return mName.equals(((Clusterable<?>)obj).getName());
       }
 
       return false;

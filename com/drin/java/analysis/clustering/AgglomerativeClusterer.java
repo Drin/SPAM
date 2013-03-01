@@ -9,7 +9,6 @@ import com.drin.java.util.Logger;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
-import java.util.ArrayList;
 
 public class AgglomerativeClusterer extends HierarchicalClusterer {
 

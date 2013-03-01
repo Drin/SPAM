@@ -41,8 +41,6 @@ import javax.swing.JLabel;
 import javax.swing.JTextField;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
-import javax.swing.JTable;
-import javax.swing.JSeparator;
 import javax.swing.BoxLayout;
 import javax.swing.JFileChooser;
 import javax.swing.JComponent;
@@ -51,7 +49,6 @@ import java.io.File;
 
 import java.util.Map;
 import java.util.List;
-import java.util.Set;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -72,8 +69,7 @@ public class InputDialog extends JDialog {
    /*
     * GUI Components
     */
-   private Container mPane = null, mOwner = null;
-   private JDialog mDialog = null;
+   private Container mPane = null;
    private JComboBox<String> mDataSetType, mRegion_A, mRegion_B;
    private JTextField mDataSet, mOutFile, mOntology,
                       mAlpha_A, mAlpha_B, mBeta_A, mBeta_B,
@@ -89,9 +85,6 @@ public class InputDialog extends JDialog {
       this.setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
       this.setResizable(false);
       this.setLocationRelativeTo(null);
-
-      mOwner = owner;
-      mDialog = this;
 
       mPane = this.getContentPane();
       mPane.setLayout(new BoxLayout(mPane, BoxLayout.Y_AXIS));
@@ -469,8 +462,6 @@ public class InputDialog extends JDialog {
       System.out.println("Constructing Pyroprints...");
       int dispSeqNdx = -1, peakListNdx = -1;
 
-      long constructStart = System.currentTimeMillis();
-
       Map<String, Clusterable<?>> pyroMap = new HashMap<String, Clusterable<?>>();
       Map<String, double[]> threshMap = new HashMap<String, double[]>();
       Map<Integer, Object[]> pyroDataMap = new HashMap<Integer, Object[]>();
@@ -488,13 +479,15 @@ public class InputDialog extends JDialog {
       for (Map<String, Object> dataMap : dataList) {
          String isoID = String.valueOf(dataMap.get("isolate"));
          String regName = String.valueOf(dataMap.get("region"));
-         String wellID = String.valueOf(dataMap.get("well"));
+         //String wellID = String.valueOf(dataMap.get("well"));
          Integer pyroID = new Integer(String.valueOf(dataMap.get("pyroprint")));
          double peakHeight = Double.parseDouble(String.valueOf(dataMap.get("pHeight")));
          String nucleotide = String.valueOf(dataMap.get("nucleotide"));
 
+         /*
          double alphaThresh = threshMap.get(regName)[0];
          double betaThresh  = threshMap.get(regName)[1];
+         */
          int pyro_len       = (int) threshMap.get(regName)[2];
 
          if (!pyroDataMap.containsKey(pyroID)) {
