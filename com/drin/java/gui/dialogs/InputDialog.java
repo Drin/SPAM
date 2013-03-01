@@ -121,20 +121,7 @@ public class InputDialog extends JDialog {
 
       mDataSetType = new JComboBox<String>(DATA_TYPE_VALUES);
 
-      try {
-         mConn = new CPLOPConnection();
-      }
-
-      catch (CPLOPConnection.DriverException driveErr) {
-         System.out.println("Driver Exception:\n" + driveErr + "\nExiting...");
-         //driveErr.printStackTrace();
-         System.exit(1);
-      }
-
-      catch (java.sql.SQLException sqlErr) {
-         System.out.println("SQL Exception:\n" + sqlErr + "\nExiting...");
-         System.exit(1);
-      }
+      mConn = CPLOPConnection.getConnection();
    }
 
    public InputDialog() {
@@ -304,6 +291,7 @@ public class InputDialog extends JDialog {
       List<Map<String, Object>> dataList = null;
       String dataSet = mDataSet.getText();
 
+      //Isolates
       if (String.valueOf(mDataSetType.getSelectedItem()).equals(DATA_TYPE_VALUES[0])) {
          try {
             dataList = mConn.getDataByIsoID(dataSet);
@@ -315,6 +303,7 @@ public class InputDialog extends JDialog {
          }
       }
 
+      //Pyroprints
       else if (String.valueOf(mDataSetType.getSelectedItem()).equals(DATA_TYPE_VALUES[1])) {
          try {
             dataList = mConn.getDataByPyroID(dataSet);
@@ -326,6 +315,7 @@ public class InputDialog extends JDialog {
          }
       }
 
+      //Experiments
       else if (String.valueOf(mDataSetType.getSelectedItem()).equals(DATA_TYPE_VALUES[2])) {
          try {
             dataList = mConn.getDataByExperimentName(dataSet);
@@ -364,19 +354,29 @@ public class InputDialog extends JDialog {
 
       startTime = System.currentTimeMillis();
 
-      Map<String, Clusterable<?>> entityMap = constructEntities(queryData(),
-                                                                alpha_A, beta_A,
-                                                                alpha_B, beta_B);
+      //Isolates
+      Map<String, Clusterable<?>> entityMap = null;
+      if (String.valueOf(mDataSetType.getSelectedItem()).equals(DATA_TYPE_VALUES[0])) {
+         entityMap = constructEntities(queryData(), alpha_A, beta_A, alpha_B, beta_B);
+      }
+      else if (String.valueOf(mDataSetType.getSelectedItem()).equals(DATA_TYPE_VALUES[1]) ||
+               String.valueOf(mDataSetType.getSelectedItem()).equals(DATA_TYPE_VALUES[2])) {
+         entityMap = constructPyroprints(queryData(), alpha_A, beta_A, alpha_B, beta_B);
+      }
       
       ClusterAverageMetric clustMetric = new ClusterAverageMetric();
+      Cluster.resetClusterIDs();
 
       for (Map.Entry<String, Clusterable<?>> mapEntry : entityMap.entrySet()) {
-         Logger.debug(String.format("adding Isolate %s\n", mapEntry.getValue()));
+         Logger.debug(String.format("adding Clusterable %s\n", mapEntry.getValue()));
          clusters.add(new HCluster(clustMetric, mapEntry.getValue()));
       }
 
       entityMap = null;
 
+      List<Double> thresholds = new ArrayList<Double>();
+      thresholds.add(new Double(alpha_A));
+      thresholds.add(new Double(beta_A));
 
       if (ontology != null) {
          Logger.debug("OHClust!");
@@ -412,11 +412,11 @@ public class InputDialog extends JDialog {
 
          clusters = null;
          clusterer = new OHClusterer(coreClusters, boundaryClusters,
-                                     ontology, alpha_A, beta_A);
+                                     ontology, thresholds);
       }
       else if (ontology == null) {
          Logger.debug("Normal Clustering");
-         clusterer = new AgglomerativeClusterer(clusters, beta_A);
+         clusterer = new AgglomerativeClusterer(clusters, thresholds);
       }
 
       AnalysisWorker worker = new AnalysisWorker(clusterer,
@@ -461,17 +461,95 @@ public class InputDialog extends JDialog {
       return cancelButton;
    }
 
+   @SuppressWarnings("unchecked")
    //TODO need this for when clustering pyroprints
-   private Map<String, Pyroprint> constructPyroprints() {
-      return null;
+   private Map<String, Clusterable<?>> constructPyroprints(List<Map<String, Object>> dataList,
+                                                      double alpha_A, double beta_A,
+                                                      double alpha_B, double beta_B) {
+      System.out.println("Constructing Pyroprints...");
+      int dispSeqNdx = -1, peakListNdx = -1;
+
+      long constructStart = System.currentTimeMillis();
+
+      Map<String, Clusterable<?>> pyroMap = new HashMap<String, Clusterable<?>>();
+      Map<String, double[]> threshMap = new HashMap<String, double[]>();
+      Map<Integer, Object[]> pyroDataMap = new HashMap<Integer, Object[]>();
+
+      double pyrolen_A = Double.parseDouble(mPyroLen_A.getText());
+      double pyrolen_B = Double.parseDouble(mPyroLen_B.getText());
+
+      threshMap.put(String.valueOf(mRegion_A.getSelectedItem()),
+                                   new double[] {alpha_A, beta_A, pyrolen_A});
+
+      threshMap.put(String.valueOf(mRegion_B.getSelectedItem()),
+                                   new double[] {alpha_B, beta_B, pyrolen_B});
+
+      //First pass over the data where ITSRegions and Isolates are constructed.
+      for (Map<String, Object> dataMap : dataList) {
+         String isoID = String.valueOf(dataMap.get("isolate"));
+         String regName = String.valueOf(dataMap.get("region"));
+         String wellID = String.valueOf(dataMap.get("well"));
+         Integer pyroID = new Integer(String.valueOf(dataMap.get("pyroprint")));
+         double peakHeight = Double.parseDouble(String.valueOf(dataMap.get("pHeight")));
+         String nucleotide = String.valueOf(dataMap.get("nucleotide"));
+
+         double alphaThresh = threshMap.get(regName)[0];
+         double betaThresh  = threshMap.get(regName)[1];
+         int pyro_len       = (int) threshMap.get(regName)[2];
+
+         if (!pyroDataMap.containsKey(pyroID)) {
+            dispSeqNdx = 2;
+            peakListNdx = dispSeqNdx + 1;
+            pyroDataMap.put(pyroID, new Object[] {pyroID, isoID, "", new ArrayList<Double>(), regName});
+         }
+
+         Object[] pyroData = pyroDataMap.get(pyroID);
+
+         if (pyroData[dispSeqNdx] instanceof String) {
+            if (String.valueOf(pyroData[dispSeqNdx]).length() < pyro_len) {
+               pyroData[dispSeqNdx] = String.valueOf(pyroData[dispSeqNdx]).concat(nucleotide);
+            }
+         }
+         if (pyroData[peakListNdx] instanceof List<?>) {
+            List<Double> peakList = (List<Double>) pyroData[peakListNdx];
+            if (peakList.size() < pyro_len) {
+               peakList.add(new Double(peakHeight));
+            }
+         }
+      }
+
+      //using the pyroprint information we have accumulated, we now know
+      //we have iterated over all the data and so can add complete pyroprint
+      //objects to isolates
+      for (Map.Entry<Integer, Object[]> pyroEntry : pyroDataMap.entrySet()) {
+         Object[] pyroData = pyroEntry.getValue();
+
+         Pyroprint newPyro = new Pyroprint(Integer.parseInt(String.valueOf(pyroData[0])),
+                                           String.valueOf(pyroData[1]),
+                                           String.valueOf(pyroData[dispSeqNdx]),
+                                           (List<Double>) pyroData[peakListNdx],
+                                           new PyroprintUnstablePearsonMetric());
+
+         pyroMap.put(newPyro.getName(), newPyro);
+
+         /*
+         for (ITSRegion region : isoMap.get(pyroDataEntry.getKey()).getData()) {
+            if (region.getName().equals(pyroData[4])) {
+               region.getData().add(newPyro);
+            }
+         }
+         */
+      }
+
+      return pyroMap;
    }
 
    @SuppressWarnings("unchecked")
    //TODO construct hierarchy here by adding partition values as "tags" to
    //Isolate (implements Lableable).
    private Map<String, Clusterable<?>> constructEntities(List<Map<String, Object>> dataList,
-                                                  double alpha_A, double beta_A,
-                                                  double alpha_B, double beta_B) {
+                                                         double alpha_A, double beta_A,
+                                                         double alpha_B, double beta_B) {
       System.out.println("Constructing Isolates...");
 
       long constructStart = System.currentTimeMillis();
@@ -490,7 +568,6 @@ public class InputDialog extends JDialog {
                                    new double[] {alpha_B, beta_B, pyrolen_B});
 
       //First pass over the data where ITSRegions and Isolates are constructed.
-      String pyroList = "";
       for (Map<String, Object> dataMap : dataList) {
          String isoID = String.valueOf(dataMap.get("isolate"));
          String regName = String.valueOf(dataMap.get("region"));

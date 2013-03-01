@@ -25,13 +25,14 @@ public class CPLOPConnection {
    private static final String DB_PASS = "ILoveData#";
 
    private Connection conn, schemaConn;
+   private static CPLOPConnection mCPLOPConnection = null;
 
    /**
     * Test the connection.
     */
    public static void main(String[] args) {
       try {
-         CPLOPConnection cplop = new CPLOPConnection();
+         CPLOPConnection cplop = CPLOPConnection.getConnection();
 
          List<Map<String, Object>> res;
          
@@ -45,11 +46,32 @@ public class CPLOPConnection {
       }
    }
 
+   public static CPLOPConnection getConnection() {
+      if (mCPLOPConnection == null) {
+         try {
+            mCPLOPConnection = new CPLOPConnection();
+         }
+
+         catch (CPLOPConnection.DriverException driveErr) {
+            System.out.println("Driver Exception:\n" + driveErr + "\nExiting...");
+            //driveErr.printStackTrace();
+            System.exit(1);
+         }
+
+         catch (java.sql.SQLException sqlErr) {
+            System.out.println("SQL Exception:\n" + sqlErr + "\nExiting...");
+            System.exit(1);
+         }
+      }
+
+      return mCPLOPConnection;
+   }
+
    /**
     * @throws SQLException if the DriverManager can't get a connection.
     * @throws DriverException if there is a problem instantiating the DB driver.
     */
-   public CPLOPConnection() throws SQLException, DriverException {
+   private CPLOPConnection() throws SQLException, DriverException {
       try {
          Class.forName(DB_DRIVER);
 
@@ -434,9 +456,9 @@ public class CPLOPConnection {
 
       String query = "SELECT i.isoID, i.commonName, i.hostID, i.sampleID, " +
                      "i.dateStored, i.pyroprintDate " +
-                     "FROM Isolates i join Pyroprints p1 on (i.isoID = p1.isoID) join " +
+                     "FROM Isolates i join Pyroprints p1 using (isoID) join " +
                            "Pyroprints p2 on (i.isoID = p2.isoID and p1.pyroID != p2.pyroID) " +
-                     "WHERE p1.appliedRegion != p2.appliedRegion and p1.pyroID and " +
+                     "WHERE p1.appliedRegion != p2.appliedRegion and " +
                      "p1.pyroID in (SELECT DISTINCT pyroID FROM Histograms) and " +
                      "p2.pyroID in (SELECT DISTINCT pyroID FROM Histograms) " +
                      "GROUP BY i.isoID";
@@ -818,6 +840,38 @@ public class CPLOPConnection {
       return rtn;
    }
 
+   /*
+    * Queries for constructing an appropriate ontology
+    */
+   public List<String> getDistinctValues(String tableName, String colName) throws SQLException {
+      List<String> distinctValues = new ArrayList<String>();
+      Statement stmt = null;
+      ResultSet results = null;
+
+      String query = String.format("SELECT distinct(%s) " +
+                                   "FROM %s " +
+                                   "WHERE %s IS NOT NULL",
+                                   colName, tableName, colName);
+
+      try {
+         stmt = conn.createStatement();
+         results = stmt.executeQuery(query);
+
+         while (results.next()) {
+            distinctValues.add(results.getString(1));
+         }
+      }
+      catch (SQLException sqlEx) {
+         //Rethrow the exception
+         throw sqlEx;
+      }
+      finally {
+         if (results != null) { results.close(); }
+         if (stmt != null) { stmt.close(); }
+      }
+
+      return distinctValues;
+   }
 
    /**
     * Perform just a general query.

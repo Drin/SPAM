@@ -37,6 +37,7 @@ public abstract class Cluster implements Labelable {
       mMean = -2;
    }
 
+   public static void resetClusterIDs() { Cluster.CLUST_ID = 1; }
    public String getName() { return mName; }
    public int size() { return mElements.size(); }
    public double getDiameter() { return mDiameter; }

@@ -339,6 +339,10 @@ public class ClusterFileDialog extends JDialog {
          }
       }
 
+      List<Double> thresholds = new ArrayList<Double>();
+      thresholds.add(new Double(alpha_A));
+      thresholds.add(new Double(beta_A));
+
       if (mOntology != null) {
          List<Cluster> coreClusters = new ArrayList<Cluster>();
          List<Cluster> boundaryClusters = new ArrayList<Cluster>();
@@ -372,10 +376,10 @@ public class ClusterFileDialog extends JDialog {
 
          clusters = null;
          clusterer = new OHClusterer(coreClusters, boundaryClusters,
-                                     ontology, alpha_A, beta_A);
+                                     ontology, thresholds);
       }
       else if (mOntology == null) {
-         clusterer = new AgglomerativeClusterer(clusters, beta_A);
+         clusterer = new AgglomerativeClusterer(clusters, thresholds);
       }
 
       AnalysisWorker worker = new AnalysisWorker(clusterer,

@@ -18,13 +18,15 @@ import java.util.ArrayList;
 public class OntologyTerm {
    private static final String TIME_OPTION_KEY = "TimeSensitive",
                                SCHEME_NAME_DELIMITER = "-";
-   private String mName;
+
+   private String mTableName, mColName;
    private Map<String, Boolean> mOptions;
    private Map<String, OntologyTerm> mPartitions;
    private List<Cluster> mData, mClusters;
 
-   public OntologyTerm(String name) {
-      mName = name;
+   public OntologyTerm(String tableName, String colName) {
+      mTableName = tableName;
+      mColName = colName;
 
       mOptions = new HashMap<String, Boolean>();
       mPartitions = new LinkedHashMap<String, OntologyTerm>();
@@ -32,8 +34,9 @@ public class OntologyTerm {
       mClusters = null;
    }
 
-   public OntologyTerm(String name, Map<String, Boolean> options, List<String> values) {
-      this(name);
+   public OntologyTerm(String tableName, String colName,
+                       Map<String, Boolean> options, List<String> values) {
+      this(tableName, colName);
 
       for (Map.Entry<String, Boolean> option : options.entrySet()) {
          mOptions.put(option.getKey(), new Boolean(option.getValue().booleanValue()));
@@ -44,17 +47,8 @@ public class OntologyTerm {
       }
    }
 
-   public OntologyTerm(Cluster element) {
-      mName = "";
-      mOptions = null;
-      mPartitions = null;
-
-      mData = new ArrayList<Cluster>();
-      mData.add(element);
-   }
-
    public OntologyTerm(OntologyTerm originalNode) {
-      this(originalNode.mName);
+      this(originalNode.mTableName, originalNode.mColName);
 
       for (Map.Entry<String, Boolean> option : originalNode.mOptions.entrySet()) {
          mOptions.put(option.getKey(), new Boolean(option.getValue().booleanValue()));
@@ -68,6 +62,15 @@ public class OntologyTerm {
             mPartitions.put(partition.getKey(), new OntologyTerm(partition.getValue()));
          }
       }
+   }
+
+   public OntologyTerm(Cluster element) {
+      mTableName = "";
+      mOptions = null;
+      mPartitions = null;
+
+      mData = new ArrayList<Cluster>();
+      mData.add(element);
    }
 
    public boolean addData(Cluster element) {
@@ -117,17 +120,10 @@ public class OntologyTerm {
       mData.add(element);
    }
 
-   public String getName() {
-      return mName;
-   }
-
-   public List<Cluster> getData() {
-      return mData;
-   }
-
-   public List<Cluster> getClusters() {
-      return mClusters;
-   }
+   public String getTableName() { return mTableName; }
+   public String getColName() { return mColName; }
+   public List<Cluster> getData() { return mData; }
+   public List<Cluster> getClusters() { return mClusters; }
 
    public boolean isTimeSensitive() {
       return mOptions.containsKey(TIME_OPTION_KEY);
@@ -144,7 +140,7 @@ public class OntologyTerm {
    @Override
    public String toString() {
       String fmt = String.format("Feature %s(TimeSensitive[%s]):",
-       getName(), isTimeSensitive());
+       getTableName(), isTimeSensitive());
 
       for (String partitionName : mPartitions.keySet()) {
          fmt += " " + partitionName + ",";

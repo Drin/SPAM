@@ -28,19 +28,7 @@ public class SchemaTree extends JPanel {
 
       mSchemaRoot = new DefaultMutableTreeNode(new SchemaItem(ROOT_NODE_NAME));
 
-      try {
-         mConn = new CPLOPConnection();
-      }
-
-      catch (CPLOPConnection.DriverException driveErr) {
-         System.out.println("Driver Exception:\n" + driveErr + "\nExiting...");
-         System.exit(1);
-      }
-
-      catch (java.sql.SQLException sqlErr) {
-         System.out.println("SQL Exception:\n" + sqlErr + "\nExiting...");
-         System.exit(1);
-      }
+      mConn = CPLOPConnection.getConnection();
    }
 
    public void init() {

@@ -1,6 +1,7 @@
 package com.drin.java.ontology;
 
 import com.drin.java.ontology.OntologyTerm;
+import com.drin.java.database.CPLOPConnection;
 
 import java.util.List;
 import java.util.Map;
@@ -18,19 +19,27 @@ import java.util.regex.Pattern;
  * ...
  */
 public class OntologyParser {
-   private static final String FEATURE_PATTERN = "(^[^#].*)\\((.*)\\):(.*)",
+   private static final String FEATURE_PATTERN = "(^[^#].*)[.]([^#].*)\\((.*)\\):(.*)",
                                FEATURE_DELIMITER = ";",
                                OPTION_DELIM = ",",
                                VALUE_DELIM = ",";
-   private static final int NAME_NDX = 1,
-                            OPTION_NDX = 2,
-                            VALUE_NDX = 3;
+
+   private static final int TABLE_NAME_NDX = 1,
+                            TABLE_COL_NDX = 2,
+                            OPTION_NDX = 3,
+                            VALUE_NDX = 4;
+
+   private CPLOPConnection mConn = null;
    private Pattern mRegexPattern;
    private Matcher mRegexMatch;
 
    public OntologyParser() {
       mRegexPattern = Pattern.compile(FEATURE_PATTERN + FEATURE_DELIMITER);
       mRegexMatch = null;
+
+      if (mConn == null) {
+         mConn = CPLOPConnection.getConnection();
+      }
    }
 
    public static void main(String[] args) {
@@ -62,12 +71,33 @@ public class OntologyParser {
    }
 
    public OntologyTerm getTerm() {
-      return new OntologyTerm(getTermName(), getTermOptions(), getTermValues());
+      String tableName = getTermTableName(), colName = getTermColName();
+      List<String> partitions = getTermValues();
+
+      if (partitions.isEmpty()) {
+         try {
+            partitions = mConn.getDistinctValues(tableName, colName);
+         }
+         catch (java.sql.SQLException sqlErr) {
+            System.out.printf("SQL Exception: '%s'\n", sqlErr);
+            System.exit(1);
+         }
+      }
+
+      return new OntologyTerm(tableName, colName, getTermOptions(), partitions);
    }
 
-   public String getTermName() {
+   public String getTermTableName() {
       if (mRegexMatch != null && mRegexMatch.matches()) {
-         return mRegexMatch.group(NAME_NDX).trim();
+         return mRegexMatch.group(TABLE_NAME_NDX).trim();
+      }
+
+      return "";
+   }
+
+   public String getTermColName() {
+      if (mRegexMatch != null && mRegexMatch.matches()) {
+         return mRegexMatch.group(TABLE_COL_NDX).trim();
       }
 
       return "";
@@ -94,7 +124,9 @@ public class OntologyParser {
          String[] valueArr = mRegexMatch.group(VALUE_NDX).replaceAll("\\s", "").split(VALUE_DELIM);
 
          for (int valNdx = 0; valNdx < valueArr.length; valNdx++) {
-            valueList.add(valueArr[valNdx]);
+            if (!valueArr[valNdx].equals("")) {
+               valueList.add(valueArr[valNdx]);
+            }
          }
       }
 
@@ -102,7 +134,7 @@ public class OntologyParser {
    }
 
    public void printOntology() {
-      String feature = String.format("Name: %s\n", mRegexMatch.group(NAME_NDX).trim());
+      String feature = String.format("Name: %s\n", mRegexMatch.group(TABLE_NAME_NDX).trim());
       Map<String, Boolean> optionMap = getTermOptions();
       List<String> valueList = getTermValues();
 

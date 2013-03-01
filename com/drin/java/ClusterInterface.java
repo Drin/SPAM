@@ -37,33 +37,30 @@ public class ClusterInterface {
    private long startTime;
 
    public ClusterInterface() {
-      try {
-         mConn = new CPLOPConnection();
-      }
-
-      catch (CPLOPConnection.DriverException driveErr) {
-         System.out.println("Driver Exception:\n" + driveErr + "\nExiting...");
-         //driveErr.printStackTrace();
-         System.exit(1);
-      }
-
-      catch (java.sql.SQLException sqlErr) {
-         System.out.println("SQL Exception:\n" + sqlErr + "\nExiting...");
-         System.exit(1);
-      }
+      mConn = CPLOPConnection.getConnection();
    }
 
+   /*
+    * TODO: a more specified ontology
+    * "Isolates.commonName(): human, cow;",
+    * "Isolates.hostID(): Winnie,       Collin;",
+    * "Pyroprints.pyroPrintedDate(TimeSensitive): \t;"
+    */
    public static void main(String[] args) {
       ClusterInterface testInterface = new ClusterInterface();
 
+      //This is really basic for now so that I can debug the actual algorithm.
+      //Initial evaluations should be on full database anyways to have the
+      //least biased characterization
       String testOntology = String.format("%s\n%s\n%s",
-         "Host(): cw, sw;",
-         "Location():R1, R2, MorroBay;",
-         "Day(TimeSensitive):     1,2,3,\t4,5,6,7,10;"
+         "Isolates.commonName():;",
+         "Isolates.hostID(): ;",
+         "Pyroprints.pyroPrintedDate(TimeSensitive): \t;"
       );
 
-      String testDataSet = "'Sw-029', 'Sw-030', 'Sw-018', 'Sw-019', 'Sw-020'";
-      double tmp_alpha = .99, tmp_beta = .995;
+      double tmp_alpha = .995, tmp_beta = .99;
+      String testDataSet = "'Sw-029', 'Sw-030', 'Sw-018', 'Sw-019', 'Sw-020," +
+                           "'Sw-021', 'Sw-033', 'Sw-032'";
 
       ClusterResults results = testInterface.clusterData(testOntology, testDataSet,
                                                          "Isolates", tmp_alpha, tmp_beta);
@@ -92,6 +89,10 @@ public class ClusterInterface {
 
          if (ontology != null) { ontology.addData(tmpClust); }
       }
+
+      List<Double> thresholds = new ArrayList<Double>();
+      thresholds.add(new Double(alphaThresh));
+      thresholds.add(new Double(betaThresh));
 
       if (ontology != null) {
          List<Cluster> coreClusters = new ArrayList<Cluster>();
@@ -126,10 +127,10 @@ public class ClusterInterface {
 
          clusters = null;
          clusterer = new OHClusterer(coreClusters, boundaryClusters,
-                                     ontology, alphaThresh, betaThresh);
+                                     ontology, thresholds);
       }
       else if (ontology == null) {
-         clusterer = new AgglomerativeClusterer(clusters, betaThresh);
+         clusterer = new AgglomerativeClusterer(clusters, thresholds);
       }
 
       clusterer.clusterData(null);

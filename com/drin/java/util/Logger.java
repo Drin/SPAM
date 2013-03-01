@@ -10,7 +10,7 @@ public class Logger {
                                ERR_PREFIX = "*ERROR*",
                                DEBUG_PREFIX = "DEBUG",
                                WARNING_PREFIX = "WARNING";
-   private static final boolean DEBUG_MODE = false;
+   private static final boolean DEBUG_MODE = true;
 
    private static Logger mLogger = null;
 
