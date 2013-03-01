@@ -12,25 +12,20 @@ import com.drin.java.util.Logger;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.HashMap;
 
 import javax.swing.JTextArea;
 
 public class OHClusterer extends AgglomerativeClusterer {
+   private static final int ALPHA_THRESH_NDX = 0, BETA_THRESH_NDX = 1;
    protected List<Cluster> mBoundaryClusters;
    protected Ontology mOntology;
-   protected double mAlphaThreshold;
 
    public OHClusterer(List<Cluster> coreClusters, List<Cluster> boundaryClusters,
-                      Ontology ontology, double alpha, double beta) {
-      super(coreClusters, beta);
+                      Ontology ontology, List<Double> thresholds) {
+      super(coreClusters, thresholds);
       mBoundaryClusters = boundaryClusters;
-      mAlphaThreshold = alpha;
-
-      //mSimType affects how close clusters are determined. See findCloseCluster()
-      //in com.drin.java.analysis.clustering.AgglomerativeClusterer
       mOntology = ontology;
-
-      if (ontology != null) { mSimType = CLUST_SIMILARITY.SIMILAR; }
    }
 
    private void printOntology() {
@@ -42,9 +37,19 @@ public class OHClusterer extends AgglomerativeClusterer {
    public void clusterData(JTextArea canvas) {
       if (mOntology == null) { super.clusterData(canvas); }
       else {
-         mResultClusters = new ArrayList<Cluster>(mBoundaryClusters);
-         mResultClusters.addAll(ontologicalCluster(mOntology.getRoot(), mAlphaThreshold, canvas));
-         super.clusterDataSet(mResultClusters, mBetaThreshold, canvas);
+         mResultClusters = new HashMap<Double, List<Cluster>>();
+         List<Cluster> resultClusters = ontologicalCluster(mOntology.getRoot(),
+                                                           mThresholds.get(ALPHA_THRESH_NDX),
+                                                           canvas);
+
+         mResultClusters.put(mThresholds.get(ALPHA_THRESH_NDX),
+                             new ArrayList<Cluster>(resultClusters));
+
+         for (int threshNdx = BETA_THRESH_NDX; threshNdx < mThresholds.size(); threshNdx++) {
+            super.clusterDataSet(resultClusters, mThresholds.get(threshNdx), canvas);
+
+            mResultClusters.put(mThresholds.get(threshNdx), new ArrayList<Cluster>(resultClusters));
+         }
       }
    }
 

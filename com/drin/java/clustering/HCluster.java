@@ -15,6 +15,10 @@ public class HCluster extends Cluster {
 
    public HCluster(DataMetric<Cluster> metric) { super(metric); }
 
+   public HCluster(int clustId, DataMetric<Cluster> metric) {
+      super(clustId, metric);
+   }
+
    public HCluster(DataMetric<Cluster> metric, Clusterable<?> elem) {
       this(metric);
 
@@ -45,7 +49,7 @@ public class HCluster extends Cluster {
 
    public Cluster join(Cluster otherClust) {
       if (otherClust instanceof HCluster) {
-         Cluster newCluster = new HCluster(this.mMetric);
+         Cluster newCluster = new HCluster(Integer.parseInt(this.getName()), this.mMetric);
 
          Collection<Clusterable<?>> otherData = ((HCluster)otherClust).mElements;
 

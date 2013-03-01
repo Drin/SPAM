@@ -12,10 +12,9 @@ import java.util.List;
 import java.util.ArrayList;
 
 public class AgglomerativeClusterer extends HierarchicalClusterer {
-   protected static final int CLUSTER_PAIR_SIZE = 2;
 
-   public AgglomerativeClusterer(List<Cluster> clusters, double threshold) {
-      super(clusters, threshold);
+   public AgglomerativeClusterer(List<Cluster> clusters, List<Double> thresholds) {
+      super(clusters, thresholds);
    }
 
    @Override

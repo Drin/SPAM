@@ -29,6 +29,13 @@ public class Pyroprint extends Clusterable<Double> {
       mMetric = metric;
    }
 
+   public Pyroprint(String isoId, String dispSeq,
+                    List<Double> data, DataMetric<Pyroprint> metric) {
+      super(isoId, data);
+      mDisp = dispSeq;
+      mMetric = metric;
+   }
+
    public int getDispLen() { return mDisp.length(); }
 
    /**

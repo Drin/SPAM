@@ -42,6 +42,8 @@ public class Ontology {
    public void addTerm(OntologyTerm newTerm) {
       if (System.getenv().containsKey("DEBUG")) {
          System.out.printf("adding new term:\n\t%s\n", newTerm.toString());
+         System.out.printf("term table: %s\tterm column: %s\n",
+                           newTerm.getTableName(), newTerm.getColName());
       }
 
       if (mRoot != null) {
@@ -64,21 +66,21 @@ public class Ontology {
    }
 
    private static String printOntology(OntologyTerm term, String partitionName, String prefix) {
-      if (term == null) { return ""; }
-
       String ontologyStr = String.format("%s%s:\n", prefix, partitionName);
 
-      if (term.getData() != null) {
-         for (Cluster element : term.getData()) {
-            ontologyStr += String.format("%s%s,", prefix + "   ", element.getName());
+      if (term != null) {
+         if (term.getData() != null) {
+            for (Cluster element : term.getData()) {
+               ontologyStr += String.format("%s%s,", prefix + "   ", element.getName());
+            }
+
+            ontologyStr += "\n";
          }
 
-         ontologyStr += "\n";
-      }
-
-      if (term.getPartitions() != null) {
-         for (Map.Entry<String, OntologyTerm> feature : term.getPartitions().entrySet()) {
-            ontologyStr += Ontology.printOntology(feature.getValue(), feature.getKey(), prefix + "   ");
+         if (term.getPartitions() != null) {
+            for (Map.Entry<String, OntologyTerm> feature : term.getPartitions().entrySet()) {
+               ontologyStr += Ontology.printOntology(feature.getValue(), feature.getKey(), prefix + "   ");
+            }
          }
       }
 
@@ -149,11 +151,19 @@ public class Ontology {
       return ont;
    }
 
+   /*
+    * old test:
+    * String testOntology = String.format("%s\n%s\n%s",
+    * "Host(): cw, sw;",
+    * "Location():R1, R2, MorroBay;",
+    * "Day(TimeSensitive):     1,2,3,\t4,5,6,7,10;"
+    * );
+    */
    public static void main(String[] args) {
-      String testOntology = String.format("%s\n%s\n%s",
-         "Host(): cw, sw;",
-         "Location():R1, R2, MorroBay;",
-         "Day(TimeSensitive):     1,2,3,\t4,5,6,7,10;"
+      String testOntology = String.format("%s\n%s\n%s\n",
+         "Isolates.commonName():;",
+         "Isolates.hostID(): ;",
+         "Pyroprints.date_pyroPrintedDate(TimeSensitive): \t;"
       );
 
       Ontology ont = Ontology.constructOntology(testOntology);

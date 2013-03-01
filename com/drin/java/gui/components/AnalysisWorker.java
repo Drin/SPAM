@@ -10,6 +10,7 @@ import javax.swing.SwingWorker;
 import javax.swing.JTextArea;
 
 import java.util.List;
+import java.util.Map;
 
 public class AnalysisWorker extends SwingWorker<AnalysisWorker.TaskResult, Integer> {
    private Clusterer mClusterer;
@@ -76,9 +77,9 @@ public class AnalysisWorker extends SwingWorker<AnalysisWorker.TaskResult, Integ
 
    public class TaskResult {
       public long mElapsedTime;
-      public List<Cluster> mClusterData;
+      public Map<Double, List<Cluster>> mClusterData;
 
-      public TaskResult(long time, List<Cluster> clusters) {
+      public TaskResult(long time, Map<Double, List<Cluster>> clusters) {
          mElapsedTime = time;
          mClusterData = clusters;
       }

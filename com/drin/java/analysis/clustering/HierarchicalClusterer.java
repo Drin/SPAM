@@ -16,30 +16,29 @@ import java.util.ArrayList;
 import javax.swing.JTextArea;
 
 public abstract class HierarchicalClusterer implements Clusterer {
-   protected CLUST_SIMILARITY mSimType;
    protected List<Cluster> mClusters;
-   protected List<Cluster> mResultClusters;
+   protected List<Double> mThresholds;
+   protected Map<Double, List<Cluster>> mResultClusters;
 
-   protected double mBetaThreshold;
-
-   public HierarchicalClusterer(List<Cluster> clusters, double threshold) {
+   public HierarchicalClusterer(List<Cluster> clusters, List<Double> thresholds) {
       mClusters = clusters;
-      mBetaThreshold = threshold;
-
-      mSimType = CLUST_SIMILARITY.SQUISHY;
+      mThresholds = thresholds;
    }
 
-   public List<Cluster> getClusters() { return mResultClusters; }
+   public Map<Double, List<Cluster>> getClusters() { return mResultClusters; }
 
    @Override
    public void clusterData(JTextArea canvas) {
-      mResultClusters = new ArrayList<Cluster>(mClusters);
-      clusterDataSet(mResultClusters, mBetaThreshold, canvas);
-      //experimentalclusterDataSet(mResultClusters, mBetaThreshold, canvas);
+      mResultClusters = new HashMap<Double, List<Cluster>>();
+      List<Cluster> resultClusters = new ArrayList<Cluster>(mClusters);
+
+      for (Double threshold : mThresholds) {
+         clusterDataSet(resultClusters, threshold, canvas);
+
+         mResultClusters.put(threshold, new ArrayList<Cluster>(resultClusters));
+      }
    }
 
-   //This method is the more basic way of clustering. It is primarily being
-   //used to compare against the priority queue method
    protected void clusterDataSet(List<Cluster> clusters, double threshold, JTextArea canvas) {
       double percentIncr = 100.0/clusters.size(), percentComplete = 0;
       Map<String, Map<String, Double>> clustDistMap = new HashMap<String, Map<String, Double>>();
@@ -57,8 +56,9 @@ public abstract class HierarchicalClusterer implements Clusterer {
       }
    }
 
-   //This takes a threshold parameter so that it's easier for OHClust! to pass
-   //mAlphaThreshold rather than having to overwrite the entire method
+   //This was experimental and an attempt to speed up clustering. It didn't,
+   //but it took me awhile to implement so I'm leaving it for my own
+   //satisfaction
    protected void experimentalClusterDataSet(List<Cluster> clusters, double threshold, JTextArea canvas) {
       double percentIncr = 100.0/clusters.size(), percentComplete = 0;
 
@@ -86,8 +86,4 @@ public abstract class HierarchicalClusterer implements Clusterer {
 
    protected abstract CandidateQueue recompute(Cluster combinedCluster, List<Cluster> clusters, double threshold);
    protected abstract Cluster combineClusters(CandidatePair closeClusters, List<Cluster> clusters);
-
-   protected enum CLUST_SIMILARITY {
-      SIMILAR, SQUISHY
-   }
 }
