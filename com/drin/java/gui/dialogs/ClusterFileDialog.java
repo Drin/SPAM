@@ -44,7 +44,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.List;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.ArrayList;
 
 @SuppressWarnings("serial")
@@ -66,7 +65,7 @@ public class ClusterFileDialog extends JDialog {
     */
    private String mRecentDir;
    private Container mPane = null;
-   private JComboBox<String> mMethod, mRegion_A, mRegion_B;
+   private JComboBox<String> mRegion_A, mRegion_B;//mMethod, 
    private JTextField mData_A, mData_B, mOutFile, mOntology,
                       mAlpha_A, mAlpha_B, mBeta_A, mBeta_B;
 

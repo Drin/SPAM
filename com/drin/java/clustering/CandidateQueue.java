@@ -1,7 +1,5 @@
 package com.drin.java.clustering;
 
-import com.drin.java.util.Logger;
-
 import java.util.Map;
 
 import java.util.LinkedList;

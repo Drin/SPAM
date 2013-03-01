@@ -16,7 +16,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
-import java.util.HashSet;
 
 /**
  * Isolate represents a bacterial isolate collected by a biologist.
