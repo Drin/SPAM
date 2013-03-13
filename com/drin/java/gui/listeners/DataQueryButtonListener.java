@@ -2,8 +2,6 @@ package com.drin.java.gui.listeners;
 
 import com.drin.java.database.CPLOPConnection;
 
-import java.awt.Component;
-import java.awt.ComponentOrientation;
 import java.awt.Container;
 import java.awt.Dialog;
 import java.awt.event.ActionEvent;
@@ -13,10 +11,8 @@ import java.awt.FlowLayout;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JDialog;
-import javax.swing.JOptionPane;
 import javax.swing.JButton;
 import javax.swing.JTextField;
-import javax.swing.JFileChooser;
 import javax.swing.JComboBox;
 import javax.swing.JTable;
 import javax.swing.BoxLayout;
@@ -40,15 +36,12 @@ public class DataQueryButtonListener implements ActionListener {
    private Object[][] mTableData = null;
    private Object[] mTableDataColumns = null;
 
-   private String mRecentDir;
-
    private CPLOPConnection mConn = null;
 
    public DataQueryButtonListener(JTextField textField, JComboBox<String> dataTypeOptions,
     CPLOPConnection conn) {
       mDataTypeOptions = dataTypeOptions;
       mDataSetField = textField;
-      mRecentDir = null;
 
       mDialog = new JDialog(mDialog);
       mDialog.setSize(DIALOG_WIDTH, DIALOG_HEIGHT);

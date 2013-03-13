@@ -30,8 +30,5 @@ public abstract class Clusterable<E> {
    public String getName() { return mName; }
    public Collection<E> getData() { return mData; }
 
-   //public abstract String getDesignation();
    public abstract double compareTo(Clusterable<?> otherData);
-   public abstract boolean isSimilar(Clusterable<?> otherData);
-   public abstract boolean isDifferent(Clusterable<?> otherData);
 }

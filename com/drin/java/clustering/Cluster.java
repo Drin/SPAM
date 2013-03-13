@@ -29,9 +29,9 @@ public abstract class Cluster implements Labelable {
       mName = String.format("%d", clustId);
       mMetric = metric;
       
-      mElements = new HashSet<Clusterable<?>>();
       mDendogram = null;
       mLabel = new OntologyLabel();
+      mElements = new HashSet<Clusterable<?>>();
 
       mDiameter = -2;
       mMean = -2;
@@ -81,50 +81,6 @@ public abstract class Cluster implements Labelable {
                                        otherClust.mName));
 
       return comparison;
-   }
-
-   /**
-    * Compares two clusters to determine if they are <b>similar</b>.
-    * Similar is defined based on the data points contained in the cluster.
-    * If each pair of data points between the clusters are similar, then the 
-    * clusters are similar. However, if any two data points are
-    * not similar, then the two clusters are not considered similar.
-    *
-    * @param otherClust The cluster being compared to.
-    * @return True if this cluster is similar to the other cluster. False
-    * otherwise.
-    */
-   public boolean isSimilar(Cluster otherClust) {
-      for (Clusterable<?> elem_A : mElements) {
-         for (Clusterable<?> elem_B : otherClust.mElements) {
-
-            if (!elem_A.isSimilar(elem_B)) { return false; }
-         }
-      }
-
-      return true;
-   }
-
-   /**
-    * Compares two clusters to determine if they are <b>different</b>.
-    * Different is defined based on the data points contained in the cluster.
-    * If each pair of data points between the clusters are different, then the 
-    * clusters are considered different. However, if any two data points are
-    * not different, then the two clusters are not considered different.
-    *
-    * @param otherClust The cluster being compared to.
-    * @return True if this cluster is different from the other cluster. False
-    * otherwise.
-    */
-   public boolean isDifferent(Cluster otherClust) {
-      for (Clusterable<?> elem_A : mElements) {
-         for (Clusterable<?> elem_B : otherClust.mElements) {
-
-            if (!elem_A.isDifferent(elem_B)) { return false; }
-         }
-      }
-
-      return true;
    }
 
    @Override

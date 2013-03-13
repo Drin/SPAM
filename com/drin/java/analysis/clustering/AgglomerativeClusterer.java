@@ -37,7 +37,8 @@ public class AgglomerativeClusterer extends HierarchicalClusterer {
    }
 
    @Override
-   protected CandidatePair findCloseClusters(Map<String, Map<String, Double>> distMap, List<Cluster> clusters, double threshold) {
+   protected CandidatePair findCloseClusters(Map<String, Map<String, Double>> distMap,
+                                             List<Cluster> clusters, double threshold) {
       Map<String, Double> clustDistMap = null;
       Cluster close_A = null, close_B = null;
       double maxSim = 0;

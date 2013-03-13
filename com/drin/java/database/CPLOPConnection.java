@@ -456,11 +456,13 @@ public class CPLOPConnection {
 
       String query = "SELECT i.isoID, i.commonName, i.hostID, i.sampleID, " +
                      "i.dateStored, i.pyroprintDate " +
-                     "FROM Isolates i join Pyroprints p1 using (isoID) join " +
-                           "Pyroprints p2 on (i.isoID = p2.isoID and p1.pyroID != p2.pyroID) " +
+                     "FROM Isolates i join " +
+                           "Pyroprints p1 using (isoID) join " +
+                           "Pyroprints p2 using (isoID) " +
                      "WHERE p1.appliedRegion != p2.appliedRegion and " +
-                     "p1.pyroID in (SELECT DISTINCT pyroID FROM Histograms) and " +
-                     "p2.pyroID in (SELECT DISTINCT pyroID FROM Histograms) " +
+                           "p1.pyroID != p2.pyroID and " +
+                           "p1.pyroID in (SELECT DISTINCT pyroID FROM Histograms) and " +
+                           "p2.pyroID in (SELECT DISTINCT pyroID FROM Histograms) " +
                      "GROUP BY i.isoID";
 
       try {
@@ -872,6 +874,36 @@ public class CPLOPConnection {
 
       return distinctValues;
    }
+
+   /*
+    * TODO this will remain commented out until a solution for retrieving a
+    * single record for each pyroprint is determined in mysql.
+    * Call a stored procedure so that pyroprint records do not have to be
+    * parsed in memory by Java.
+    *
+   public List<Map<String, Object>> getPyroprintRecords(String isoIDs) throws SQLException {
+      List<Map<String, Object>> records = new ArrayList<Map<String, Object>>();
+      Statement stmt = null;
+      ResultSet results = null;
+
+      try {
+         stmt = conn.prepareCall("{call get_pyroprint_records(?)}");
+         stmt.setString(1, isoIDs);
+
+         results = stmt.executeQuery();
+
+         while (results.next()) {
+            //results.get
+         }
+      }
+      catch (SQLException sqlEx) { throw sqlEx; }
+      finally {
+         if (results != null) { results.close(); }
+         if (stmt != null) { stmt.close(); }
+      }
+      return null;
+   }
+   */
 
    /**
     * Perform just a general query.

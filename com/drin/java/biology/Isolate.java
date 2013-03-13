@@ -24,25 +24,18 @@ import java.util.Set;
 public class Isolate extends Clusterable<ITSRegion> implements Labelable {
    private static final int ALPHA_NDX = 0, BETA_NDX = 1;
    private DataMetric<Isolate> mMetric;
-   private Map<String, double[]> mThresholds;
    private Map<String, Double> mComparisonCache;
 
    protected OntologyLabel mLabel;
+
+   public Isolate(String isoId, DataMetric<Isolate> metric) {
+      this(isoId, null, metric);
+   }
 
    public Isolate(String isoId, Set<ITSRegion> regions, DataMetric<Isolate> metric) {
       super(isoId, regions);
 
       mMetric = metric;
-      mLabel = new OntologyLabel();
-      mComparisonCache = new HashMap<String, Double>();
-   }
-
-   public Isolate(String isoId, Map<String, double[]> threshMap,
-                  DataMetric<Isolate> metric) {
-      super(isoId, null);
-
-      mMetric = metric;
-      mThresholds = threshMap;
       mLabel = new OntologyLabel();
       mComparisonCache = new HashMap<String, Double>();
    }
@@ -74,76 +67,6 @@ public class Isolate extends Clusterable<ITSRegion> implements Labelable {
       }
 
       return -2;
-   }
-
-   @Override
-   public boolean isSimilar(Clusterable<?> otherObj) {
-      if (otherObj instanceof Isolate) {
-         if (this.getData() != null) {
-            Iterator<ITSRegion> itr_A = this.getData().iterator();
-
-            while (itr_A.hasNext()) {
-               ITSRegion region_A = itr_A.next();
-               Iterator<ITSRegion> itr_B = ((Isolate)otherObj).getData().iterator();
-
-               while (itr_B.hasNext()) {
-                  ITSRegion region_B = itr_B.next();
-
-                  if (region_A.getName().equals(region_B.getName())) {
-                     if (!region_A.isSimilar(region_B)) { return false; }
-                  }
-               }
-            }
-
-            return true;
-         }
-         else if (mThresholds != null) {
-            double comparison = this.compareTo((Isolate) otherObj);
-
-            for (Map.Entry<String, double[]> thresh : mThresholds.entrySet()) {
-               if (comparison < thresh.getValue()[ALPHA_NDX]) { return false; }
-            }
-
-            return true;
-         }
-      }
-
-      return false;
-   }
-
-   @Override
-   public boolean isDifferent(Clusterable<?> otherObj) {
-      if (otherObj instanceof Isolate) {
-         if (this.getData() != null) {
-            Iterator<ITSRegion> itr_A = this.getData().iterator();
-
-            while (itr_A.hasNext()) {
-               ITSRegion region_A = itr_A.next();
-               Iterator<ITSRegion> itr_B = ((Isolate)otherObj).getData().iterator();
-
-               while (itr_B.hasNext()) {
-                  ITSRegion region_B = itr_B.next();
-
-                  if (region_A.getName().equals(region_B.getName())) {
-                     if (region_A.isDifferent(region_B)) { return true; }
-                  }
-               }
-            }
-
-            return false;
-         }
-         else if (mThresholds != null) {
-            double comparison = this.compareTo((Isolate) otherObj);
-
-            for (Map.Entry<String, double[]> thresh : mThresholds.entrySet()) {
-               if (comparison >= thresh.getValue()[BETA_NDX]) { return false; }
-            }
-
-            return true;
-         }
-      }
-
-      return true;
    }
 
    @Override
