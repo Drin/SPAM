@@ -41,10 +41,16 @@ public abstract class HierarchicalClusterer implements Clusterer {
       double percentIncr = 100.0/clusters.size(), percentComplete = 0;
       Map<String, Map<String, Double>> clustDistMap = new HashMap<String, Map<String, Double>>();
 
+      if (canvas != null) {
+         canvas.setText(String.format("\n\n\t\t%.02f%% Complete!", percentComplete));
+         percentComplete += percentIncr;
+      }
+
       CandidatePair closeClusters = findCloseClusters(clustDistMap, clusters, threshold);
 
       for (; closeClusters != null && clusters.size() > 1;
            closeClusters = findCloseClusters(clustDistMap, clusters, threshold)) {
+
          if (canvas != null) {
             canvas.setText(String.format("\n\n\t\t%.02f%% Complete!", percentComplete));
             percentComplete += percentIncr;

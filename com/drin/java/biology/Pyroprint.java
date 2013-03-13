@@ -79,21 +79,6 @@ public class Pyroprint extends Clusterable<Double> {
       return new Double(mMaxPeak);
    }
 
-   /**
-    * Find the average peak height for this pyroprint.
-    *
-    * @return double The average peak height for this pyroprint.
-    */
-   public Double getMeanPeak() {
-      double total = 0;
-
-      for (Double peak : mData) {
-         total += peak.doubleValue();
-      }
-
-      return new Double(total/mData.size());
-   }
-
    /*
     * Overridden Object Methods
     */
@@ -130,24 +115,6 @@ public class Pyroprint extends Clusterable<Double> {
       }
 
       return false;
-   }
-
-   @Override
-   public boolean isSimilar(Clusterable<?> otherObj) {
-      if (otherObj instanceof Pyroprint) {
-         return hasSameProtocol((Pyroprint) otherObj);
-      }
-
-      return false;
-   }
-
-   @Override
-   public boolean isDifferent(Clusterable<?> otherObj) {
-      if (otherObj instanceof Pyroprint) {
-         return !hasSameProtocol((Pyroprint) otherObj);
-      }
-
-      return true;
    }
 
    @Override

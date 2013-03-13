@@ -39,7 +39,7 @@ public class ITSRegionMedianMetric extends ITSRegionMetric {
 
    @Override
    public void apply(ITSRegion elem_A, ITSRegion elem_B) {
-      if (elem_A.isSimilarRegion(elem_B)) {
+      if (elem_A.getName().equals(elem_B.getName())) {
          for (Pyroprint pyro_A : elem_A.getPyroprints()) {
             for (Pyroprint pyro_B : elem_B.getPyroprints()) {
                addComparison(mPyroComp.compare(mPyroMetric, pyro_A, pyro_B));

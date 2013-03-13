@@ -285,7 +285,6 @@ public class ClusterFileDialog extends JDialog {
       Ontology ontology = null;
       Clusterer clusterer = null;
       List<Cluster> clusters = new ArrayList<Cluster>();
-      Map<String, double[]> threshMap = new HashMap<String, double[]>();
       
       if (!mOntology.getText().equals("")) {
          ontology = Ontology.createOntology(mOntology.getText());
@@ -319,13 +318,11 @@ public class ClusterFileDialog extends JDialog {
       Map<String, Map<String, Double>> corrMap = parser.parseData();
       isoIds = corrMap.keySet();
       regionMap.put(region_A, corrMap);
-      threshMap.put(region_A, new double[] {alpha_A, beta_A});
 
       //Build correlation map for region B
       parser = new MatrixParser(data_B);
       corrMap = parser.parseData();
       regionMap.put(region_B, corrMap);
-      threshMap.put(region_B, new double[] {alpha_B, beta_B});
 
       //Build a metric that now encompasses both regions
       IsolateSimpleMetric isoMetric = new IsolateSimpleMetric(regionMap);
@@ -333,7 +330,7 @@ public class ClusterFileDialog extends JDialog {
       if (isoIds != null) {
          for (String isoId : isoIds) {
             Cluster cluster = new HCluster(new ClusterAverageMetric(),
-                                           new Isolate(isoId, threshMap, isoMetric));
+                                           new Isolate(isoId, isoMetric));
             clusters.add(cluster);
          }
       }
