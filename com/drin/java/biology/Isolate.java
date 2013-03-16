@@ -11,29 +11,22 @@ import com.drin.java.metrics.DataMetric;
 
 import com.drin.java.util.Logger;
 
-import java.util.Iterator;
-
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Set;
+import java.util.HashSet;
 
 /**
  * Isolate represents a bacterial isolate collected by a biologist.
  *
  */
 public class Isolate extends Clusterable<ITSRegion> implements Labelable {
-   private static final int ALPHA_NDX = 0, BETA_NDX = 1;
    private DataMetric<Isolate> mMetric;
    private Map<String, Double> mComparisonCache;
 
    protected OntologyLabel mLabel;
 
    public Isolate(String isoId, DataMetric<Isolate> metric) {
-      this(isoId, null, metric);
-   }
-
-   public Isolate(String isoId, Set<ITSRegion> regions, DataMetric<Isolate> metric) {
-      super(isoId, regions);
+      super(isoId, new HashSet<ITSRegion>());
 
       mMetric = metric;
       mLabel = new OntologyLabel();
@@ -46,6 +39,16 @@ public class Isolate extends Clusterable<ITSRegion> implements Labelable {
 
    public boolean hasLabel(String labelName) {
       return mLabel.hasLabel(labelName);
+   }
+
+   public ITSRegion getRegion(String regionName) {
+      for (ITSRegion region : mData) {
+         if (region.getName().equals(regionName)) {
+            return region;
+         }
+      }
+
+      return null;
    }
 
    @Override

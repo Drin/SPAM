@@ -5,7 +5,7 @@ import com.drin.java.metrics.DataMetric;
 
 import com.drin.java.util.Logger;
 
-import java.util.List;
+import java.util.ArrayList;
 import java.util.Iterator;
 
 /**
@@ -22,18 +22,20 @@ public class Pyroprint extends Clusterable<Double> {
    private String mDisp;
    private DataMetric<Pyroprint> mMetric;
 
-   public Pyroprint(int pyroId, String wellId, String dispSeq,
-                    List<Double> data, DataMetric<Pyroprint> metric) {
-      super(String.format("%d (%s)", pyroId, wellId), data);
-      mDisp = dispSeq;
+   public Pyroprint(int pyroId, String wellId, DataMetric<Pyroprint> metric) {
+      this(String.format("%d (%s)", pyroId, wellId), metric);
+   }
+
+   public Pyroprint(String isoId, DataMetric<Pyroprint> metric) {
+      super(isoId, new ArrayList<Double>());
+
+      mDisp = "";
       mMetric = metric;
    }
 
-   public Pyroprint(String isoId, String dispSeq,
-                    List<Double> data, DataMetric<Pyroprint> metric) {
-      super(isoId, data);
-      mDisp = dispSeq;
-      mMetric = metric;
+   public void addDispensation(String nucleotide, double peakHeight) {
+      mDisp += nucleotide;
+      mData.add(new Double(peakHeight));
    }
 
    public int getDispLen() { return mDisp.length(); }
@@ -57,26 +59,6 @@ public class Pyroprint extends Clusterable<Double> {
    public boolean hasSameProtocol(Pyroprint other_pyro) {
       return this.size() == other_pyro.size() &&
              this.getDispSeq().equals(other_pyro.getDispSeq());
-   }
-
-   /*
-    * Utility Methods
-    */
-   /**
-    * Find the maximum peak height for the given list of peak heights. This
-    * method returns -1 if there are no peak heights for this pyroprint.
-    *
-    * @return double The value of the peak height for the given list of peak
-    * heights.
-    */
-   public Double getMaxPeak() {
-      double mMaxPeak = -1;
-
-      for (Double peakVal : mData) {
-         mMaxPeak = Math.max(mMaxPeak, peakVal.doubleValue());
-      }
-
-      return new Double(mMaxPeak);
    }
 
    /*
