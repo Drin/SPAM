@@ -1,106 +1,86 @@
 package com.drin.java.util;
 
-import com.drin.java.util.InvalidPropertyException;
+import com.drin.java.metrics.IsolateAverageMetric;
+
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.Constructor;
 
 import java.io.File;
+import java.io.FileInputStream;
 
-import java.util.Scanner;
-import java.util.Map;
-import java.util.HashMap;
-
-@SuppressWarnings("serial")
 public class Configuration {
-   private static final String KEY_VAL_DELIM = "=";
-   private static final int PROP_KEY = 0,
-                            PROP_VAL = 1;
+   private static final String DEFAULT_CONFIG_FILE = "props-standard.yml";
+   private static Yaml mYamlReader = new Yaml(new Constructor(Configuration.class));
+   private static Configuration mConfig = null;
 
-   private static Map<String, Object> mConfigMap = new HashMap<String, Object>();
+   /*
+    * Configuration Variables
+    */
+   private String clusterMetric, isoMetric, regionMetric, pyroMetric;
+   private int pyroLength;
+   private boolean debug, transform;
 
-   public static void loadConfiguration(File propFile) throws InvalidPropertyException {
-      Scanner propReader = null;
-
-      try { propReader = new Scanner(propFile); }
-      catch (java.io.FileNotFoundException fileErr) {
-         System.err.printf("Could not find file '%s'\n", propFile);
-      }
-
-      while (propReader.hasNextLine()) {
-         String[] property = propReader.nextLine().split(KEY_VAL_DELIM);
-
-         if (property.length < 2 || property[0].startsWith("#")) { continue; }
-
-         validateProp(property);
-
-         mConfigMap.put(property[PROP_KEY], property[PROP_VAL]);
-      }
+   public static Configuration loadConfig() {
+      return mConfig == null ? loadConfig(DEFAULT_CONFIG_FILE) : mConfig;
    }
 
-   public static String getString(String propName) {
-      if (mConfigMap.containsKey(propName)) {
-         return String.valueOf(mConfigMap.get(propName));
-      }
+   public static Configuration loadConfig(String fileName) {
+      FileInputStream configStream = null;
 
-      return null;
-   }
+      try { configStream = new FileInputStream(new File(fileName)); }
+      catch(java.io.FileNotFoundException err) { err.printStackTrace(); }
 
-   public static Boolean getBoolean(String propName) {
-      if (mConfigMap.containsKey(propName)) {
-         return Boolean.valueOf(String.valueOf(mConfigMap.get(propName)));
-      }
+      mConfig = (Configuration) mYamlReader.load(configStream);
 
-      return null;
-   }
-
-   public static Integer getInt(String propName) {
-      if (mConfigMap.containsKey(propName)) {
-         return Integer.valueOf(String.valueOf(mConfigMap.get(propName)));
-      }
-
-      return null;
-   }
-
-   private static void validateProp(String[] property) throws InvalidPropertyException {
-      PROP_STATUS status = PROP_STATUS.VALID;
-
-      if (property.length != 2) {
-         status = PROP_STATUS.INV_LEN;
-      }
-
-      switch (status) {
-         case VALID:
-            return;
-
-         case INV_LEN:
-            String err = String.format("Invalid property format: should be " +
-                                       "<name>%s<value>", KEY_VAL_DELIM);
-            throw new InvalidPropertyException(err);
-
-         default:
-            throw new InvalidPropertyException("Unknown property");
-      }
-   }
-
-   private static void debug() {
-      for (Map.Entry<String, Object> prop : mConfigMap.entrySet()) {
-         System.out.printf("%s => %s\n", prop.getKey(), prop.getValue());
-      }
-   }
-
-   private enum PROP_STATUS {
-      VALID, INV_LEN, INV_VAL;
+      return mConfig;
    }
 
    public static void main(String[] args) {
-      try {
-         if (args.length > 0) {
-            Configuration.loadConfiguration(new File(args[0]));
-         }
-         else { Configuration.loadConfiguration(new File("props-standard.cfg")); }
+      Configuration config = Configuration.loadConfig();
+      System.out.println(config);
+      IsolateAverageMetric isoMetric = null;
 
-         Configuration.debug();
+      try {
+         Class<?> isoMetricClass = Class.forName(config.getIsoMetric());
+         isoMetric = (IsolateAverageMetric) isoMetricClass.newInstance();
       }
-      catch(InvalidPropertyException err) {
-         System.out.println(err);
+      catch(Exception err) {
+         err.printStackTrace();
+         System.exit(1);
       }
+
+      isoMetric.testMethod();
+   }
+
+   /*
+    * Setters
+    */
+   public void setClusterMetric(String metric) { clusterMetric = metric; }
+   public void setIsoMetric(String metric) { isoMetric = metric; }
+   public void setRegionMetric(String metric) { regionMetric = metric; }
+   public void setPyroMetric(String metric) { pyroMetric = metric; }
+
+   public void setPyroLength(int length) { pyroLength = length; }
+   public void setTransform(boolean isTransform) { transform = isTransform; }
+   public void setDebug(boolean isDebug) { debug = isDebug; }
+
+   /*
+    * Getters
+    */
+   public String getClusterMetric() { return clusterMetric; }
+   public String getIsoMetric() { return isoMetric; }
+   public String getRegionMetric() { return regionMetric; }
+   public String getPyroMetric() { return pyroMetric; }
+
+   public int getPyroLength() { return pyroLength; }
+   public boolean getTransform() { return transform; }
+   public boolean getDebug() { return debug; }
+
+   public String toString() {
+      return String.format("debug: %s\ntransform: %s\npyroLength: %d\n" +
+                           "cluster metric: %s\niso metric: %s\n" +
+                           "region Metric: %s\npyro metric: %s\n",
+                           debug, transform, pyroLength, clusterMetric,
+                           isoMetric, regionMetric, pyroMetric);
    }
 }

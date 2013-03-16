@@ -7,22 +7,15 @@ import com.drin.java.metrics.DataMetric;
 
 import com.drin.java.util.Configuration;
 import com.drin.java.util.Logger;
-import com.drin.java.util.InvalidPropertyException;
 
 public class ITSRegionAverageMetric extends DataMetric<ITSRegion> {
-   private static final String TRANSFORM_KEY = "TransformCorrelation";
-
-   private Boolean mTransform;
    private int mPairCount;
-   private double mAlpha, mBeta;
+   private Configuration mConfig;
 
-   public ITSRegionAverageMetric(double alpha, double beta) {
+   public ITSRegionAverageMetric() {
       this.reset();
 
-      mAlpha = alpha;
-      mBeta = beta;
-
-      mTransform = Configuration.getBoolean(TRANSFORM_KEY);
+      mConfig = Configuration.loadConfig();
    }
 
    @Override
@@ -60,12 +53,12 @@ public class ITSRegionAverageMetric extends DataMetric<ITSRegion> {
       if (mPairCount <= 0) { setError(-1); }
       else { result /= mPairCount; }
 
-      if (mTransform != null) {
+      if (mConfig.getTransform() != null) {
          Logger.debug(String.format("ITSRegionAverageMetric %s: %.04f/%d",
-                                    (mTransform ? "(t)" : "(not t)"),
+                                    (mConfig.getTransform() ? "(t)" : "(not t)"),
                                     mResult, mPairCount));
 
-         if (mTransform) { result = transformResult(result); }
+         if (mConfig.getTransform()) { result = transformResult(result); }
       }
       else { Logger.error(-1, "Invalid Transform Property"); }
 
@@ -74,8 +67,10 @@ public class ITSRegionAverageMetric extends DataMetric<ITSRegion> {
    }
 
    private double transformResult(double result) {
+      /* TODO
       if (result > mAlpha) { return 1; }
       else if (result < mBeta) { return 0; }
+      */
       return result;
    }
 }

@@ -15,6 +15,10 @@ public class IsolateAverageMetric extends DataMetric<Isolate> {
       super();
    }
 
+   public void testMethod() {
+      System.out.println("IsolateAverageMetric successfully called!\n");
+   }
+
    @Override
    public void apply(Isolate elem_A, Isolate elem_B) {
       double total = 0;

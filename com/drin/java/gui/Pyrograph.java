@@ -21,7 +21,6 @@ public class Pyrograph extends JPanel {
    private String seqOrder = null;
 
    private double verticalBase = 660, verticalIncr = 20, maxHeight = 0, maxWidth = 0;
-   private double maxFreq = 0;
    private int horizontalBase = 40, horizontalIncr = 11;
 
    
@@ -32,15 +31,8 @@ public class Pyrograph extends JPanel {
       seqOrder = pyro.getSequence();
       seqPeaks = pyro.getData();
 
-      this.setPreferredSize(new Dimension(
-       pyro.getLength() * horizontalIncr, (int) (pyro.getMaxPeak() * verticalIncr))
-      );
-
-      /*
-      System.out.println("going to draw sequence: " + seqOrder +
-       "and peakVals: " + seqPeaks);
-       */
-      maxFreq = pyro.getMaxPeak();
+      this.setPreferredSize(new Dimension(pyro.getLength() * horizontalIncr,
+                                          200 * verticalIncr));
    }
 
    public Pyrogram getPyrogram() {
@@ -94,10 +86,10 @@ public class Pyrograph extends JPanel {
    
       //Line2D constructor: double, double, double, double
       //this draws the scale on the y-axis
-      brush2D.draw(new Line2D.Double(10, verticalBase, 10, verticalBase - (maxFreq * 20)));
+      brush2D.draw(new Line2D.Double(10, verticalBase, 10, verticalBase - (200 * 20)));
 
       //draws and labels intervals on the y-axis scale
-      for (int peak = 0; peak <= maxFreq; peak++) {
+      for (int peak = 0; peak <= 200; peak++) {
          double verticalPos = verticalBase - verticalIncr * peak;
 
          //draws hash marks for each increment

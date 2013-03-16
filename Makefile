@@ -4,6 +4,7 @@ JAVADOC=documentation
 
 SPAM_MAIN=com.drin.java.ClusterInterface
 SPAM_GUI_MAIN=com.drin.java.gui.SpamGUI
+SPAM_TEST_MAIN=com.drin.java.test.SPAMEvaluation
 
 CC = javac
 ENGINE = java
@@ -12,6 +13,11 @@ JFLAGS = -deprecation -Xlint
 compile: clean spam
 
 spam: ClusterInterface.java
+	@echo "-------------------------------"
+	find $(PACKAGE_PATH) -name $^ | xargs $(CC) $(JFLAGS) $(CLASSES)
+	@echo "-------------------------------"
+
+spamTest: SPAMEvaluation.java
 	@echo "-------------------------------"
 	find $(PACKAGE_PATH) -name $^ | xargs $(CC) $(JFLAGS) $(CLASSES)
 	@echo "-------------------------------"
@@ -31,6 +37,11 @@ runGUI:
 	$(ENGINE) $(SPAM_GUI_MAIN)
 	@echo "finished running."
 
+runTest:
+	@echo "running..."
+	$(ENGINE) $(SPAM_TEST_MAIN)
+	@echo "finished running."
+
 document: docSpam
 
 docSpam:
@@ -43,6 +54,8 @@ docSpam:
 SpamGUI.java:
 
 ClusterInterface.java:
+
+SPAMEvaluation.java:
 
 cleanDocs:
 	rm -rf ${JAVADOC}/*
