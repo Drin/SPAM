@@ -1,0 +1,42 @@
+Algorithms:
+   OHClust!-O -> with transformation
+   OHClust!-R -> without transformation
+   HClustering
+
+Repeat tests of each configuration 10 times because of random generation of
+data
+
+Configurations:
+   Independent Variables:
+      Size (Initial) : 100
+                       500
+                       1000
+                       2500
+                       5000
+                       10000
+                       25000
+                       50000
+                       75000
+                       100000
+
+      Update Size : 0.1%
+                    1%
+                    2%
+                    5%
+                    10%
+
+      Number of Updates : 100
+                          1000
+
+      Metadata : Random
+                 Level 1
+                 Level 2
+                 Mix
+
+   Dependent variables:
+      Cluster Diameter
+      Cluster separation (intercluster cohesion)
+      Variation of Mutual Information
+      Jaccard
+      Dice
+      Rand
