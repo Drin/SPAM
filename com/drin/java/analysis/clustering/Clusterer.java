@@ -9,6 +9,9 @@ import java.util.List;
 
 public interface Clusterer {
 
-   public void clusterData(JTextArea canvas);
+   public void clusterData(List<Cluster> clusters);
    public Map<Double, List<Cluster>> getClusters();
+
+   public void setProgressCanvas(JTextArea canvas);
+   public void writeProgress();
 }

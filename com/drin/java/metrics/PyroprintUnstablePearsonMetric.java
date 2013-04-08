@@ -4,25 +4,17 @@ import com.drin.java.biology.Pyroprint;
 import com.drin.java.metrics.DataMetric;
 
 import com.drin.java.util.Logger;
-import com.drin.java.util.Configuration;
-
-import com.drin.java.util.InvalidPropertyException;
 
 import java.util.Collection;
 import java.util.Iterator;
 
 public class PyroprintUnstablePearsonMetric extends DataMetric<Pyroprint> {
-   private static final int DEFAULT_LEN = 104;
-
-   private int mPeakCount, mPyroLen;
+   private int mPeakCount;
    private double mPyro_A_sum, mPyro_B_sum, mProduct_AB,
                   mPyro_A_squared_sum, mPyro_B_squared_sum;
 
    public PyroprintUnstablePearsonMetric() {
       super();
-
-      Integer pyro_len = Configuration.getInt("PyroprintLength");
-      mPyroLen = pyro_len == null ? DEFAULT_LEN : pyro_len.intValue();
    }
 
    public void reset() {

@@ -7,6 +7,11 @@ import com.drin.java.biology.ITSRegion;
 import com.drin.java.biology.Pyroprint;
 
 import com.drin.java.metrics.DataMetric;
+import com.drin.java.metrics.ITSRegionAverageMetric;
+import com.drin.java.metrics.ITSRegionMedianMetric;
+import com.drin.java.metrics.IsolateAverageMetric;
+import com.drin.java.metrics.PyroprintUnstablePearsonMetric;
+import com.drin.java.metrics.ClusterAverageMetric;
 
 import com.drin.java.ontology.Ontology;
 
@@ -50,66 +55,81 @@ import java.util.HashMap;
 public class SPAMEvaluation {
    private Configuration mConfiguration;
    private Clusterer mClusterer;
+   private Ontology mOntology;
+   private DataMetric<Cluster> mClustMetric;
 
-   public SPAMEvaluation(Configuration configuration, Clusterer clusterer,
-                         List<Clusterable<?>> dataList) {
-      DataMetric<Cluster> clustMetric = null;
+   @SuppressWarnings("unchecked")
+   public SPAMEvaluation(Configuration configuration, Ontology ontology) {
+      mConfiguration = configuration;
+      mOntology = ontology;
 
-      if (configuration == null) {
-         System.err.println("Invalid Evaluation Configuration");
-         System.exit(1);
+      List<Double> threshList = new ArrayList<Double>();
+      threshList.add(new Double(mConfiguration.getRegionAttr("16-23", Configuration.ALPHA_KEY)));
+      threshList.add(new Double(mConfiguration.getRegionAttr("16-23", Configuration.BETA_KEY)));
+
+      for (Double thresh : threshList) {
+         System.err.printf("alpha: %.04f beta: %.04f\n", threshList.get(0), threshList.get(1));
       }
+
+      mClusterer = new OHClusterer(ontology, threshList);
 
       try {
-         clustMetric = (DataMetric) Class.forName(configuration.getClusterMetric()).newInstance();
+         mClustMetric = (DataMetric) Class.forName(configuration.getMetric(
+                         Configuration.CLUSTER_KEY)).newInstance();
       }
       catch (ClassNotFoundException classErr) {
-         System.err.println("fail!");
+         classErr.printStackTrace();
          System.exit(1);
       }
       catch (InstantiationException instErr) {
-         System.err.println("fail!");
+         instErr.printStackTrace();
          System.exit(1);
       }
       catch (IllegalAccessException accErr) {
-         System.err.println("fail!");
+         accErr.printStackTrace();
          System.exit(1);
       }
-
-      if (clusterer == null) {
-         List<Cluster> clusterList = new ArrayList<Cluster>();
-         List<Double> threshList = null;
-
-         for (Clusterable<?> data : dataList) {
-            clusterList.add(new HCluster(clustMetric, data));
-         }
-
-         clusterer = new AgglomerativeClusterer(clusterList, threshList);
-      }
-
-      mConfiguration = configuration;
-      mClusterer = clusterer;
    }
 
-   public static void main(String[] args) {
+   public void runInitial() {
       String dataSet = "'Sw-020','Sw-021','Sw-022','Sw-023','Sw-024', " +
                        "'Sw-025','Sw-026','Sw-027','Sw-028','Sw-029', " +
                        "'Sw-030','Sw-031','Sw-032','Sw-033','Sw-034', " +
                        "'Sw-035','Sw-036','Sw-037','Sw-038','Sw-039', " +
                        "'Sw-040','Sw-041','Sw-042'";
+      List<Clusterable<?>> dataList = constructIsolates(mConfiguration, dataSet, mOntology);
+      List<Cluster> clusterList = new ArrayList<Cluster>();
 
-      Configuration config = Configuration.loadConfig();
-      List<Clusterable<?>> dataList = constructIsolates(config, dataSet);
+      if (dataList != null) {
+         for (Clusterable<?> data : dataList) {
+            clusterList.add(new HCluster(mClustMetric, data));
+         }
+      }
 
-      SPAMEvaluation evaluator = new SPAMEvaluation(config, null, dataList);
-      System.out.println("success");
+      mClusterer.clusterData(clusterList);
+
+      System.out.println("ontology: " + mOntology);
    }
 
-   private static List<Clusterable<?>> constructIsolates(Configuration config, String dataIds) {
+   public static void main(String[] args) {
+      //Ontology testOntology = Ontology.createOntology(String.format("%s\n%s\n%s",
+      Ontology testOntology = Ontology.createOntology(String.format("%s",
+         "Isolates.commonName():;"
+         //"Isolates.hostID(): ;",
+         //"Pyroprints.pyroPrintedDate(TimeSensitive): \t;"
+      ));
+
+      SPAMEvaluation evaluator = new SPAMEvaluation(Configuration.loadConfig(), testOntology);
+
+      evaluator.runInitial();
+   }
+
+   @SuppressWarnings("unchecked")
+   private static List<Clusterable<?>> constructIsolates(Configuration config,
+                                                         String dataIds, Ontology ont) {
       CPLOPConnection conn = CPLOPConnection.getConnection();
       List<Map<String, Object>> rawDataList = null;
-      List<Clusterable<?>> dataList = null;
-
+      List<Clusterable<?>> dataList = new ArrayList<Clusterable<?>>();
 
       DataMetric<Isolate> isoMetric = null;
       DataMetric<ITSRegion> regionMetric = null;
@@ -118,7 +138,7 @@ public class SPAMEvaluation {
       /*
        * query CPLOP for data
        */
-      try { rawDataList = conn.getDataByIsoID(dataIds); }
+      try { rawDataList = conn.getDataByIsoID(ont, dataIds); }
       catch (java.sql.SQLException sqlErr) {
          sqlErr.printStackTrace();
          System.exit(1);
@@ -128,11 +148,12 @@ public class SPAMEvaluation {
        * construct object representations
        */
       try {
-         isoMetric = (DataMetric) Class.forName(config.getIsoMetric()).newInstance();
-         regionMetric = (DataMetric) Class.forName(config.getRegionMetric()).newInstance();
-         pyroMetric = (DataMetric) Class.forName(config.getPyroMetric()).newInstance();
+         isoMetric = (DataMetric) Class.forName(config.getMetric(Configuration.ISOLATE_KEY)).newInstance();
+         regionMetric = (DataMetric) Class.forName(config.getMetric(Configuration.ITSREGION_KEY)).newInstance();
+         pyroMetric = (DataMetric) Class.forName(config.getMetric(Configuration.PYROPRINT_KEY)).newInstance();
       }
       catch(Exception err) {
+         err.printStackTrace();
          System.err.println("fail!");
          System.exit(1);
       }
@@ -143,8 +164,9 @@ public class SPAMEvaluation {
          String wellID     = String.valueOf(dataMap.get("well"));
          String isoID      = String.valueOf(dataMap.get("isolate"));
          String regName    = String.valueOf(dataMap.get("region"));
-         String nucleotide = String.valueOf(dataMap.get("nucleotide"));
          Integer pyroID    = new Integer(String.valueOf(dataMap.get("pyroprint")));
+
+         String nucleotide = String.valueOf(dataMap.get("nucleotide"));
          double peakHeight = Double.parseDouble(String.valueOf(dataMap.get("pHeight")));
 
          String pyroName = String.format("%d (%s)", pyroID.intValue(), wellID);
@@ -163,8 +185,10 @@ public class SPAMEvaluation {
             tmpPyro = new Pyroprint(pyroID.intValue(), wellID, pyroMetric);
             tmpIso.getRegion(regName).add(tmpPyro);
          }
-         else if (tmpPyro.getName().equals(pyroName)) {
-            tmpPyro.addDispensation(nucleotide, peakHeight);
+
+         if (tmpPyro.getName().equals(pyroName) && tmpPyro.getDispLen() <
+             Integer.parseInt(config.getRegionAttr(regName, Configuration.LENGTH_KEY))) {
+               tmpPyro.addDispensation(nucleotide, peakHeight);
          }
       }
 

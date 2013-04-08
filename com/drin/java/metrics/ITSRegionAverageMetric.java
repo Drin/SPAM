@@ -9,19 +9,21 @@ import com.drin.java.util.Configuration;
 import com.drin.java.util.Logger;
 
 public class ITSRegionAverageMetric extends DataMetric<ITSRegion> {
+   private static Configuration mConfig;
+   private String mRegionName;
    private int mPairCount;
-   private Configuration mConfig;
 
    public ITSRegionAverageMetric() {
-      this.reset();
+      super();
 
-      mConfig = Configuration.loadConfig();
+      mConfig = Configuration.getConfig();
    }
 
    @Override
    public void reset() {
       super.reset();
       mPairCount = 0;
+      mRegionName = "";
    }
 
    @Override
@@ -53,24 +55,35 @@ public class ITSRegionAverageMetric extends DataMetric<ITSRegion> {
       if (mPairCount <= 0) { setError(-1); }
       else { result /= mPairCount; }
 
-      if (mConfig.getTransform() != null) {
-         Logger.debug(String.format("ITSRegionAverageMetric %s: %.04f/%d",
-                                    (mConfig.getTransform() ? "(t)" : "(not t)"),
-                                    mResult, mPairCount));
-
-         if (mConfig.getTransform()) { result = transformResult(result); }
-      }
-      else { Logger.error(-1, "Invalid Transform Property"); }
-
       reset();
-      return result;
+
+      return transformResult(result);
    }
 
    private double transformResult(double result) {
-      /* TODO
-      if (result > mAlpha) { return 1; }
-      else if (result < mBeta) { return 0; }
-      */
+      String alphaStr = null, betaStr = null;
+
+      if (Boolean.parseBoolean(mConfig.getAttr(Configuration.TRANSFORM_KEY))) {
+         try {
+            alphaStr = mConfig.getRegionAttr(mRegionName, Configuration.ALPHA_KEY);
+            betaStr = mConfig.getRegionAttr(mRegionName, Configuration.BETA_KEY); 
+
+            double alphaThresh = Double.parseDouble(alphaStr);
+            double betaThresh = Double.parseDouble(betaStr);
+
+            if (result >= alphaThresh) { return 1; }
+            else if (result < betaThresh) { return 0; }
+         }
+         catch(NumberFormatException numErr) {
+            mErrCode = -1;
+            Logger.error(mErrCode, String.format("Invalid threshold value " +
+                                                 "(%s or %s) for " +
+                                                 "region %s\n", mRegionName,
+                                                 alphaStr, betaStr));
+            numErr.printStackTrace();
+         }
+      }
+
       return result;
    }
 }

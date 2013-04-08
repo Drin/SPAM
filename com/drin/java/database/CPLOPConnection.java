@@ -1,8 +1,12 @@
 package com.drin.java.database;
 
+import com.drin.java.ontology.Ontology;
+
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Map;
+import java.util.Set;
+
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 
@@ -26,6 +30,7 @@ public class CPLOPConnection {
 
    private Connection conn, schemaConn;
    private static CPLOPConnection mCPLOPConnection = null;
+   private static Map<String, String> mForeignKeys = null;
 
    /**
     * Test the connection.
@@ -43,6 +48,33 @@ public class CPLOPConnection {
       }
       catch (Exception ex) {
          ex.printStackTrace();
+      }
+   }
+
+   /**
+    * @throws SQLException if the DriverManager can't get a connection.
+    * @throws DriverException if there is a problem instantiating the DB driver.
+    */
+   private CPLOPConnection() throws SQLException, DriverException {
+      try {
+         Class.forName(DB_DRIVER);
+
+         conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASS);
+         //connect to information_schema database as well for selecting
+         //attributes for data organization
+         schemaConn = DriverManager.getConnection(DB_INFO_URL, DB_USER, DB_PASS);
+
+         mForeignKeys = new HashMap<String, String>();
+         mForeignKeys.put("Isolates", "isoID");
+         mForeignKeys.put("Histograms", "pyroID");
+         mForeignKeys.put("HostSpecies", "commonName");
+         mForeignKeys.put("Host", "commonName, hostID");
+         mForeignKeys.put("Samples", "sampleID, commonName, hostID");
+         mForeignKeys.put("Experiments", "ExperimentID");
+         mForeignKeys.put("ExperimentPyroPrintLink", "PyroprintID, ExperimentID");
+      }
+      catch (ClassNotFoundException classEx) {
+         throw new DriverException("Unable to instantiate DB Driver: " + DB_DRIVER);
       }
    }
 
@@ -65,24 +97,6 @@ public class CPLOPConnection {
       }
 
       return mCPLOPConnection;
-   }
-
-   /**
-    * @throws SQLException if the DriverManager can't get a connection.
-    * @throws DriverException if there is a problem instantiating the DB driver.
-    */
-   private CPLOPConnection() throws SQLException, DriverException {
-      try {
-         Class.forName(DB_DRIVER);
-
-         conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASS);
-         //connect to information_schema database as well for selecting
-         //attributes for data organization
-         schemaConn = DriverManager.getConnection(DB_INFO_URL, DB_USER, DB_PASS);
-      }
-      catch (ClassNotFoundException classEx) {
-         throw new DriverException("Unable to instantiate DB Driver: " + DB_DRIVER);
-      }
    }
 
    public Map<String, List<String>> getCPLOPSchema() throws SQLException {
@@ -602,6 +616,52 @@ public class CPLOPConnection {
       return rtn;
    }
 
+   private String constructOntologicalQuery(Ontology ont, String query) {
+      String extraSelects = "", extraJoins = "", extraWheres = "";
+
+      if (ont == null) {
+         return String.format(query, extraJoins, extraWheres);
+      }
+
+      for (Map.Entry<String, Set<String>> tableCols : ont.getTableColumns().entrySet()) {
+         if (!tableCols.getKey().equals("Isolates") &&
+             !tableCols.getKey().equals("Pyroprints") &&
+             !tableCols.getKey().equals("Histograms")) {
+            extraJoins += String.format("join %s using (%s) ",
+                                         tableCols.getKey(),
+                                         mForeignKeys.get(tableCols.getKey())
+            );
+         }
+
+         for (String colName : tableCols.getValue()) {
+            if (colName.replace(" ", "").equals("")) { continue; }
+
+            extraSelects += String.format(", %s", colName);
+         }
+      }
+
+      for (Map.Entry<String, Set<String>> colPartitions : ont.getColumnPartitions().entrySet()) {
+         if (!colPartitions.getKey().equals("pyroID") &&
+             !colPartitions.getKey().equals("isoID") &&
+             !colPartitions.getKey().equals("nucleotide") &&
+             !colPartitions.getKey().equals("pHeight") &&
+             !colPartitions.getValue().isEmpty()) {
+
+            extraWheres += String.format("AND %s in (", colPartitions.getKey());
+
+            for (String partition : colPartitions.getValue()) {
+               if (partition.equals("")) { continue; }
+
+               extraWheres += String.format("'%s', ", partition);
+            }
+
+            extraWheres = extraWheres.substring(0, extraWheres.length() - 2) + ") ";
+         }
+      }
+
+      return String.format(query, extraSelects, extraJoins, extraWheres);
+   }
+
    /**
     * Get all relevant data given a list of pyroIDs.
     *
@@ -615,17 +675,21 @@ public class CPLOPConnection {
     *
     * @throws SQLException if the query fails.
     */
-   private List<Map<String, Object>> getData(String searchID, String searchSet) throws SQLException {
+   private List<Map<String, Object>> getData(Ontology ont, String searchID,
+                                             String searchSet) throws SQLException {
       List<Map<String, Object>> rtn = new ArrayList<Map<String, Object>>();
       Statement stmt = null;
       ResultSet results = null;
 
       String query = String.format(
-       "SELECT pyroID, isoID, appliedRegion, wellID, pHeight, nucleotide " +
-       "FROM Pyroprints join Isolates using (isoID) join Histograms using (pyroID) " +
-       "WHERE %s in (%s) and pyroID in (Select distinct pyroID from Histograms)" + 
-       "ORDER BY isoID, pyroID, position asc",
-       searchID, searchSet);
+          "SELECT pyroID, isoID, appliedRegion, wellID, pHeight, nucleotide%s " +
+          "FROM Pyroprints join Isolates using (isoID) join Histograms using (pyroID) %s" +
+          "WHERE %s in (%s) and pyroID in (Select distinct pyroID from Histograms) %s" + 
+          "ORDER BY isoID, pyroID, position asc",
+          "%s", "%s", searchID, searchSet, "%s"
+      );
+
+      query = constructOntologicalQuery(ont, query);
 
       //System.err.println("query:\n" + query);
       try {
@@ -654,16 +718,18 @@ public class CPLOPConnection {
       return rtn;
    }
 
-   public List<Map<String, Object>> getDataByIsoID(String isoIds) throws SQLException
+   public List<Map<String, Object>> getDataByIsoID(Ontology ont, String isoIds)
+   throws SQLException
    {
       String searchID = "isoID";
-      return getData(searchID, isoIds);
+      return getData(ont, searchID, isoIds);
    }
 
-   public List<Map<String, Object>> getDataByPyroID(String pyroIds) throws SQLException
+   public List<Map<String, Object>> getDataByPyroID(Ontology ont, String pyroIds)
+   throws SQLException
    {
       String searchID = "pyroID";
-      return getData(searchID, pyroIds);
+      return getData(ont, searchID, pyroIds);
    }
 
    public List<Map<String, Object>> getDataByExperimentName(String experiments) throws SQLException

@@ -13,11 +13,13 @@ import java.util.List;
 import java.util.Map;
 
 public class AnalysisWorker extends SwingWorker<AnalysisWorker.TaskResult, Integer> {
+   private List<Cluster> mClusters;
    private Clusterer mClusterer;
    private JTextArea mCanvas;
    private String mOutFile;
 
-   public AnalysisWorker(Clusterer clusterer, JTextArea resultCanvas) {
+   public AnalysisWorker(Clusterer clusterer, List<Cluster> clusters, JTextArea resultCanvas) {
+      mClusters = clusters;
       mClusterer = clusterer;
       mCanvas = resultCanvas;
       mOutFile = null;
@@ -29,7 +31,7 @@ public class AnalysisWorker extends SwingWorker<AnalysisWorker.TaskResult, Integ
    public TaskResult doInBackground() {
       long startTime = System.currentTimeMillis();
 
-      mClusterer.clusterData(mCanvas);
+      mClusterer.clusterData(mClusters);
       return new TaskResult(System.currentTimeMillis() - startTime,
                             mClusterer.getClusters());
    }

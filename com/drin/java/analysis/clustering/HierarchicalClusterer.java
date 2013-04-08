@@ -14,80 +14,63 @@ import java.util.ArrayList;
 import javax.swing.JTextArea;
 
 public abstract class HierarchicalClusterer implements Clusterer {
-   protected List<Cluster> mClusters;
-   protected List<Double> mThresholds;
+   protected Map<String, Map<String, Double>> mSimMap;
    protected Map<Double, List<Cluster>> mResultClusters;
+   protected List<Double> mThresholds;
 
-   public HierarchicalClusterer(List<Cluster> clusters, List<Double> thresholds) {
-      mClusters = clusters;
+   protected JTextArea mCanvas;
+   protected double mPercentComplete, mPercentIncr;
+
+   public HierarchicalClusterer(List<Double> thresholds) {
+      mResultClusters = new HashMap<Double, List<Cluster>>();
+      mSimMap = new HashMap<String, Map<String, Double>>();
       mThresholds = thresholds;
+
+      mPercentComplete = 0;
+      mPercentIncr = 0;
    }
 
+   public void resetSimilarityCache() { mSimMap.clear(); }
    public Map<Double, List<Cluster>> getClusters() { return mResultClusters; }
 
    @Override
-   public void clusterData(JTextArea canvas) {
-      mResultClusters = new HashMap<Double, List<Cluster>>();
-      List<Cluster> resultClusters = new ArrayList<Cluster>(mClusters);
+   public void setProgressCanvas(JTextArea canvas) { mCanvas = canvas; }
+
+   @Override
+   public void writeProgress() {
+      if (mCanvas != null) {
+         mCanvas.setText(String.format("\n\n\t\t%.02f%% Complete!", mPercentComplete));
+         mPercentComplete += mPercentIncr;
+      }
+   }
+
+   @Override
+   public void clusterData(List<Cluster> clusters) {
+      mResultClusters.clear();
 
       for (Double threshold : mThresholds) {
-         clusterDataSet(resultClusters, threshold, canvas);
+         clusterDataSet(clusters, threshold);
 
-         mResultClusters.put(threshold, new ArrayList<Cluster>(resultClusters));
+         mResultClusters.put(threshold, new ArrayList<Cluster>(clusters));
       }
    }
 
-   protected void clusterDataSet(List<Cluster> clusters, double threshold, JTextArea canvas) {
-      double percentIncr = 100.0/clusters.size(), percentComplete = 0;
-      Map<String, Map<String, Double>> clustDistMap = new HashMap<String, Map<String, Double>>();
+   protected void clusterDataSet(List<Cluster> clusters, double threshold) {
+      CandidatePair closeClusters = null;
+      mPercentIncr = 100.0/clusters.size();
 
-      if (canvas != null) {
-         canvas.setText(String.format("\n\n\t\t%.02f%% Complete!", percentComplete));
-         percentComplete += percentIncr;
-      }
+      do {
+         writeProgress();
 
-      CandidatePair closeClusters = findCloseClusters(clustDistMap, clusters, threshold);
+         closeClusters = findCloseClusters(clusters, threshold);
 
-      for (; closeClusters != null && clusters.size() > 1;
-           closeClusters = findCloseClusters(clustDistMap, clusters, threshold)) {
-
-         if (canvas != null) {
-            canvas.setText(String.format("\n\n\t\t%.02f%% Complete!", percentComplete));
-            percentComplete += percentIncr;
+         if (closeClusters != null) {
+            combineClusters(closeClusters, clusters);
          }
 
-         combineClusters(closeClusters, clusters);
-      }
+      } while (closeClusters != null && clusters.size() > 1);
    }
 
-   //This was experimental and an attempt to speed up clustering. It didn't,
-   //but it took me awhile to implement so I'm leaving it for my own
-   //satisfaction
-   protected void experimentalClusterDataSet(List<Cluster> clusters, double threshold, JTextArea canvas) {
-      double percentIncr = 100.0/clusters.size(), percentComplete = 0;
-
-      if (canvas != null) {
-         canvas.setText(String.format("\n\n\t\t%.02f%% Complete!", percentComplete));
-         percentComplete += percentIncr;
-      }
-
-      CandidateQueue clusterCandidates = findCandidatePairs(clusters, threshold);
-      CandidatePair closeClusters = clusterCandidates.dequeue();
-
-      for (; closeClusters != null; closeClusters = clusterCandidates.dequeue()) {
-         if (canvas != null) {
-            canvas.setText(String.format("\n\n\t\t%.02f%% Complete!", percentComplete));
-            percentComplete += percentIncr;
-         }
-
-         Cluster combinedCluster = combineClusters(closeClusters, clusters);
-         clusterCandidates.addAllCandidates(recompute(combinedCluster, clusters, threshold));
-      }
-   }
-
-   protected abstract CandidateQueue findCandidatePairs(List<Cluster> clusters, double threshold);
-   protected abstract CandidatePair findCloseClusters(Map<String, Map<String, Double>> distMap, List<Cluster> clusters, double threshold);
-
-   protected abstract CandidateQueue recompute(Cluster combinedCluster, List<Cluster> clusters, double threshold);
+   protected abstract CandidatePair findCloseClusters(List<Cluster> clusters, double threshold);
    protected abstract Cluster combineClusters(CandidatePair closeClusters, List<Cluster> clusters);
 }
