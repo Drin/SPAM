@@ -10,6 +10,7 @@ import com.drin.java.metrics.DataMetric;
 
 import com.drin.java.util.Logger;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
 
@@ -24,7 +25,6 @@ public abstract class Cluster implements Labelable {
    protected double mDiameter, mMean;
 
    public Cluster(DataMetric<Cluster> metric) { this(CLUST_ID++, metric); }
-
    public Cluster(int clustId, DataMetric<Cluster> metric) {
       mName = String.format("%d", clustId);
       mMetric = metric;
@@ -54,6 +54,7 @@ public abstract class Cluster implements Labelable {
     * This is for ontological labels. Clusters should have a set of labels that
     * is a superset of the labels of its data points.
     */
+   public Map<String, Boolean> getLabels() { return mLabel.getLabels(); }
    public void addLabel(String label) { mLabel.addLabel(label); }
    public boolean hasLabel(String label) { return mLabel.hasLabel(label); }
 

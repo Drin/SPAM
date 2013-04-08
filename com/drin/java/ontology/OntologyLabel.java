@@ -4,13 +4,13 @@ import java.util.Map;
 import java.util.HashMap;
 
 public class OntologyLabel implements Labelable {
-   private Map<String, Boolean> mLabelMap;
+   protected Map<String, Boolean> mLabelMap;
 
    public OntologyLabel() {
       mLabelMap = new HashMap<String, Boolean>();
    }
 
-   public Map<String, Boolean> getLabelMap() { return mLabelMap; }
+   public Map<String, Boolean> getLabels() { return mLabelMap; }
 
    public void addLabel(String labelName) {
       mLabelMap.put(labelName, new Boolean(true));
@@ -21,7 +21,6 @@ public class OntologyLabel implements Labelable {
    }
 
    public void addAll(OntologyLabel oldLabels) {
-      mLabelMap.putAll(oldLabels.getLabelMap());
+      mLabelMap.putAll(oldLabels.getLabels());
    }
-
 }

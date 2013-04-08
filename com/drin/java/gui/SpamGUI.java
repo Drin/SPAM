@@ -9,7 +9,6 @@ import java.io.File;
 
 public class SpamGUI {
    private static SpamGUI main = new SpamGUI();
-   private static String DEFAULT_FILE = "props-standard.cfg";
 
    public static void main(String[] args) {
       main.loadConfFiles();
@@ -17,17 +16,7 @@ public class SpamGUI {
    }
 
    public void loadConfFiles() {
-      File propertyFile = new File(DEFAULT_FILE);
-
-      if (propertyFile.isFile()) {
-         try {
-            Configuration.loadConfiguration(propertyFile);
-         }
-         catch (InvalidPropertyException err) {
-            System.out.println(err);
-            System.exit(0);
-         }
-      }
+      Configuration.loadConfig();
    }
 
    public void initMainWindow() {

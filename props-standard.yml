@@ -1,9 +1,23 @@
 debug: true
 transform: false
 
-pyroLength: 93
+regions: {
+   16-23: {
+      pyroLength: 93
+      alpha: 0.995
+      beta: 0.99
+   }
 
-clusterMetric: com.drin.java.metrics.ClusterAverageMetric
-isoMetric: com.drin.java.metrics.IsolateAverageMetric
-regionMetric: com.drin.java.metrics.ITSRegionAverageMetric
-pyroMetric: com.drin.java.metrics.PyroprintUnstablePearsonMetric
+   23-5: {
+      pyroLength: 93
+      alpha: 0.995
+      beta: 0.99
+   }
+}
+
+metrics: {
+   cluster: com.drin.java.metrics.ClusterAverageMetric
+   isolate: com.drin.java.metrics.IsolateAverageMetric
+   itsregion: com.drin.java.metrics.ITSRegionAverageMetric
+   pyroprint: com.drin.java.metrics.PyroprintUnstablePearsonMetric
+}

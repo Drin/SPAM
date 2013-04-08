@@ -1,5 +1,6 @@
 package com.drin.java.clustering;
 
+import com.drin.java.ontology.Labelable;
 import com.drin.java.clustering.Clusterable;
 import com.drin.java.clustering.Cluster;
 
@@ -24,6 +25,10 @@ public class HCluster extends Cluster {
 
       mElements.add(elem);
       mDendogram = new DendogramLeaf(elem);
+
+      if (elem instanceof Labelable) {
+         mLabel.getLabels().putAll(((Labelable) elem).getLabels());
+      }
    }
 
    public void computeStatistics() {
