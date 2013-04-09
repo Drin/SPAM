@@ -51,19 +51,9 @@ public class Ontology {
 
    public void addData(Cluster element) {
       boolean dataAdded = mRoot.addData(element);
-      if (System.getenv().containsKey("DEBUG") && !dataAdded) {
-         System.out.printf("element was not added: '%s' to Ontology \n",
-                           element.getName());
-      }
    }
 
    public void addTerm(OntologyTerm newTerm) {
-      if (System.getenv().containsKey("DEBUG")) {
-         System.out.printf("adding new term:\n\t%s\n", newTerm.toString());
-         System.out.printf("term table: %s\tterm column: %s\n",
-                           newTerm.getTableName(), newTerm.getColName());
-      }
-
       if (!mTableColumns.containsKey(newTerm.getTableName())) {
          mTableColumns.put(newTerm.getTableName(), new HashSet<String>());
       }

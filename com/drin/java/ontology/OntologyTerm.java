@@ -71,6 +71,7 @@ public class OntologyTerm {
 
       mData = new ArrayList<Cluster>();
       mData.add(element);
+      mHasNewData = true;
    }
 
    public void clearDataFlag() { mHasNewData = false; }
@@ -100,7 +101,7 @@ public class OntologyTerm {
    public boolean addData(Cluster element) {
       boolean dataAdded = false;
 
-      if (mPartitions != null) {
+      if (mPartitions != null && !mPartitions.isEmpty()) {
          for (Map.Entry<String, OntologyTerm> partition : mPartitions.entrySet()) {
             boolean isPartitionMatch = false;
 
@@ -113,9 +114,9 @@ public class OntologyTerm {
                   partition.setValue(new OntologyTerm(element));
                   dataAdded = true;
                }
-               else if (partition.getValue().addData(element)) {
-                  mHasNewData = true;
-               }
+               else { dataAdded = partition.getValue().addData(element); }
+
+               if (dataAdded) { mHasNewData = true; }
             }
          }
       }
