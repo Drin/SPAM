@@ -23,10 +23,13 @@ import java.sql.SQLException;
  */
 public class CPLOPConnection {
    private static final String DB_DRIVER = "com.mysql.jdbc.Driver";
-   private static final String DB_URL = "jdbc:mysql://cslvm96.csc.calpoly.edu/CPLOP?autoReconnect=true";
-   private static final String DB_INFO_URL = "jdbc:mysql://cslvm96.csc.calpoly.edu/information_schema?autoReconnect=true";
-   private static final String DB_USER = "amontana";
-   private static final String DB_PASS = "ILoveData#";
+   //private static final String DB_URL = "jdbc:mysql://cslvm96.csc.calpoly.edu/CPLOP?autoReconnect=true";
+   //private static final String DB_INFO_URL = "jdbc:mysql://cslvm96.csc.calpoly.edu/information_schema?autoReconnect=true";
+   private static final String DB_URL = "jdbc:mysql://localhost:8906/CPLOP?autoReconnect=true";
+   private static final String DB_INFO_URL = "jdbc:mysql://localhost:8906/information_schema?autoReconnect=true";
+   private static final String DB_USER = "drin";
+   //private static final String DB_PASS = "ILoveData#";
+   private static final String DB_PASS = "";
 
    private Connection conn, schemaConn;
    private static CPLOPConnection mCPLOPConnection = null;
@@ -620,7 +623,7 @@ public class CPLOPConnection {
       String extraSelects = "", extraJoins = "", extraWheres = "";
 
       if (ont == null) {
-         return String.format(query, extraJoins, extraWheres);
+         return String.format(query, extraSelects, extraJoins, extraWheres);
       }
 
       for (Map.Entry<String, Set<String>> tableCols : ont.getTableColumns().entrySet()) {
@@ -680,13 +683,18 @@ public class CPLOPConnection {
       List<Map<String, Object>> rtn = new ArrayList<Map<String, Object>>();
       Statement stmt = null;
       ResultSet results = null;
+      String searchClause = "", placeHolder = "%s";
+
+      if (searchID != null && searchSet != null) {
+         searchClause = String.format("%s in (%s) and", searchID, searchSet);
+      }
 
       String query = String.format(
           "SELECT pyroID, isoID, appliedRegion, wellID, pHeight, nucleotide%s " +
           "FROM Pyroprints join Isolates using (isoID) join Histograms using (pyroID) %s" +
-          "WHERE %s in (%s) and pyroID in (Select distinct pyroID from Histograms) %s" + 
+          "WHERE %s pyroID in (Select distinct pyroID from Histograms) %s" + 
           "ORDER BY isoID, pyroID, position asc",
-          "%s", "%s", searchID, searchSet, "%s"
+          placeHolder, placeHolder, searchClause, placeHolder
       );
 
       query = constructOntologicalQuery(ont, query);
@@ -704,6 +712,18 @@ public class CPLOPConnection {
             tuple.put("well", results.getString(4));
             tuple.put("pHeight", results.getString(5));
             tuple.put("nucleotide", results.getString(6));
+
+            if (ont != null) {
+               int colNdx = 7;
+
+               for (Map.Entry<String, Set<String>> tableCols : ont.getTableColumns().entrySet()) {
+                  for (String colName : tableCols.getValue()) {
+                     if (colName.replace(" ", "").equals("")) { continue; }
+
+                     tuple.put(colName, results.getString(colNdx++));
+                  }
+               }
+            }
 
             rtn.add(tuple);
          }

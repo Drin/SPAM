@@ -1,6 +1,3 @@
-tag data when constructing isolates, after query
-
-
 Algorithms:
    OHClust!-O -> with transformation
    OHClust!-R -> without transformation

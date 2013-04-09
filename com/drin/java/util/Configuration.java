@@ -192,7 +192,7 @@ public class Configuration {
 
    public String getAttr(String attrName) {
       Object mapping = mAttributeMap.get(attrName);
-      if (!(mapping instanceof Map<?, ?>)) {
+      if (mapping != null && !(mapping instanceof Map<?, ?>)) {
          return String.valueOf(mapping);
       }
 
@@ -202,10 +202,10 @@ public class Configuration {
    @SuppressWarnings("unchecked")
    public String getRegionAttr(String regionName, String attrName) {
       Object mapping = mAttributeMap.get(REGION_KEY);
-      if (mapping instanceof Map<?, ?>) {
+      if (mapping != null && mapping instanceof Map<?, ?>) {
          Object regionMapping = ((Map<String, Object>) mapping).get(regionName);
 
-         if (regionMapping instanceof Map<?, ?>) {
+         if (regionMapping != null && regionMapping instanceof Map<?, ?>) {
             Map<String, String> regionMap = (Map<String, String>) regionMapping;
             return regionMap.get(attrName);
          }
@@ -221,7 +221,7 @@ public class Configuration {
    @SuppressWarnings("unchecked")
    public String getSubMapping(String mapName, String attrName) {
       Object mapping = mAttributeMap.get(mapName);
-      if (mapping instanceof Map<?, ?>) {
+      if (mapping != null && mapping instanceof Map<?, ?>) {
          return ((Map<String, String>) mapping).get(attrName);
       }
       

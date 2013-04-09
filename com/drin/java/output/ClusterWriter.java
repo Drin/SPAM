@@ -48,7 +48,7 @@ public class ClusterWriter {
       String clustContents = "", bigClustName = "";
       int biggestClust = 0;
 
-      mDendInfo = "";
+      mDendInfo = "<Dendogram>\n\n";
       mClustInfo = "";
 
       for (Map.Entry<Double, List<Cluster>> clusterData : mClusterData.entrySet()) {
@@ -83,6 +83,8 @@ public class ClusterWriter {
          bigClustName = "";
          biggestClust = 0;
       }
+
+      mDendInfo += "\n\n</Dendogram>";
    }
 
    public void writeData(String outputFile, String text) {

@@ -49,16 +49,15 @@ public class OHClusterer extends AgglomerativeClusterer {
       }
 
       separateCoreClusters(clusters, mThresholds.get(ALPHA_THRESH_NDX));
-      System.out.println("ontology: " + mOntology);
-      System.exit(0);
 
       ontologicalCluster(mOntology.getRoot(), mThresholds.get(ALPHA_THRESH_NDX));
 
       List<Cluster> resultClusters = mOntology.getRoot().getClusters();
+      resultClusters.addAll(mBoundaryClusters);
+
+      super.clusterDataSet(resultClusters, mThresholds.get(ALPHA_THRESH_NDX));
       mResultClusters.put(mThresholds.get(ALPHA_THRESH_NDX),
                           new ArrayList<Cluster>(resultClusters));
-
-      printOntology();
 
       for (int threshNdx = BETA_THRESH_NDX; threshNdx < mThresholds.size(); threshNdx++) {
          super.clusterDataSet(resultClusters, mThresholds.get(threshNdx));
@@ -79,6 +78,8 @@ public class OHClusterer extends AgglomerativeClusterer {
                ontologicalCluster(partition.getValue(), threshold);
                unclusteredData = true;
             }
+
+            if (partition.getValue().getClusters() == null) { continue; }
 
             clusters.addAll(partition.getValue().getClusters());
 
@@ -110,11 +111,12 @@ public class OHClusterer extends AgglomerativeClusterer {
    //modifies mSimMap and mBoundaryClusters
    private void separateCoreClusters(List<Cluster> clusters, double threshold) {
       Map<String, Cluster> coreClusters = new HashMap<String, Cluster>();
-      Map<String, Double> clustSimMap = new HashMap<String, Double>();
+      Map<String, Double> clustSimMap = null;
       Cluster clust_A = null, clust_B = null;
 
       //determine clusters that are close
       for (int clustNdx_A = 0; clustNdx_A < clusters.size(); clustNdx_A++) {
+         clustSimMap = new HashMap<String, Double>();
          clust_A = clusters.get(clustNdx_A);
 
          for (int clustNdx_B = clustNdx_A + 1; clustNdx_B < clusters.size(); clustNdx_B++) {
@@ -134,7 +136,6 @@ public class OHClusterer extends AgglomerativeClusterer {
          }
 
          mSimMap.put(clust_A.getName(), clustSimMap);
-         clustSimMap.clear();
       }
 
       //clusters that are very similar to another go into ontology tree
@@ -144,7 +145,6 @@ public class OHClusterer extends AgglomerativeClusterer {
 
          if (coreClusters.containsKey(clust_A.getName())) {
             mOntology.addData(coreClusters.get(clust_A.getName()));
-            System.out.printf("adding cluster %s to ontology\n", clust_A.getName());
          }
          else {
             mBoundaryClusters.add(clust_A);

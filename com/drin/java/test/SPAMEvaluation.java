@@ -24,6 +24,8 @@ import com.drin.java.analysis.clustering.Clusterer;
 import com.drin.java.analysis.clustering.AgglomerativeClusterer;
 import com.drin.java.analysis.clustering.OHClusterer;
 
+import com.drin.java.output.ClusterWriter;
+
 import com.drin.java.util.Configuration;
 import com.drin.java.util.Logger;
 
@@ -53,83 +55,112 @@ import java.util.HashMap;
  * a particular configuration.
  */
 public class SPAMEvaluation {
-   private Configuration mConfiguration;
+   private static final String CONFIG_DIR = "configs",
+                               ONT_DIR    = "ontologies",
+                               USER_DIR   = System.getProperty("user.dir"),
+                               FILE_SEP   = System.getProperty("file.separator");
+
+   private Configuration mConfig;
    private Clusterer mClusterer;
    private Ontology mOntology;
    private DataMetric<Cluster> mClustMetric;
 
-   @SuppressWarnings("unchecked")
-   public SPAMEvaluation(Configuration configuration, Ontology ontology) {
-      mConfiguration = configuration;
+   public SPAMEvaluation(Configuration config, Ontology ontology) {
+      mConfig = config;
       mOntology = ontology;
-
       List<Double> threshList = new ArrayList<Double>();
-      threshList.add(new Double(mConfiguration.getRegionAttr("16-23", Configuration.ALPHA_KEY)));
-      threshList.add(new Double(mConfiguration.getRegionAttr("16-23", Configuration.BETA_KEY)));
 
-      for (Double thresh : threshList) {
-         System.err.printf("alpha: %.04f beta: %.04f\n", threshList.get(0), threshList.get(1));
-      }
+      threshList.add(new Double(mConfig.getRegionAttr("16-23", Configuration.ALPHA_KEY)));
+      threshList.add(new Double(mConfig.getRegionAttr("16-23", Configuration.BETA_KEY)));
 
-      mClusterer = new OHClusterer(ontology, threshList);
+      mClusterer = new OHClusterer(ont, threshList);
 
       try {
-         mClustMetric = (DataMetric) Class.forName(configuration.getMetric(
-                         Configuration.CLUSTER_KEY)).newInstance();
+         mClustMetric = (DataMetric) Class.forName(
+            mConfig.getMetric(Configuration.CLUSTER_KEY)
+         ).newInstance();
       }
-      catch (ClassNotFoundException classErr) {
-         classErr.printStackTrace();
-         System.exit(1);
-      }
-      catch (InstantiationException instErr) {
-         instErr.printStackTrace();
-         System.exit(1);
-      }
-      catch (IllegalAccessException accErr) {
-         accErr.printStackTrace();
-         System.exit(1);
+      catch (Exception err) {
+         err.printStackTrace();
       }
    }
 
-   public void runInitial() {
-      String dataSet = "'Sw-020','Sw-021','Sw-022','Sw-023','Sw-024', " +
-                       "'Sw-025','Sw-026','Sw-027','Sw-028','Sw-029', " +
-                       "'Sw-030','Sw-031','Sw-032','Sw-033','Sw-034', " +
-                       "'Sw-035','Sw-036','Sw-037','Sw-038','Sw-039', " +
-                       "'Sw-040','Sw-041','Sw-042'";
-      List<Clusterable<?>> dataList = constructIsolates(mConfiguration, dataSet, mOntology);
-      List<Cluster> clusterList = new ArrayList<Cluster>();
+   @SuppressWarnings("unchecked")
+   public static void main(String[] args) {
+      File configDir = new File(CONFIG_DIR);
+      Configuration config = null;
+      Ontology ont = null;
 
+      if (!configDir.exists() || !configDir.isDirectory()) {
+         System.err.println("Invalid configuration directory!");
+         System.exit(1);
+      }
+
+      for (File configFile : configDir.listFiles()) {
+         if (configFile != null && (!configFile.exists() || !configFile.isFile())) {
+            continue;
+         }
+
+         config = Configuration.loadConfig(configFile);
+         String ontFileName = mConfig.getAttr("ontology");
+
+         if (ontFileName != null) {
+            ont = Ontology.createOntology(new File(String.format(
+               "%s%s%s%s%s", USER_DIR, FILE_SEP, ONT_DIR, FILE_SEP, ontFileName
+            )));
+         }
+
+         SPAMEvaluation evaluator = new SPAMEvaluation(config, ont);
+         evaluator.runTests();
+      }
+   }
+
+   public void runTests() {
+      long startQueryTime = 0, startClusterTime = 0, finishTime = 0;
+      List<Clusterable<?>> dataList = null;
+      List<Cluster> clusterList = null;
+
+      startQueryTime = System.currentTimeMillis();
+
+      dataList = constructIsolates(mConfiguration, mOntology);
+
+      clusterList = new ArrayList<Cluster>();
       if (dataList != null) {
          for (Clusterable<?> data : dataList) {
             clusterList.add(new HCluster(mClustMetric, data));
          }
       }
 
+      startClusterTime = System.currentTimeMillis();
       mClusterer.clusterData(clusterList);
+      finishTime = System.currentTimeMillis();
 
-      System.out.println("ontology: " + mOntology);
-   }
+      String timeOutput = String.format(
+         "Time to query Database: %d\n" +
+         "Time to cluster data:   %d\n",
+         (startClusterTime - startQueryTime),
+         (finishTime - startClusterTime)
+      );
 
-   public static void main(String[] args) {
-      //Ontology testOntology = Ontology.createOntology(String.format("%s\n%s\n%s",
-      Ontology testOntology = Ontology.createOntology(String.format("%s",
-         "Isolates.commonName():;"
-         //"Isolates.hostID(): ;",
-         //"Pyroprints.pyroPrintedDate(TimeSensitive): \t;"
-      ));
+      String outFile = "HClust_Test";
+      if (mOntology != null) { outFile = "OHClust_Test_3_layer"; }
 
-      SPAMEvaluation evaluator = new SPAMEvaluation(Configuration.loadConfig(), testOntology);
+      try {
+         ClusterWriter writer = new ClusterWriter(mClusterer.getClusters());
 
-      evaluator.runInitial();
+         writer.writeData(outFile + ClusterWriter.FileType.CSV, timeOutput + writer.getClustInfo());
+         writer.writeData(outFile + ClusterWriter.FileType.XML, writer.getDendInfo());
+      }
+      catch(Exception err) {
+         err.printStackTrace();
+      }
    }
 
    @SuppressWarnings("unchecked")
-   private static List<Clusterable<?>> constructIsolates(Configuration config,
-                                                         String dataIds, Ontology ont) {
+   private static List<Clusterable<?>> constructIsolates(Configuration config, Ontology ont) {
       CPLOPConnection conn = CPLOPConnection.getConnection();
-      List<Map<String, Object>> rawDataList = null;
       List<Clusterable<?>> dataList = new ArrayList<Clusterable<?>>();
+      List<Map<String, Object>> rawDataList = null;
 
       DataMetric<Isolate> isoMetric = null;
       DataMetric<ITSRegion> regionMetric = null;
@@ -138,7 +169,7 @@ public class SPAMEvaluation {
       /*
        * query CPLOP for data
        */
-      try { rawDataList = conn.getDataByIsoID(ont, dataIds); }
+      try { rawDataList = conn.getDataByIsoID(ont, null); }
       catch (java.sql.SQLException sqlErr) {
          sqlErr.printStackTrace();
          System.exit(1);
@@ -174,6 +205,17 @@ public class SPAMEvaluation {
          //Retrieve Isolate
          if (tmpIso == null || !tmpIso.getName().equals(isoID)) {
             tmpIso = new Isolate(isoID, isoMetric);
+
+            if (ont != null) {
+               for (Map.Entry<String, Set<String>> tableCols : ont.getTableColumns().entrySet()) {
+                  for (String colName : tableCols.getValue()) {
+                     if (colName.replace(" ", "").equals("")) { continue; }
+
+                     tmpIso.addLabel(String.valueOf(dataMap.get(colName)));
+                  }
+               }
+            }
+
             dataList.add(tmpIso);
          }
 
