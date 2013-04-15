@@ -102,7 +102,7 @@ public class SPAMEvaluation {
          }
 
          config = Configuration.loadConfig(configFile);
-         String ontFileName = mConfig.getAttr("ontology");
+         String ontFileName = mConfig.getAttr(Configuration.ONT_KEY);
 
          if (ontFileName != null) {
             ont = Ontology.createOntology(new File(String.format(
