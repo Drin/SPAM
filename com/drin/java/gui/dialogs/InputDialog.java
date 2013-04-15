@@ -54,6 +54,7 @@ import java.util.Map;
 import java.util.List;
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.Set;
 import java.util.HashSet;
 
 @SuppressWarnings("serial")
@@ -98,7 +99,7 @@ public class InputDialog extends JDialog {
 
       setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 
-      mConf = Configuration.getConfig();
+      mConf = Configuration.loadConfig();
       mConn = CPLOPConnection.getConnection();
 
       mDataSet = new JTextField(20);
@@ -316,7 +317,7 @@ public class InputDialog extends JDialog {
       return cancelButton;
    }
 
-   private List<Map<String, Object>> queryData() {
+   private List<Map<String, Object>> queryData(Ontology ont) {
       long queryStart = System.currentTimeMillis();
 
       List<Map<String, Object>> dataList = null;
@@ -329,8 +330,8 @@ public class InputDialog extends JDialog {
          //Pyroprints : 1
          //Experiments : 2
 
-         dataList = selection.equals(DATA_TYPE_VALUES[0]) ? mConn.getDataByIsoID(dataSet) :
-                    selection.equals(DATA_TYPE_VALUES[1]) ? mConn.getDataByPyroID(dataSet) :
+         dataList = selection.equals(DATA_TYPE_VALUES[0]) ? mConn.getDataByIsoID(ont, dataSet) :
+                    selection.equals(DATA_TYPE_VALUES[1]) ? mConn.getDataByPyroID(ont, dataSet) :
                     selection.equals(DATA_TYPE_VALUES[2]) ? mConn.getDataByExperimentName(dataSet) :
                                                             null;
       }
@@ -356,6 +357,13 @@ public class InputDialog extends JDialog {
       mConf.setRegionAttr(region_B, Configuration.LENGTH_KEY, mPyroLen_B.getText());
       mConf.setRegionAttr(region_B, Configuration.ALPHA_KEY, mAlpha_B.getText());
       mConf.setRegionAttr(region_B, Configuration.BETA_KEY, mBeta_B.getText());
+
+      if (!mOntology.getText().equals("")) {
+         mConf.setAttr(Configuration.ONT_KEY, mOntology.getText());
+      }
+      else {
+         mConf.setAttr(Configuration.ONT_KEY, null);
+      }
    }
 
    private boolean doWork() {
@@ -363,9 +371,7 @@ public class InputDialog extends JDialog {
       Clusterer clusterer = null;
       updateConfig();
 
-      Ontology ontology = mOntology.getText().equals("") ? null :
-                          Ontology.createOntology(mOntology.getText());
-
+      Ontology ontology = Ontology.createOntology(new File(mConf.getAttr(Configuration.ONT_KEY)));
       ClusterAverageMetric clustMetric = new ClusterAverageMetric();
 
       startTime = System.currentTimeMillis();
@@ -377,20 +383,10 @@ public class InputDialog extends JDialog {
       List<Clusterable<?>> dataList = null;
       String selection = String.valueOf(mDataSetType.getSelectedItem());
 
-      dataList = selection.equals(DATA_TYPE_VALUES[0]) ? constructEntities(queryData()) :
-                 selection.equals(DATA_TYPE_VALUES[1]) ? constructPyroprints(queryData()) :
-                 selection.equals(DATA_TYPE_VALUES[2]) ? constructPyroprints(queryData()) :
+      dataList = selection.equals(DATA_TYPE_VALUES[0]) ? constructEntities(queryData(ontology), ontology) :
+                 selection.equals(DATA_TYPE_VALUES[1]) ? constructPyroprints(queryData(ontology), ontology) :
+                 selection.equals(DATA_TYPE_VALUES[2]) ? constructPyroprints(queryData(ontology), ontology) :
                                                          null;
-
-      /*
-      if (Boolean.parseBoolean(mConf.getAttr("debug"))) {
-         for (Clusterable<?> datum : dataList) {
-            System.out.println(datum);
-         }
-
-         System.exit(0);
-      }
-      */
 
       if (dataList == null) {
          return false;
@@ -415,7 +411,7 @@ public class InputDialog extends JDialog {
    }
 
    @SuppressWarnings("unchecked")
-   private List<Clusterable<?>> constructPyroprints(List<Map<String, Object>> dataList) {
+   private List<Clusterable<?>> constructPyroprints(List<Map<String, Object>> dataList, Ontology ont) {
       List<Clusterable<?>> entityList = new ArrayList<Clusterable<?>>();
 
       DataMetric<Isolate> isoMetric = null;
@@ -451,6 +447,16 @@ public class InputDialog extends JDialog {
             }
 
             tmpPyro = new Pyroprint(pyroID.intValue(), wellID, pyroMetric);
+
+            if (ont != null) {
+               for (Map.Entry<String, Set<String>> tableCols : ont.getTableColumns().entrySet()) {
+                  for (String colName : tableCols.getValue()) {
+                     if (colName.replace(" ", "").equals("")) { continue; }
+
+                     tmpPyro.addLabel(String.valueOf(dataMap.get(colName)));
+                  }
+               }
+            }
          }
 
          if (tmpPyro.getName().equals(pyroName) && tmpPyro.getDispLen() <
@@ -464,7 +470,7 @@ public class InputDialog extends JDialog {
    }
 
    @SuppressWarnings("unchecked")
-   private List<Clusterable<?>> constructEntities(List<Map<String, Object>> dataList) {
+   private List<Clusterable<?>> constructEntities(List<Map<String, Object>> dataList, Ontology ont) {
       long constructStart = System.currentTimeMillis();
       Map<String, Isolate> isoMap = new HashMap<String, Isolate>();
       List<Clusterable<?>> entityList = new ArrayList<Clusterable<?>>();
@@ -499,6 +505,17 @@ public class InputDialog extends JDialog {
 
          if (tmpIso == null || !tmpIso.getName().equals(isoID)) {
             tmpIso = new Isolate(isoID, isoMetric);
+
+            if (ont != null) {
+               for (Map.Entry<String, Set<String>> tableCols : ont.getTableColumns().entrySet()) {
+                  for (String colName : tableCols.getValue()) {
+                     if (colName.replace(" ", "").equals("")) { continue; }
+
+                     tmpIso.addLabel(String.valueOf(dataMap.get(colName)));
+                  }
+               }
+            }
+
             entityList.add(tmpIso);
          }
 

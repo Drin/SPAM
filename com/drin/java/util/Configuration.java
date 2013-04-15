@@ -2,9 +2,6 @@ package com.drin.java.util;
 
 import com.drin.java.metrics.IsolateAverageMetric;
 
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.constructor.Constructor;
-
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -27,9 +24,13 @@ public class Configuration {
                               METRIC_KEY    = "metrics",
                               ALPHA_KEY     = "alpha",
                               BETA_KEY      = "beta",
-                              LENGTH_KEY    = "pyroLength";
+                              LENGTH_KEY    = "pyroLength",
+                              ONT_KEY       = "ontology";
 
-   private static final String DEFAULT_CONFIG_FILE = "props-standard.yml";
+   private static final String DEFAULT_CONFIG_DIR  = "configs",
+                               DEFAULT_CONFIG_FILE = "props-standard.yml",
+                               FILE_SEP = System.getProperty("file.separator");
+
    private static final String CONFIG_OPTION_PATTERN = "\\s*" +
                                                        "([a-zA-Z0-9+.{}-]*)" +
                                                        "\\s*" +
@@ -59,7 +60,10 @@ public class Configuration {
    }
 
    public static Configuration loadConfig() {
-      return Configuration.loadConfig(new File(DEFAULT_CONFIG_FILE));
+      return Configuration.loadConfig(new File(String.format(
+         "%s%s%s%s%s", System.getProperty("user.dir"), FILE_SEP,
+         DEFAULT_CONFIG_DIR, FILE_SEP, DEFAULT_CONFIG_FILE
+      )));
    }
 
    public static Configuration loadConfig(String configStr) {

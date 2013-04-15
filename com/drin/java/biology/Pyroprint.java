@@ -1,10 +1,14 @@
 package com.drin.java.biology;
 
+import com.drin.java.ontology.Labelable;
+import com.drin.java.ontology.OntologyLabel;
+
 import com.drin.java.clustering.Clusterable;
 import com.drin.java.metrics.DataMetric;
 
 import com.drin.java.util.Logger;
 
+import java.util.Map;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -18,9 +22,11 @@ import java.util.Iterator;
  * associates a list of light emittance peak heights to the DNA sequence being
  * analyzed.
  */
-public class Pyroprint extends Clusterable<Double> {
+public class Pyroprint extends Clusterable<Double> implements Labelable {
    private String mDisp;
    private DataMetric<Pyroprint> mMetric;
+
+   protected OntologyLabel mLabel;
 
    public Pyroprint(int pyroId, String wellId, DataMetric<Pyroprint> metric) {
       this(String.format("%d (%s)", pyroId, wellId), metric);
@@ -31,6 +37,13 @@ public class Pyroprint extends Clusterable<Double> {
 
       mDisp = "";
       mMetric = metric;
+      mLabel = new OntologyLabel();
+   }
+
+   public Map<String, Boolean> getLabels() { return mLabel.getLabels(); }
+   public void addLabel(String labelName) { mLabel.addLabel(labelName); }
+   public boolean hasLabel(String labelName) {
+      return mLabel.hasLabel(labelName);
    }
 
    public void addDispensation(String nucleotide, double peakHeight) {
