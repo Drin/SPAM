@@ -24,6 +24,6 @@ regions: {
 metrics: {
    cluster: com.drin.java.metrics.ClusterAverageMetric
    isolate: com.drin.java.metrics.IsolateAverageMetric
-   itsregion: com.drin.java.metrics.ITSRegionAverageMetric
+   itsregion: com.drin.java.metrics.ITSRegionMedianMetric
    pyroprint: com.drin.java.metrics.PyroprintUnstablePearsonMetric
 }
