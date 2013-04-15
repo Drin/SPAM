@@ -6,19 +6,23 @@ import com.drin.java.biology.Isolate;
 import com.drin.java.biology.ITSRegion;
 import com.drin.java.biology.Pyroprint;
 
+import com.drin.java.metrics.DataMetric;
 import com.drin.java.metrics.ClusterAverageMetric;
 import com.drin.java.metrics.IsolateAverageMetric;
-import com.drin.java.metrics.ITSRegionAverageMetric;
+import com.drin.java.metrics.ITSRegionMedianMetric;
 import com.drin.java.metrics.PyroprintUnstablePearsonMetric;
 
 import com.drin.java.ontology.Ontology;
+
+import com.drin.java.clustering.Clusterable;
 import com.drin.java.clustering.Cluster;
 import com.drin.java.clustering.HCluster;
 import com.drin.java.clustering.ClusterResults;
+
 import com.drin.java.analysis.clustering.Clusterer;
-import com.drin.java.analysis.clustering.AgglomerativeClusterer;
 import com.drin.java.analysis.clustering.OHClusterer;
 
+import com.drin.java.util.Configuration;
 import com.drin.java.util.Logger;
 
 import java.util.List;
@@ -34,230 +38,129 @@ public class ClusterInterface {
                                                            "Experiments"};
 
    private CPLOPConnection mConn;
+   private Configuration mConfig;
    private long startTime;
 
    public ClusterInterface() {
+      mConfig = Configuration.loadConfig();
       mConn = CPLOPConnection.getConnection();
    }
 
    /*
-    * TODO: a more specified ontology
-    * "Isolates.commonName(): human, cow;",
-    * "Isolates.hostID(): Winnie,       Collin;",
-    * "Pyroprints.pyroPrintedDate(TimeSensitive): \t;"
-    */
+    * Isolates.commonName(): human, cow;",
+    * Isolates.hostID(): Winnie,   Collin;",
+    * Pyroprints.pyroPrintedDate(TimeSensitive): \t;"
+   */
    public static void main(String[] args) {
       ClusterInterface testInterface = new ClusterInterface();
 
-      //This is really basic for now so that I can debug the actual algorithm.
-      //Initial evaluations should be on full database anyways to have the
-      //least biased characterization
       String testOntology = String.format("%s\n%s\n%s",
          "Isolates.commonName():;",
          "Isolates.hostID(): ;",
-         "Pyroprints.pyroPrintedDate(TimeSensitive): \t;"
+         "Pyroprints.pyroPrintedDate(TimeSensitive):   ;"
       );
 
-      double tmp_alpha = .995, tmp_beta = .99;
-      String testDataSet = "'Sw-029', 'Sw-030', 'Sw-018', 'Sw-019', 'Sw-020," +
-                           "'Sw-021', 'Sw-033', 'Sw-032'";
+      /*String testDataSet = "'Sw-029', 'Sw-030', 'Sw-018', 'Sw-019', 'Sw-020', " +
+                           "'Sw-021', 'Sw-033', 'Sw-032'";*/
+      String testDataSet = null;
 
-      ClusterResults results = testInterface.clusterData(testOntology, testDataSet,
-                                                         "Isolates", tmp_alpha, tmp_beta);
+      ClusterResults results = testInterface.clusterData(testOntology, testDataSet);
 
       System.out.println(results);
    }
 
-   public ClusterResults clusterData(String ontologyStr, String selectedData,
-                                     String tableName, double alphaThresh, double betaThresh) {
+   public ClusterResults clusterData(String ontologyStr, String selectedData) {
       Ontology ontology = null;
       Clusterer clusterer = null;
-      List<Cluster> clusters = new ArrayList<Cluster>();
+      ClusterAverageMetric clustMetric = new ClusterAverageMetric();
 
       if (ontologyStr != null) {
          ontology = Ontology.constructOntology(ontologyStr);
       }
 
-      Map<String, Isolate> isoMap = constructIsolates(queryData(selectedData, tableName),
-                                                      alphaThresh, betaThresh);
-      
-      ClusterAverageMetric clustMetric = new ClusterAverageMetric();
+      List<Clusterable<?>> dataList = constructIsolates(ontology, queryData(ontology, selectedData));
 
-      for (Map.Entry<String, Isolate> isoEntry : isoMap.entrySet()) {
-         Cluster tmpClust = new HCluster(clustMetric, isoEntry.getValue());
+      List<Cluster> clusters = new ArrayList<Cluster>();
+      for (Clusterable<?> data : dataList) {
+         Cluster tmpClust = new HCluster(clustMetric, data);
          clusters.add(tmpClust);
-
-         if (ontology != null) { ontology.addData(tmpClust); }
       }
 
       List<Double> thresholds = new ArrayList<Double>();
-      thresholds.add(new Double(alphaThresh));
-      thresholds.add(new Double(betaThresh));
+      thresholds.add(new Double(mConfig.getRegionAttr("16-23", Configuration.ALPHA_KEY)));
+      thresholds.add(new Double(mConfig.getRegionAttr("16-23", Configuration.BETA_KEY)));
 
-      if (ontology != null) {
-         List<Cluster> coreClusters = new ArrayList<Cluster>();
-         List<Cluster> boundaryClusters = new ArrayList<Cluster>();
-         Map<Integer, String> promotedClusters = new HashMap<Integer, String>();
-
-         for (int ndx_A = 0; ndx_A < clusters.size(); ndx_A++) {
-            Cluster clust_A = clusters.get(ndx_A);
-
-            for (int ndx_B = ndx_A + 1; ndx_B < clusters.size(); ndx_B++) {
-               Cluster clust_B = clusters.get(ndx_B);
-
-               if (clust_A.compareTo(clust_B) > alphaThresh) {
-                  if (!promotedClusters.containsKey(new Integer(ndx_A))) {
-                     coreClusters.add(clust_A);
-                     promotedClusters.put(ndx_A, clust_A.getName());
-                  }
-
-                  if (!promotedClusters.containsKey(new Integer(ndx_B))) {
-                     coreClusters.add(clust_B);
-                     promotedClusters.put(ndx_B, clust_B.getName());
-                  }
-               }
-            }
-         }
-
-         for (int clustNdx = 0; clustNdx < clusters.size(); clustNdx++) {
-            if (!promotedClusters.containsKey(clustNdx)) {
-               boundaryClusters.add(clusters.get(clustNdx));
-            }
-         }
-
-         clusters = null;
-         clusterer = new OHClusterer(coreClusters, boundaryClusters,
-                                     ontology, thresholds);
-      }
-      else if (ontology == null) {
-         clusterer = new AgglomerativeClusterer(clusters, thresholds);
-      }
-
-      clusterer.clusterData(null);
+      clusterer = new OHClusterer(ontology, thresholds);
+      clusterer.clusterData(clusters);
 
       return new ClusterResults(clusterer.getClusters());
    }
 
-   private List<Map<String, Object>> queryData(String dataSet, String tableName) {
+   private List<Map<String, Object>> queryData(Ontology ont, String dataSet) {
       List<Map<String, Object>> dataList = null;
 
-      if (tableName.equals(DATA_TYPE_VALUES[0])) {
-         try {
-            dataList = mConn.getDataByIsoID(dataSet);
-         }
-         catch (java.sql.SQLException sqlErr) {
-            System.out.println("SQLException:\nExiting...");
-            sqlErr.printStackTrace();
-            System.exit(1);
-         }
-      }
-
-      else if (tableName.equals(DATA_TYPE_VALUES[1])) {
-         try {
-            dataList = mConn.getDataByPyroID(dataSet);
-         }
-         catch (java.sql.SQLException sqlErr) {
-            System.out.println("SQLException:\nExiting...");
-            sqlErr.printStackTrace();
-            System.exit(1);
-         }
+      try { dataList = mConn.getDataByIsoID(ont, dataSet); }
+      catch (java.sql.SQLException sqlErr) {
+         System.out.println("SQLException:\nExiting...");
+         sqlErr.printStackTrace();
+         System.exit(1);
       }
 
       return dataList;
    }
 
-   private Map<String, Isolate> constructIsolates(List<Map<String, Object>> dataList,
-                                                  double alphaThresh, double betaThresh) {
-      Map<String, Isolate> isoMap = new HashMap<String, Isolate>();
-      Map<String, Map<Integer, Object[]>> pyroDataMap =
-         new HashMap<String, Map<Integer, Object[]>>();
+   private List<Clusterable<?>> constructIsolates(Ontology ont, List<Map<String, Object>> rawDataList) {
+      List<Clusterable<?>> dataList = new ArrayList<Clusterable<?>>();
 
-      //First pass over the data where ITSRegions and Isolates are constructed.
-      String pyroList = "";
-      for (Map<String, Object> dataMap : dataList) {
+      DataMetric<Isolate> isoMetric = new IsolateAverageMetric();
+      DataMetric<ITSRegion> regionMetric = new ITSRegionMedianMetric();
+      DataMetric<Pyroprint> pyroMetric = new PyroprintUnstablePearsonMetric();
+
+      Isolate tmpIso = null;
+      Pyroprint tmpPyro = null;
+      for (Map<String, Object> dataMap : rawDataList) {
+         String wellID = String.valueOf(dataMap.get("well"));
          String isoID = String.valueOf(dataMap.get("isolate"));
          String regName = String.valueOf(dataMap.get("region"));
-         String wellID = String.valueOf(dataMap.get("well"));
          Integer pyroID = new Integer(String.valueOf(dataMap.get("pyroprint")));
-         double peakHeight = Double.parseDouble(String.valueOf(dataMap.get("pHeight")));
+
          String nucleotide = String.valueOf(dataMap.get("nucleotide"));
+         double peakHeight = Double.parseDouble(String.valueOf(dataMap.get("pHeight")));
+
+         String pyroName = String.format("%d (%s)", pyroID.intValue(), wellID);
 
          //Retrieve Isolate
-         if (!isoMap.containsKey(isoID)) {
-            isoMap.put(isoID, new Isolate(isoID, new HashSet<ITSRegion>(),
-                                          new IsolateAverageMetric()));
-         }
+         if (tmpIso == null || !tmpIso.getName().equals(isoID)) {
+            tmpIso = new Isolate(isoID, isoMetric);
 
-         isoMap.get(isoID).getData().add(new ITSRegion(regName, alphaThresh, betaThresh,
-                                         new ITSRegionAverageMetric(alphaThresh, betaThresh)));
+            if (ont != null) {
+               for (Map.Entry<String, Set<String>> tableCols : ont.getTableColumns().entrySet()) {
+                  for (String colName : tableCols.getValue()) {
+                     if (colName.replace(" ", "").equals("")) { continue; }
 
-         if (!pyroDataMap.containsKey(isoID)) {
-            pyroDataMap.put(isoID, new HashMap<Integer, Object[]>());
-         }
-
-         Map<Integer, Object[]> pyroMap = pyroDataMap.get(isoID);
-
-         if (!pyroMap.containsKey(pyroID)) {
-            pyroMap.put(pyroID, new Object[] {pyroID, wellID, "",
-                                              new ArrayList<Double>(),
-                                              regName});
-         }
-
-         Object[] pyroData = pyroMap.get(pyroID);
-
-         if (pyroData[2] instanceof String) {
-            pyroData[2] = String.valueOf(pyroData[2]).concat(nucleotide);
-         }
-         if (pyroData[3] instanceof List<?>) {
-            @SuppressWarnings("unchecked")
-            List<Double> peakList = (List<Double>) pyroData[3];
-            peakList.add(new Double(peakHeight));
-         }
-      }
-
-      for (Map.Entry<String, Map<Integer, Object[]>> pyroDataEntry : pyroDataMap.entrySet()) {
-
-         for (Map.Entry<Integer, Object[]> pyroEntry : pyroDataEntry.getValue().entrySet()) {
-            Object[] pyroData = pyroEntry.getValue();
-
-            @SuppressWarnings("unchecked")
-            Pyroprint newPyro = new Pyroprint(Integer.parseInt(String.valueOf(pyroData[0])),
-                                              String.valueOf(pyroData[1]),
-                                              String.valueOf(pyroData[2]),
-                                              (List<Double>) pyroData[3],
-                                              new PyroprintUnstablePearsonMetric());
-
-            for (ITSRegion region : isoMap.get(pyroDataEntry.getKey()).getData()) {
-               if (region.getName().equals(pyroData[4])) {
-                  region.getData().add(newPyro);
+                     tmpIso.addLabel(String.valueOf(dataMap.get(colName)));
+                  }
                }
             }
+
+            dataList.add(tmpIso);
+         }
+
+         if (tmpIso != null) {
+            tmpIso.getData().add(new ITSRegion(regName, regionMetric));
+         }
+
+         if (tmpPyro == null || !tmpPyro.getName().equals(pyroName)) {
+            tmpPyro = new Pyroprint(pyroID.intValue(), wellID, pyroMetric);
+            tmpIso.getRegion(regName).add(tmpPyro);
+         }
+
+         //TODO this should *not* be hardcoded
+         if (tmpPyro.getName().equals(pyroName) && tmpPyro.getDispLen() < 93) {
+               tmpPyro.addDispensation(nucleotide, peakHeight);
          }
       }
 
-      Map<String, Isolate> finalIsoMap = new HashMap<String, Isolate>();
-
-      Logger.debug("Isolates retrieved from CPLOP:");
-      for (Map.Entry<String, Isolate> isoEntry : isoMap.entrySet()) {
-         Logger.debug(String.format("%s: %s\n", isoEntry.getKey(),
-                                    isoEntry.getValue().toString()));
-
-         boolean isCompleteIsolate = true;
-
-         for (ITSRegion region : isoEntry.getValue().getData()) {
-            if (region.getData().isEmpty()) {
-               Logger.debug(String.format("%s[%s] has no pyroprints\n",
-                                          isoEntry.getValue().getName(),
-                                          region.getName()));
-               isCompleteIsolate = false;
-            }
-         }
-
-         if (isCompleteIsolate) {
-            finalIsoMap.put(isoEntry.getKey(), isoEntry.getValue());
-         }
-      }
-
-      return isoMap;
+      return dataList;
    }
 }
