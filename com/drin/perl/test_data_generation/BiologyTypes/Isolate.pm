@@ -68,6 +68,7 @@ sub duplicate {
       name_suffix => (++$config->{name_map}->{$self->{name_prefix}}),
       pyroprints  => {},
       num_pyros   => $self->{num_pyros},
+      parent      => "$self->{name_prefix}-$self->{name_suffix}",
    };
 
    for my $region (keys %{$self->{pyroprints}}) {
@@ -168,6 +169,19 @@ sub bulk_insert_str {
    $str .= "$self->{is_generated}";
 
    return "($str)";
+}
+
+sub debug_info {
+   my ($self) = (@_);
+
+   print({*STDOUT} "Isolate [$self->{name_prefix}-$self->{name_suffix}]".
+                   " has $self->{num_pyros} pyroprints\n");
+
+   if ($self->{parent}) {
+      print({*STDOUT} "\tparent isolate was [$self->{parent}]\n");
+   }
+
+#   print({*STDOUT} $self->to_string("\t")."\n");
 }
 
 1;

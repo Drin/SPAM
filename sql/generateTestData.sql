@@ -39,7 +39,7 @@ BEGIN
 
    INSERT INTO test_isolates_random(test_isolate_id)
    SELECT test_isolate_id
-   FROM test_isolates
+   FROM test_isolates JOIN test_pyroprints USING (name_prefix, name_suffix) 
    ORDER BY RAND(randSeed);
 END$$
 

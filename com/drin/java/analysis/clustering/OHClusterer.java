@@ -52,6 +52,11 @@ public class OHClusterer extends AgglomerativeClusterer {
 
       ontologicalCluster(mOntology.getRoot(), mThresholds.get(ALPHA_THRESH_NDX));
 
+      if (mOntology.getRoot().getClusters() == null) {
+         System.out.printf("failed clustering. Got null\n");
+         System.exit(1);
+      }
+
       List<Cluster> resultClusters = mOntology.getRoot().getClusters();
       resultClusters.addAll(mBoundaryClusters);
 
@@ -108,6 +113,9 @@ public class OHClusterer extends AgglomerativeClusterer {
                Logger.debug("Clustering time sensitive clusters...");
 
                clusterDataSet(clusters, threshold);
+               if (clusters == null) {
+                  System.out.printf("spot A is null\n");
+               }
                root.setClusters(clusters);
             }
          }
@@ -116,6 +124,9 @@ public class OHClusterer extends AgglomerativeClusterer {
             Logger.debug("Clustering non time sensitive clusters...");
 
             clusterDataSet(clusters, threshold);
+            if (clusters == null) {
+               System.out.printf("spot B is null\n");
+            }
             root.setClusters(clusters);
          }
 
@@ -127,6 +138,9 @@ public class OHClusterer extends AgglomerativeClusterer {
 
          clusters.addAll(root.getData());
          clusterDataSet(clusters, threshold);
+         if (clusters == null) {
+            System.out.printf("spot C is null\n");
+         }
          root.setClusters(clusters);
       }
 
@@ -177,7 +191,7 @@ public class OHClusterer extends AgglomerativeClusterer {
 
          if (coreClusters.containsKey(clust_A.getName())) {
             mOntology.addData(coreClusters.get(clust_A.getName()));
-            System.out.printf("added new data\n");
+            //System.out.printf("added new data\n");
          }
          else {
             mBoundaryClusters.add(clust_A);
