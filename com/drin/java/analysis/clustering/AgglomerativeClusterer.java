@@ -34,16 +34,18 @@ public class AgglomerativeClusterer extends HierarchicalClusterer {
          for (int ndx_B = ndx_A + 1; ndx_B < clusters.size(); ndx_B++) {
             Cluster clust_B = clusters.get(ndx_B);
 
-            if (!clustSimMap.containsKey(clust_B.getName())) {
-               clustSimMap.put(clust_B.getName(), clust_A.compareTo(clust_B));
-            }
+            if (!clust_A.getName().equals(clust_B.getName())) {
+               if (!clustSimMap.containsKey(clust_B.getName())) {
+                  clustSimMap.put(clust_B.getName(), clust_A.compareTo(clust_B));
+               }
 
-            double clustDist = clustSimMap.get(clust_B.getName());
+               double clustDist = clustSimMap.get(clust_B.getName());
 
-            if (clustDist > maxSim && clustDist > threshold) {
-               close_A = clust_A;
-               close_B = clust_B;
-               maxSim = clustDist;
+               if (clustDist > maxSim && clustDist > threshold) {
+                  close_A = clust_A;
+                  close_B = clust_B;
+                  maxSim = clustDist;
+               }
             }
          }
 

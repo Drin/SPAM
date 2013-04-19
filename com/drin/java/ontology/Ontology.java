@@ -49,8 +49,8 @@ public class Ontology {
       return mColumnPartitions;
    }
 
-   public void addData(Cluster element) {
-      boolean dataAdded = mRoot.addData(element);
+   public boolean addData(Cluster element) {
+      return mRoot.addData(element);
    }
 
    public void addTerm(OntologyTerm newTerm) {
@@ -201,7 +201,7 @@ public class Ontology {
          "Pyroprints.date_pyroPrintedDate(TimeSensitive): \t;"
       );
 
-      Ontology ont = Ontology.constructOntology(testOntology);
+      Ontology ont = Ontology.createOntology(new File("ontologies/large.ont"));
       System.out.println("ontology :\n" + ont);
    }
 }

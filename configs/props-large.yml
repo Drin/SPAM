@@ -1,8 +1,8 @@
-initialSize: 100
-updateSize: 10
-numUpdates: 100
+initialSize: 500
+updateSize: 50
+numUpdates: 1000
 
-ontology: standard.ont
+ontology: large.ont
 
 debug: false
 transform: false

@@ -70,16 +70,37 @@ public class OHClusterer extends AgglomerativeClusterer {
       List<Cluster> clusters = new ArrayList<Cluster>();
       boolean unclusteredData = false;
 
+      /*
+      System.out.printf("clustering node [%s.%s]...\n",
+                        root.getTableName(), root.getColName());
+
+      System.out.printf("checking conditions:\n" +
+         "\tis root null: %s\n" +
+         "\tdoes root have new data: %s\n" +
+         "\tdoes root have sub-partitions: %s\n",
+         (root == null), root.hasNewData(), !root.getPartitions().isEmpty()
+      );
+      */
+
       if (root != null && root.hasNewData() && !root.getPartitions().isEmpty()) {
+         //System.out.printf("root is not null and there is new data and this is not the leaf\n");
+
          for (Map.Entry<String, OntologyTerm> partition : root.getPartitions().entrySet()) {
-            if (partition.getValue() == null) { continue; }
+            if (partition.getValue() == null) {
+               //System.out.printf("partition [%s] has a null node\n", partition.getKey());
+               continue;
+            }
 
             if (partition.getValue().hasNewData()) {
+               //System.out.printf("clustering new data in partition [%s]\n", partition.getKey());
                ontologicalCluster(partition.getValue(), threshold);
                unclusteredData = true;
             }
 
-            if (partition.getValue().getClusters() == null) { continue; }
+            if (partition.getValue().getClusters() == null) {
+               //System.out.printf("partition [%s] has no clusters\n", partition.getKey());
+               continue;
+            }
 
             clusters.addAll(partition.getValue().getClusters());
 
@@ -97,15 +118,26 @@ public class OHClusterer extends AgglomerativeClusterer {
             clusterDataSet(clusters, threshold);
             root.setClusters(clusters);
          }
+
       }
 
       else if (root != null && root.getData() != null && root.hasNewData()) {
          Logger.debug("percolating leaf cluster sets");
+         //System.out.printf("This is a leaf node\n");
 
          clusters.addAll(root.getData());
          clusterDataSet(clusters, threshold);
          root.setClusters(clusters);
       }
+
+      else {
+         //System.out.printf("WTF\n");
+      }
+
+      /*
+      System.out.printf("finished clustering node [%s.%s]\n",
+                        root.getTableName(), root.getColName());
+                        */
    }
 
    //modifies mSimMap and mBoundaryClusters
@@ -145,6 +177,7 @@ public class OHClusterer extends AgglomerativeClusterer {
 
          if (coreClusters.containsKey(clust_A.getName())) {
             mOntology.addData(coreClusters.get(clust_A.getName()));
+            System.out.printf("added new data\n");
          }
          else {
             mBoundaryClusters.add(clust_A);
