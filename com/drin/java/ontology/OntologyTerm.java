@@ -116,14 +116,14 @@ public class OntologyTerm {
                }
                else { dataAdded = partition.getValue().addData(element); }
 
-               System.out.printf("matched partition!\n");
+               //System.out.printf("matched partition!\n");
 
                break;
             }
          }
 
          if (!isPartitionMatch) {
-            System.out.printf("never matched partition!\n");
+            //System.out.printf("never matched partition!\n");
          }
       }
 

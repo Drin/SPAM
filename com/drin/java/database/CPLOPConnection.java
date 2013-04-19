@@ -725,7 +725,7 @@ public class CPLOPConnection {
 
       query = constructOntologicalQuery(ont, query);
 
-      System.out.printf("%s\n", query);
+      System.err.printf("%s\n", query);
 
       try {
          stmt = conn.createStatement();

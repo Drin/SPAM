@@ -72,9 +72,14 @@ sub get_isolate_info {
 
    my ($tmp_isolate, $tmp_pyroprint);
    for my $record (@{$records}) {
+
       if (!$tmp_isolate->{name_prefix} || !$tmp_isolate->{name_suffix} ||
           $tmp_isolate->{name_prefix} ne $record->{name_prefix} ||
           $tmp_isolate->{name_suffix} ne $record->{name_suffix}) {
+
+         if ($tmp_isolate->{name_prefix} && $tmp_isolate->{name_suffix}) {
+            $tmp_isolate->debug_info();
+         }
 
          $tmp_isolate = BiologyTypes::Isolate->new($record);
 
@@ -88,8 +93,10 @@ sub get_isolate_info {
          $tmp_isolate->add_pyroprint($record->{appliedRegion}, $tmp_pyroprint);
       }
 
-      $tmp_pyroprint->add_dispensation($record->{nucleotide},
-                                       $record->{pHeight});
+      if (defined $tmp_pyroprint && $tmp_pyroprint) {
+         $tmp_pyroprint->add_dispensation($record->{nucleotide},
+                                          $record->{pHeight});
+      }
    }
 
    return $isolates;
@@ -134,6 +141,7 @@ sub commit_random_data {
 
    for my $isolate (@{$isolates}) {
       push(@iso_strings, $isolate->bulk_insert_str());
+      $isolate->debug_info();
 
       for my $region (keys %{$isolate->{pyroprints}}) {
          for my $pyroprint (@{$isolate->{pyroprints}->{$region}}) {
@@ -152,6 +160,7 @@ sub commit_random_data {
       }
    }
 
+=needtodebug
    $db_handle->do(q{
       LOCK TABLES test_isolates WRITE, test_pyroprints WRITE,
                   test_histograms WRITE
@@ -182,6 +191,7 @@ sub commit_random_data {
    $db_handle->do(q{
       UNLOCK TABLES
    });
+=cut
 }
 
 sub get_db_stats {
@@ -223,15 +233,26 @@ sub main {
       print({*STDOUT} "Elapsed time: ".(time() - $config->{start_time})." seconds\n");
 
       $random_isolates = select_isolates($config->{size});
+      print({*STDOUT} "Selected ".(scalar @{$random_isolates}).
+                      " random isolates\n");
+
       $isolates = get_isolate_info($random_isolates);
+      print({*STDOUT} "got info for ".(scalar @{$isolates}).
+                      " isolate records\n");
+
       my $new_isolates = randomize_isolates($config, $isolates,
                                             (scalar @{$random_isolates}));
+
+      print({*STDOUT} "randomly generated ".(scalar @{$new_isolates}).
+                      " isolate records\n");
+
       commit_random_data($new_isolates);
    }
 }
 
 main({
    size => 500,
-   num_updates  => 2000,
+   #num_updates  => 2000,
+   num_updates  => 1,
    start_time   => time(),
 });

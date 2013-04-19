@@ -58,7 +58,7 @@ public class Logger {
    }
 
    public static void debug(String dbgString) {
-      if (mConfig.getAttr("debug").equals("true")) {
+      if (mConfig != null && mConfig.getAttr("debug").equals("true")) {
          writeString(String.format("(%s) %s: %s\n", new Date(),
                                    DEBUG_PREFIX, dbgString));
       }

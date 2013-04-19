@@ -47,6 +47,12 @@ public class AgglomerativeClusterer extends HierarchicalClusterer {
                   maxSim = clustDist;
                }
             }
+            else {
+               /*
+               System.out.printf("comparing %s and %s\n", clust_A.getName(),
+                                 clust_B.getName());
+                                 */
+            }
          }
 
          clustSimMap = null;
