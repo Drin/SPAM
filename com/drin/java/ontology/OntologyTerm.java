@@ -102,9 +102,9 @@ public class OntologyTerm {
       boolean dataAdded = false;
 
       if (mPartitions != null && !mPartitions.isEmpty()) {
-         for (Map.Entry<String, OntologyTerm> partition : mPartitions.entrySet()) {
-            boolean isPartitionMatch = false;
+         boolean isPartitionMatch = false;
 
+         for (Map.Entry<String, OntologyTerm> partition : mPartitions.entrySet()) {
             if (element instanceof Labelable) {
                isPartitionMatch = ((Labelable) element).hasLabel(partition.getKey());
             }
@@ -116,16 +116,23 @@ public class OntologyTerm {
                }
                else { dataAdded = partition.getValue().addData(element); }
 
-               if (dataAdded) { mHasNewData = true; }
+               System.out.printf("matched partition!\n");
+
+               break;
             }
+         }
+
+         if (!isPartitionMatch) {
+            System.out.printf("never matched partition!\n");
          }
       }
 
       else {
          mData.add(element);
          dataAdded = true;
-         mHasNewData = true;
       }
+
+      if (dataAdded) { mHasNewData = true; }
 
       return dataAdded;
    }

@@ -8,9 +8,16 @@ import java.util.Map;
 
 public class ClusterResults {
    private Map<Double, List<Cluster>> mClusters;
+   private long mClusterTime;
 
    public ClusterResults(Map<Double, List<Cluster>> finalClusters) {
       mClusters = finalClusters;
+      mClusterTime = -1;
+   }
+
+   public ClusterResults(Map<Double, List<Cluster>> finalClusters, long time) {
+      mClusters = finalClusters;
+      mClusterTime = time;
    }
 
    public String toString() {

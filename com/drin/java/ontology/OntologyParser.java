@@ -47,6 +47,8 @@ public class OntologyParser {
 
       String searchStr = args[0];
 
+      System.out.println(searchStr);
+
       if (parser.matchString(searchStr)) {
          parser.printOntology();
       }
@@ -121,11 +123,11 @@ public class OntologyParser {
       List<String> valueList = new ArrayList<String>();
 
       if (mRegexMatch != null && mRegexMatch.matches()) {
-         String[] valueArr = mRegexMatch.group(VALUE_NDX).replaceAll("\\s", "").split(VALUE_DELIM);
+         String[] valueArr = mRegexMatch.group(VALUE_NDX).split(VALUE_DELIM);
 
          for (int valNdx = 0; valNdx < valueArr.length; valNdx++) {
             if (!valueArr[valNdx].equals("")) {
-               valueList.add(valueArr[valNdx]);
+               valueList.add(valueArr[valNdx].trim());
             }
          }
       }

@@ -14,6 +14,7 @@ import com.drin.java.metrics.PyroprintUnstablePearsonMetric;
 import com.drin.java.metrics.ClusterAverageMetric;
 
 import com.drin.java.ontology.Ontology;
+import com.drin.java.ontology.Labelable;
 
 import com.drin.java.clustering.Clusterable;
 import com.drin.java.clustering.Cluster;
@@ -35,6 +36,9 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Random;
+
+import java.io.File;
 
 /**
  * SPAMEvaluation serves as a test harness for SPAM and various results
@@ -60,12 +64,18 @@ public class SPAMEvaluation {
                                USER_DIR   = System.getProperty("user.dir"),
                                FILE_SEP   = System.getProperty("file.separator");
 
+   private CPLOPConnection mConn;
    private Configuration mConfig;
    private Clusterer mClusterer;
    private Ontology mOntology;
    private DataMetric<Cluster> mClustMetric;
+   private Random mRand;
+
+   private int mSQLRandSeed;
 
    public SPAMEvaluation(Configuration config, Ontology ontology) {
+      mConn = CPLOPConnection.getConnection();
+      mRand = new Random();
       mConfig = config;
       mOntology = ontology;
       List<Double> threshList = new ArrayList<Double>();
@@ -73,7 +83,7 @@ public class SPAMEvaluation {
       threshList.add(new Double(mConfig.getRegionAttr("16-23", Configuration.ALPHA_KEY)));
       threshList.add(new Double(mConfig.getRegionAttr("16-23", Configuration.BETA_KEY)));
 
-      mClusterer = new OHClusterer(ont, threshList);
+      mClusterer = new OHClusterer(ontology, threshList);
 
       try {
          mClustMetric = (DataMetric) Class.forName(
@@ -101,8 +111,9 @@ public class SPAMEvaluation {
             continue;
          }
 
+         System.out.println("Loading config file " + configFile.getName());
          config = Configuration.loadConfig(configFile);
-         String ontFileName = mConfig.getAttr(Configuration.ONT_KEY);
+         String ontFileName = config.getAttr(Configuration.ONT_KEY);
 
          if (ontFileName != null) {
             ont = Ontology.createOntology(new File(String.format(
@@ -115,50 +126,87 @@ public class SPAMEvaluation {
       }
    }
 
+   public ClusterResults runSingle(List<Cluster> clusterList) {
+      long startTime = System.currentTimeMillis();
+      mClusterer.clusterData(clusterList);
+      long finishTime = System.currentTimeMillis();
+
+      return new ClusterResults(mClusterer.getClusters(), finishTime - startTime);
+
+   }
+
+   /*
+   String outFile = "HClust_Test";
+   if (mOntology != null) { outFile = "OHClust_Test_3_layer"; }
+
+   try {
+      ClusterWriter writer = new ClusterWriter(mClusterer.getClusters());
+
+      writer.writeData(outFile + ClusterWriter.FileType.CSV, timeOutput + writer.getClustInfo());
+      writer.writeData(outFile + ClusterWriter.FileType.XML, writer.getDendInfo());
+   }
+   catch(Exception err) {
+      err.printStackTrace();
+   }
+   */
+
    public void runTests() {
-      long startQueryTime = 0, startClusterTime = 0, finishTime = 0;
+      List<ClusterResults> resultList = new ArrayList<ClusterResults>();
       List<Clusterable<?>> dataList = null;
       List<Cluster> clusterList = null;
 
-      startQueryTime = System.currentTimeMillis();
-
-      dataList = constructIsolates(mConfiguration, mOntology);
-
-      clusterList = new ArrayList<Cluster>();
-      if (dataList != null) {
-         for (Clusterable<?> data : dataList) {
-            clusterList.add(new HCluster(mClustMetric, data));
-         }
-      }
-
-      startClusterTime = System.currentTimeMillis();
-      mClusterer.clusterData(clusterList);
-      finishTime = System.currentTimeMillis();
-
-      String timeOutput = String.format(
-         "Time to query Database: %d\n" +
-         "Time to cluster data:   %d\n",
-         (startClusterTime - startQueryTime),
-         (finishTime - startClusterTime)
-      );
-
-      String outFile = "HClust_Test";
-      if (mOntology != null) { outFile = "OHClust_Test_3_layer"; }
+      int initialSize = Integer.parseInt(mConfig.getAttr("initialSize"));
+      int updateSize  = Integer.parseInt(mConfig.getAttr("updateSize"));
+      int currUpdate = 0, numUpdates  = Integer.parseInt(mConfig.getAttr("numUpdates"));
+      int pageSize, pageOffset;
 
       try {
-         ClusterWriter writer = new ClusterWriter(mClusterer.getClusters());
-
-         writer.writeData(outFile + ClusterWriter.FileType.CSV, timeOutput + writer.getClustInfo());
-         writer.writeData(outFile + ClusterWriter.FileType.XML, writer.getDendInfo());
+         mConn.randomizeIsolates(mRand.nextInt(9999));
       }
-      catch(Exception err) {
-         err.printStackTrace();
+      catch (java.sql.SQLException sqlErr) {
+         sqlErr.printStackTrace();
+         System.exit(1);
+      }
+
+      while (currUpdate <= numUpdates) {
+         clusterList = new ArrayList<Cluster>();
+
+         if (currUpdate == 0) {
+            pageSize = initialSize;
+            pageOffset = 0;
+         }
+         else {
+            pageSize = updateSize;
+            pageOffset = (updateSize * currUpdate) + initialSize;
+         }
+
+         dataList = constructIsolates(mConfig, mOntology, pageSize, pageOffset);
+
+         for (Clusterable<?> data : dataList) {
+            /*
+            System.out.printf("Isolate [%s] has labels:\n", data.getName());
+
+            if (data instanceof Labelable) {
+               Labelable dataLabel = (Labelable) data;
+               for (Map.Entry<String, Boolean> label : dataLabel.getLabels().entrySet()) {
+                  System.out.printf("\t%s\n", label.getKey());
+               }
+            }
+            */
+
+            clusterList.add(new HCluster(mClustMetric, data));
+         }
+
+         //TODO persist cluster results
+         resultList.add(runSingle(clusterList));
+
+         currUpdate++;
       }
    }
 
    @SuppressWarnings("unchecked")
-   private static List<Clusterable<?>> constructIsolates(Configuration config, Ontology ont) {
-      CPLOPConnection conn = CPLOPConnection.getConnection();
+   private List<Clusterable<?>> constructIsolates(Configuration config, Ontology ont,
+                                                  int pageSize, int pageOffset) {
       List<Clusterable<?>> dataList = new ArrayList<Clusterable<?>>();
       List<Map<String, Object>> rawDataList = null;
 
@@ -169,7 +217,7 @@ public class SPAMEvaluation {
       /*
        * query CPLOP for data
        */
-      try { rawDataList = conn.getDataByIsoID(ont, null); }
+      try { rawDataList = mConn.getRandomIsolateData(ont, pageSize, pageOffset); }
       catch (java.sql.SQLException sqlErr) {
          sqlErr.printStackTrace();
          System.exit(1);
@@ -233,6 +281,8 @@ public class SPAMEvaluation {
                tmpPyro.addDispensation(nucleotide, peakHeight);
          }
       }
+
+      System.out.printf("finished processing histogram records into a list of %d isolates\n", dataList.size());
 
       return dataList;
    }

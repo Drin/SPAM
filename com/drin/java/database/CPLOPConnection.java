@@ -14,6 +14,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.sql.CallableStatement;
 import java.sql.SQLException;
 
 /**
@@ -650,7 +651,7 @@ public class CPLOPConnection {
              !colPartitions.getKey().equals("pHeight") &&
              !colPartitions.getValue().isEmpty()) {
 
-            extraWheres += String.format("AND %s in (", colPartitions.getKey());
+            extraWheres += String.format("%s in (", colPartitions.getKey());
 
             for (String partition : colPartitions.getValue()) {
                if (partition.equals("")) { continue; }
@@ -658,11 +659,111 @@ public class CPLOPConnection {
                extraWheres += String.format("'%s', ", partition);
             }
 
-            extraWheres = extraWheres.substring(0, extraWheres.length() - 2) + ") ";
+            extraWheres = extraWheres.substring(0, extraWheres.length() - 2) + ") AND ";
          }
       }
 
-      return String.format(query, extraSelects, extraJoins, extraWheres);
+      return String.format(query, extraSelects, extraJoins,
+                           extraWheres.substring(0, extraWheres.length() - 4));
+   }
+
+   /**
+    * Calls a stored procedure that stores random isolate IDs in a temporary
+    * table.
+    *
+    * @throws SQLException if the query fails.
+    */
+   public void randomizeIsolates(int randSeed) throws SQLException  {
+      CallableStatement stmt = null;
+
+      try {
+         stmt = conn.prepareCall("{CALL randomizeIsolates(?)}");
+         stmt.setInt(1, randSeed);
+         stmt.executeUpdate();
+      }
+      catch (SQLException sqlEx) { throw sqlEx; }
+      finally
+      {
+         if (stmt != null) { stmt.close(); }
+      }
+   }
+
+   /**
+    * Get all relevant random data.
+    *
+    * @return A list of hashes representing the data.
+    *  Each row is a Map that maps attribute names to values.
+    *  'pyroprint' -> pyroprint's name (of the form 'pyroprint <id>' (String).
+    *  'isolate' -> isolate's name (String).
+    *  'region' -> unique identifier for the region (String).
+    *
+    * @throws SQLException if the query fails.
+    */
+   public List<Map<String, Object>> getRandomIsolateData(Ontology ont, int pageSize,
+                                                          int pageOffset) throws SQLException {
+      List<Map<String, Object>> rtn = new ArrayList<Map<String, Object>>();
+      Statement stmt = null;
+      ResultSet results = null;
+      String placeHolder = "%s", pagination = "";
+
+      if (pageSize > 0 && pageOffset >= 0) {
+         pagination = String.format("LIMIT %d OFFSET %d", pageSize, pageOffset);
+      }
+
+      String query = String.format(
+          "SELECT name_prefix, name_suffix, pyroID, appliedRegion, wellID, pHeight, nucleotide%s " +
+          "FROM test_isolates JOIN " +
+               "test_pyroprints USING (name_prefix, name_suffix) JOIN " +
+               "test_histograms USING (pyroID) %s JOIN " +
+               "(SELECT random_id, test_isolate_id " +
+               " FROM test_isolates_random " +
+               " %s) rand_table USING (test_isolate_id) " +
+          "WHERE %s " + 
+          "ORDER BY random_id, pyroID, position asc ",
+          placeHolder, placeHolder, pagination, placeHolder
+      );
+
+      query = constructOntologicalQuery(ont, query);
+
+      System.out.printf("%s\n", query);
+
+      try {
+         stmt = conn.createStatement();
+         results = stmt.executeQuery(query);
+
+         while (results.next()) {
+            Map<String, Object> tuple = new HashMap<String, Object>();
+            tuple.put("isolate", String.format("%s-%s", results.getString(1),
+                                               results.getString(2)));
+            tuple.put("pyroprint", results.getString(3)); 
+            tuple.put("region", results.getString(4)); 
+            tuple.put("well", results.getString(5));
+            tuple.put("pHeight", results.getString(6));
+            tuple.put("nucleotide", results.getString(7));
+
+            if (ont != null) {
+               int colNdx = 8;
+
+               for (Map.Entry<String, Set<String>> tableCols : ont.getTableColumns().entrySet()) {
+                  for (String colName : tableCols.getValue()) {
+                     if (colName.replace(" ", "").equals("")) { continue; }
+
+                     tuple.put(colName, results.getString(colNdx++));
+                  }
+               }
+            }
+
+            rtn.add(tuple);
+         }
+      }
+      catch (SQLException sqlEx) { throw sqlEx; }
+      finally
+      {
+         if (results != null) { results.close(); }
+         if (stmt != null) { stmt.close(); }
+      }
+
+      return rtn;
    }
 
    /**
