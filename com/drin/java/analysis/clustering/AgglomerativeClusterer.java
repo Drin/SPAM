@@ -2,7 +2,6 @@ package com.drin.java.analysis.clustering;
 
 import com.drin.java.clustering.Cluster;
 import com.drin.java.clustering.CandidatePair;
-import com.drin.java.clustering.CandidateQueue;
 
 import com.drin.java.util.Logger;
 
@@ -90,7 +89,7 @@ public class AgglomerativeClusterer extends HierarchicalClusterer {
 
       if (removeNdx != -1) { clusters.remove(removeNdx); }
       else {
-         Logger.debug("Remove Index is -1. Error during clustering.\nCluster List:\n");
+         Logger.error(-1, "Remove Index is -1. Error during clustering.\n");
       }
 
       return combinedCluster;

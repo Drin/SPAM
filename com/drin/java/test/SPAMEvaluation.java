@@ -86,9 +86,8 @@ public class SPAMEvaluation {
       mClusterer = new OHClusterer(ontology, threshList);
 
       try {
-         mClustMetric = (DataMetric) Class.forName(
-            mConfig.getMetric(Configuration.CLUSTER_KEY)
-         ).newInstance();
+         Class<?> clustMetricClass = Class.forName(mConfig.getMetric(Configuration.CLUSTER_KEY));
+         mClustMetric = (DataMetric<Cluster>) clustMetricClass.getDeclaredConstructor().newInstance();
       }
       catch (Exception err) {
          err.printStackTrace();
@@ -182,8 +181,8 @@ public class SPAMEvaluation {
 
          dataList = constructIsolates(mConfig, mOntology, pageSize, pageOffset);
 
+         System.out.printf("******************  CLUSTER LABELS ******************\n");
          for (Clusterable<?> data : dataList) {
-            /*
             System.out.printf("Isolate [%s] has labels:\n", data.getName());
 
             if (data instanceof Labelable) {
@@ -191,8 +190,9 @@ public class SPAMEvaluation {
                for (Map.Entry<String, Boolean> label : dataLabel.getLabels().entrySet()) {
                   System.out.printf("\t%s\n", label.getKey());
                }
+
+               System.out.printf("\n");
             }
-            */
 
             clusterList.add(new HCluster(mClustMetric, data));
          }
@@ -201,6 +201,12 @@ public class SPAMEvaluation {
          resultList.add(runSingle(clusterList));
 
          currUpdate++;
+      }
+
+      /* TODO construct bulk insert query for inserting into database
+       */
+      for (ClusterResults result : resultList) {
+         System.out.printf("%s\n", result);
       }
    }
 
@@ -227,9 +233,14 @@ public class SPAMEvaluation {
        * construct object representations
        */
       try {
-         isoMetric = (DataMetric) Class.forName(config.getMetric(Configuration.ISOLATE_KEY)).newInstance();
-         regionMetric = (DataMetric) Class.forName(config.getMetric(Configuration.ITSREGION_KEY)).newInstance();
-         pyroMetric = (DataMetric) Class.forName(config.getMetric(Configuration.PYROPRINT_KEY)).newInstance();
+         Class<?> isoMetricClass = Class.forName(config.getMetric(Configuration.ISOLATE_KEY));
+         isoMetric = (DataMetric<Isolate>) isoMetricClass.getDeclaredConstructor().newInstance();
+
+         Class<?> regionMetricClass = Class.forName(config.getMetric(Configuration.ITSREGION_KEY));
+         regionMetric = (DataMetric<ITSRegion>) regionMetricClass.getDeclaredConstructor().newInstance();
+
+         Class<?> pyroMetricClass = Class.forName(config.getMetric(Configuration.PYROPRINT_KEY));
+         pyroMetric = (DataMetric<Pyroprint>) pyroMetricClass.getDeclaredConstructor().newInstance();
       }
       catch(Exception err) {
          err.printStackTrace();

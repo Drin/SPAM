@@ -17,7 +17,6 @@ import com.drin.java.metrics.PyroprintUnstablePearsonMetric;
 
 import com.drin.java.ontology.Ontology;
 import com.drin.java.analysis.clustering.Clusterer;
-import com.drin.java.analysis.clustering.AgglomerativeClusterer;
 import com.drin.java.analysis.clustering.OHClusterer;
 
 import com.drin.java.gui.MainWindow;
@@ -55,9 +54,7 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Set;
-import java.util.HashSet;
 
-@SuppressWarnings("serial")
 public class InputDialog extends JDialog {
    /*
     * CONSTANTS
@@ -67,6 +64,10 @@ public class InputDialog extends JDialog {
 
    private final static String DEFAULT_REGION_A = "16-23",
                                DEFAULT_REGION_B = "23-5";
+
+   private final static String ONT_DIR    = "ontologies",
+                               USER_DIR   = System.getProperty("user.dir"),
+                               FILE_SEP   = System.getProperty("file.separator");
 
    private final String[] ITS_REGIONS = new String[] { DEFAULT_REGION_A, DEFAULT_REGION_B };
    private final String[] DATA_TYPE_VALUES = new String[] {"Isolates",
@@ -105,7 +106,9 @@ public class InputDialog extends JDialog {
       mDataSet = new JTextField(20);
 
       mOutFile = new JTextField(20);
-      mOntology = new JTextField(15);
+      mOntology = new JTextField(String.format("%s%s%s%s%s",
+         USER_DIR, FILE_SEP, ONT_DIR, FILE_SEP, mConf.getAttr("ontology")
+      ), 15);
 
       mRegion_A = new JComboBox<String>(ITS_REGIONS);
       mRegion_B = new JComboBox<String>(ITS_REGIONS);
@@ -369,9 +372,13 @@ public class InputDialog extends JDialog {
    private boolean doWork() {
       List<Cluster> clusters = new ArrayList<Cluster>();
       Clusterer clusterer = null;
+      Ontology ontology = null;
       updateConfig();
 
-      Ontology ontology = Ontology.createOntology(new File(mConf.getAttr(Configuration.ONT_KEY)));
+      if (mConf != null && mConf.getAttr(Configuration.ONT_KEY) != null) {
+         ontology = Ontology.createOntology(new File(mConf.getAttr(Configuration.ONT_KEY)));
+      }
+      
       ClusterAverageMetric clustMetric = new ClusterAverageMetric();
 
       startTime = System.currentTimeMillis();
@@ -387,6 +394,8 @@ public class InputDialog extends JDialog {
                  selection.equals(DATA_TYPE_VALUES[1]) ? constructPyroprints(queryData(ontology), ontology) :
                  selection.equals(DATA_TYPE_VALUES[2]) ? constructPyroprints(queryData(ontology), ontology) :
                                                          null;
+
+      Logger.debug(String.format("Clustering %d entities", dataList.size()));
 
       if (dataList == null) {
          return false;
@@ -405,7 +414,8 @@ public class InputDialog extends JDialog {
       worker.setOutputFile(mOutFile.getText());
       worker.execute();
 
-      System.out.println("Time to prepare clusterer: " + (System.currentTimeMillis() - startTime));
+      Logger.debug(String.format("Time to prepare clusterer: %d ms",
+                   (System.currentTimeMillis() - startTime)));
 
       return true;
    }
@@ -465,6 +475,9 @@ public class InputDialog extends JDialog {
          }
 
       }
+
+      Logger.debug(String.format("Time to construct Pyroprints: %d ms",
+                   (System.currentTimeMillis() - constructStart)));
 
       return entityList;
    }
@@ -535,6 +548,9 @@ public class InputDialog extends JDialog {
       }
 
       System.out.println("Time to construct Isolates: " + (System.currentTimeMillis() - constructStart));
+
+      Logger.debug(String.format("Time to construct Isolates: %d ms",
+                   (System.currentTimeMillis() - constructStart)));
 
       return entityList;
    }

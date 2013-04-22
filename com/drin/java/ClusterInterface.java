@@ -23,7 +23,6 @@ import com.drin.java.analysis.clustering.Clusterer;
 import com.drin.java.analysis.clustering.OHClusterer;
 
 import com.drin.java.util.Configuration;
-import com.drin.java.util.Logger;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -33,13 +32,8 @@ import java.util.Map;
 import java.util.HashMap;
 
 public class ClusterInterface {
-   private final String[] DATA_TYPE_VALUES = new String[] {"Isolates",
-                                                           "Pyroprints",
-                                                           "Experiments"};
-
    private CPLOPConnection mConn;
    private Configuration mConfig;
-   private long startTime;
 
    public ClusterInterface() {
       mConfig = Configuration.loadConfig();

@@ -77,10 +77,6 @@ sub get_isolate_info {
           $tmp_isolate->{name_prefix} ne $record->{name_prefix} ||
           $tmp_isolate->{name_suffix} ne $record->{name_suffix}) {
 
-         if ($tmp_isolate->{name_prefix} && $tmp_isolate->{name_suffix}) {
-            $tmp_isolate->debug_info();
-         }
-
          $tmp_isolate = BiologyTypes::Isolate->new($record);
 
          push(@{$isolates}, $tmp_isolate);
@@ -111,24 +107,21 @@ sub randomize_isolates {
    for my $num_generation (0..$num_randomizations) {
       $first_isolate = $isolates->[int(rand($num_isolates))];
       $second_isolate = $isolates->[int(rand($num_isolates))];
+      my $new_isolate = undef;
 
-      if (!$first_isolate->similar_protocol($second_isolate)) {
-         next;
-      }
+      if (!$first_isolate->similar_protocol($second_isolate)) { next; }
 
       if ($first_isolate->get_name() eq $second_isolate->get_name()) {
-         push(@{$new_isolates}, $first_isolate->duplicate($config));
+         $new_isolate = $first_isolate->duplicate($config);
       }
       elsif (rand() < CROSSOVER_PROB) {
-         push(@{$new_isolates}, $first_isolate->crossover(
-            $config, $second_isolate
-         ));
+         $new_isolate = $first_isolate->crossover($config, $second_isolate);
       }
-      elsif (int(rand())) {
-         push(@{$new_isolates}, $first_isolate->mutate($config));
-      }
-      else {
-         push(@{$new_isolates}, $second_isolate->mutate($config));
+      elsif (int(rand())) { $new_isolate = $first_isolate->mutate($config); }
+      else { $new_isolate = $second_isolate->mutate($config); }
+
+      if ($new_isolate) {
+         push(@{$new_isolates}, $new_isolate);
       }
    }
 
@@ -141,7 +134,6 @@ sub commit_random_data {
 
    for my $isolate (@{$isolates}) {
       push(@iso_strings, $isolate->bulk_insert_str());
-      $isolate->debug_info();
 
       for my $region (keys %{$isolate->{pyroprints}}) {
          for my $pyroprint (@{$isolate->{pyroprints}->{$region}}) {
@@ -160,7 +152,6 @@ sub commit_random_data {
       }
    }
 
-=needtodebug
    $db_handle->do(q{
       LOCK TABLES test_isolates WRITE, test_pyroprints WRITE,
                   test_histograms WRITE
@@ -191,7 +182,6 @@ sub commit_random_data {
    $db_handle->do(q{
       UNLOCK TABLES
    });
-=cut
 }
 
 sub get_db_stats {
@@ -220,7 +210,7 @@ sub get_db_stats {
 }
 
 sub main {
-   my ($random_isolates, $isolates, $config) = (undef, undef, @_);
+   my ($config) = (@_);
 
    $db_handle->do(q{
       SET read_rnd_buffer_size=16777216
@@ -232,11 +222,11 @@ sub main {
       print({*STDOUT} "${num_update}th iteration...\n");
       print({*STDOUT} "Elapsed time: ".(time() - $config->{start_time})." seconds\n");
 
-      $random_isolates = select_isolates($config->{size});
+      my $random_isolates = select_isolates($config->{size});
       print({*STDOUT} "Selected ".(scalar @{$random_isolates}).
                       " random isolates\n");
 
-      $isolates = get_isolate_info($random_isolates);
+      my $isolates = get_isolate_info($random_isolates);
       print({*STDOUT} "got info for ".(scalar @{$isolates}).
                       " isolate records\n");
 
@@ -251,8 +241,7 @@ sub main {
 }
 
 main({
-   size => 500,
-   #num_updates  => 2000,
-   num_updates  => 1,
+   size => 750,
+   num_updates  => 1000,
    start_time   => time(),
 });

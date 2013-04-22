@@ -2,7 +2,6 @@ package com.drin.java.clustering.dendogram;
 
 import com.drin.java.clustering.Clusterable;
 import com.drin.java.clustering.dendogram.Dendogram;
-import com.drin.java.clustering.dendogram.DendogramNode;
 
 //TODO: toString() and pp() should print out the type of the element instead of
 //just isolate
