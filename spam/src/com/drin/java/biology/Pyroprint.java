@@ -1,11 +1,15 @@
 package com.drin.java.biology;
 
+import com.drin.java.ontology.Labelable;
+import com.drin.java.ontology.OntologyLabel;
+
 import com.drin.java.clustering.Clusterable;
 import com.drin.java.metrics.DataMetric;
 
 import com.drin.java.util.Logger;
 
-import java.util.List;
+import java.util.Map;
+import java.util.ArrayList;
 import java.util.Iterator;
 
 /**
@@ -18,25 +22,43 @@ import java.util.Iterator;
  * associates a list of light emittance peak heights to the DNA sequence being
  * analyzed.
  */
-public class Pyroprint extends Clusterable<Double> {
+public class Pyroprint extends Clusterable<Double> implements Labelable {
    private String mDisp;
    private DataMetric<Pyroprint> mMetric;
 
-   public Pyroprint(int pyroId, String wellId, String dispSeq,
-                    List<Double> data, DataMetric<Pyroprint> metric) {
-      super(String.format("%d (%s)", pyroId, wellId), data);
-      mDisp = dispSeq;
-      mMetric = metric;
+   protected OntologyLabel mLabel;
+
+   public Pyroprint(int pyroId, String wellId, DataMetric<Pyroprint> metric) {
+      this(String.format("%d (%s)", pyroId, wellId), metric);
    }
+
+   public Pyroprint(String isoId, DataMetric<Pyroprint> metric) {
+      super(isoId, new ArrayList<Double>());
+
+      mDisp = "";
+      mMetric = metric;
+      mLabel = new OntologyLabel();
+   }
+
+   public Map<String, Boolean> getLabels() { return mLabel.getLabels(); }
+   public void addLabel(String labelName) { mLabel.addLabel(labelName); }
+   public boolean hasLabel(String labelName) {
+      return mLabel.hasLabel(labelName);
+   }
+
+   public void addDispensation(String nucleotide, double peakHeight) {
+      mDisp += nucleotide;
+      mData.add(new Double(peakHeight));
+   }
+
+   public int getDispLen() { return mDisp.length(); }
 
    /**
     * Get the dispensation sequence used to construct this pyroprint.
     *
     * @return String The dispensation sequence of this pyroprint.
     */
-   public String getDispSeq() {
-      return mDisp;
-   }
+   public String getDispSeq() { return mDisp; }
 
    /**
     * Check to see if this Pyroprint has the same protocol parameters as the
@@ -50,41 +72,6 @@ public class Pyroprint extends Clusterable<Double> {
    public boolean hasSameProtocol(Pyroprint other_pyro) {
       return this.size() == other_pyro.size() &&
              this.getDispSeq().equals(other_pyro.getDispSeq());
-   }
-
-   /*
-    * Utility Methods
-    */
-   /**
-    * Find the maximum peak height for the given list of peak heights. This
-    * method returns -1 if there are no peak heights for this pyroprint.
-    *
-    * @return double The value of the peak height for the given list of peak
-    * heights.
-    */
-   public Double getMaxPeak() {
-      double mMaxPeak = -1;
-
-      for (Double peakVal : mData) {
-         mMaxPeak = Math.max(mMaxPeak, peakVal.doubleValue());
-      }
-
-      return new Double(mMaxPeak);
-   }
-
-   /**
-    * Find the average peak height for this pyroprint.
-    *
-    * @return double The average peak height for this pyroprint.
-    */
-   public Double getMeanPeak() {
-      double total = 0;
-
-      for (Double peak : mData) {
-         total += peak.doubleValue();
-      }
-
-      return new Double(total/mData.size());
    }
 
    /*
@@ -123,24 +110,6 @@ public class Pyroprint extends Clusterable<Double> {
       }
 
       return false;
-   }
-
-   @Override
-   public boolean isSimilar(Clusterable<?> otherObj) {
-      if (otherObj instanceof Pyroprint) {
-         return hasSameProtocol((Pyroprint) otherObj);
-      }
-
-      return false;
-   }
-
-   @Override
-   public boolean isDifferent(Clusterable<?> otherObj) {
-      if (otherObj instanceof Pyroprint) {
-         return !hasSameProtocol((Pyroprint) otherObj);
-      }
-
-      return true;
    }
 
    @Override

@@ -4,24 +4,17 @@ import com.drin.java.biology.Pyroprint;
 import com.drin.java.metrics.DataMetric;
 
 import com.drin.java.util.Logger;
-import com.drin.java.util.Configuration;
 
 import java.util.Collection;
 import java.util.Iterator;
 
 public class PyroprintUnstablePearsonMetric extends DataMetric<Pyroprint> {
-   private static final int DEFAULT_LEN = 104;
-
-   @SuppressWarnings("unused")
-   private int mPeakCount, mPyroLen;
+   private int mPeakCount;
    private double mPyro_A_sum, mPyro_B_sum, mProduct_AB,
                   mPyro_A_squared_sum, mPyro_B_squared_sum;
 
    public PyroprintUnstablePearsonMetric() {
       super();
-
-      Integer pyro_len = Configuration.getInt("PyroprintLength");
-      mPyroLen = pyro_len == null ? DEFAULT_LEN : pyro_len.intValue();
    }
 
    public void reset() {
@@ -51,12 +44,10 @@ public class PyroprintUnstablePearsonMetric extends DataMetric<Pyroprint> {
 
    public void apply(Pyroprint elem_A, Pyroprint elem_B) {
       if (!elem_A.hasSameProtocol(elem_B)) {
-         System.out.printf("%s and %s have different protocols",
-                           elem_A.getName(), elem_B.getName());
+         Logger.debug(String.format("%s and %s have different protocols",
+                                    elem_A.getName(), elem_B.getName()));
          return;
       }
-
-      Logger.debug("Comparing pyroprints...");
 
       Collection<Double> peaks_A = elem_A.getData();
       Collection<Double> peaks_B = elem_B.getData();
@@ -76,15 +67,18 @@ public class PyroprintUnstablePearsonMetric extends DataMetric<Pyroprint> {
       mResult = getUnstablePearson();
    }
 
+   @SuppressWarnings("unused")
    private String debugState() {
-      return String.format("numElements: %d, pyro_A_sum: %.04f, pyro_B_sum: " +
-                           "%.04f, pyroA_squared_sum: %.04f, " +
-                           "pyroB_squared_sum: %.04f", mPeakCount, mPyro_A_sum,
-                           mPyro_B_sum, mPyro_A_squared_sum, mPyro_B_squared_sum);
+      return String.format("numElements: %d, pyro_A_sum: %.06f, pyro_B_sum: " +
+                           "%.06f, pyroA_squared_sum: %.06f, " +
+                           "pyroB_squared_sum: %.06f, product_AB: %.06f",
+                           mPeakCount, mPyro_A_sum, mPyro_B_sum,
+                           mPyro_A_squared_sum, mPyro_B_squared_sum,
+                           mProduct_AB);
    }
 
    private double getUnstablePearson() {
-      Logger.debug(debugState());
+      //Logger.debug(debugState());
 
       if (mPeakCount == 0) { return -2; }
 
@@ -99,8 +93,6 @@ public class PyroprintUnstablePearsonMetric extends DataMetric<Pyroprint> {
       double result = mResult;
 
       if (result == -2) { setError(-1); }
-
-      Logger.error(mErrCode, String.format("Correlation: %.04f", result));
 
       reset();
       return result;

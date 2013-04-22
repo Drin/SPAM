@@ -1,105 +1,259 @@
 package com.drin.java.util;
 
-import com.drin.java.util.InvalidPropertyException;
-
-import java.io.File;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import java.util.Scanner;
 import java.util.Map;
 import java.util.HashMap;
 
+import java.io.File;
+import java.io.FileWriter;
+
 public class Configuration {
-   private static final String KEY_VAL_DELIM = "=";
-   private static final int PROP_KEY = 0,
-                            PROP_VAL = 1;
+   public static final String DEBUG_KEY     = "debug",
+                              TRANSFORM_KEY = "transform",
+                              REGION_KEY    = "regions",
+                              CLUSTER_KEY   = "cluster",
+                              ISOLATE_KEY   = "isolate",
+                              ITSREGION_KEY = "itsregion",
+                              PYROPRINT_KEY = "pyroprint",
+                              METRIC_KEY    = "metrics",
+                              ALPHA_KEY     = "alpha",
+                              BETA_KEY      = "beta",
+                              LENGTH_KEY    = "pyroLength",
+                              ONT_KEY       = "ontology";
 
-   private static Map<String, Object> mConfigMap = new HashMap<String, Object>();
+   private static final String DEFAULT_CONFIG_DIR  = "configs",
+                               DEFAULT_CONFIG_FILE = "props-standard.yml",
+                               FILE_SEP = System.getProperty("file.separator");
 
-   public static void loadConfiguration(File propFile) throws InvalidPropertyException {
-      Scanner propReader = null;
+   private static final String CONFIG_OPTION_PATTERN = "\\s*" +
+                                                       "([a-zA-Z0-9+.{}-]*)" +
+                                                       "\\s*" +
+                                                       ":" +
+                                                       "\\s*" +
+                                                       "([a-zA-Z0-9+.{}-]*)";
 
-      try { propReader = new Scanner(propFile); }
-      catch (java.io.FileNotFoundException fileErr) {
-         System.err.printf("Could not find file '%s'\n", propFile);
-      }
+   private static final int NAME_NDX   = 1,
+                            VAL_NDX    = 2;
 
-      while (propReader.hasNextLine()) {
-         String[] property = propReader.nextLine().split(KEY_VAL_DELIM);
+   private static Pattern mRegexPattern = Pattern.compile(CONFIG_OPTION_PATTERN);
+   private static Matcher mRegexMatch = null;
 
-         if (property.length < 2 || property[0].startsWith("#")) { continue; }
+   private static Configuration mConfig = null;
 
-         validateProp(property);
+   /*
+    * Configuration Variables
+    */
+   private Map<String, Object> mAttributeMap;
 
-         mConfigMap.put(property[PROP_KEY], property[PROP_VAL]);
-      }
+   private Configuration(Map<String, Object> attrMap) {
+      mAttributeMap = attrMap;
    }
 
-   public static String getString(String propName) {
-      if (mConfigMap.containsKey(propName)) {
-         return String.valueOf(mConfigMap.get(propName));
-      }
-
-      return null;
+   public static Configuration getConfig() {
+      return mConfig;
    }
 
-   public static Boolean getBoolean(String propName) {
-      if (mConfigMap.containsKey(propName)) {
-         return Boolean.valueOf(String.valueOf(mConfigMap.get(propName)));
-      }
-
-      return null;
+   public static Configuration loadConfig() {
+      return Configuration.loadConfig(new File(String.format(
+         "%s%s%s%s%s", System.getProperty("user.dir"), FILE_SEP,
+         DEFAULT_CONFIG_DIR, FILE_SEP, DEFAULT_CONFIG_FILE
+      )));
    }
 
-   public static Integer getInt(String propName) {
-      if (mConfigMap.containsKey(propName)) {
-         return Integer.valueOf(String.valueOf(mConfigMap.get(propName)));
-      }
+   public static Configuration loadConfig(String configStr) {
+      Scanner configScanner = new Scanner(configStr);
+      mConfig = new Configuration(Configuration.parseConfig(configScanner));
 
-      return null;
+      configScanner.close();
+
+      return mConfig;
    }
 
-   private static void validateProp(String[] property) throws InvalidPropertyException {
-      PROP_STATUS status = PROP_STATUS.VALID;
+   public static Configuration loadConfig(File configFile) {
+      Scanner configScanner = null;
 
-      if (property.length != 2) {
-         status = PROP_STATUS.INV_LEN;
-      }
-
-      switch (status) {
-         case VALID:
-            return;
-
-         case INV_LEN:
-            String err = String.format("Invalid property format: should be " +
-                                       "<name>%s<value>", KEY_VAL_DELIM);
-            throw new InvalidPropertyException(err);
-
-         default:
-            throw new InvalidPropertyException("Unknown property");
-      }
-   }
-
-   private static void debug() {
-      for (Map.Entry<String, Object> prop : mConfigMap.entrySet()) {
-         System.out.printf("%s => %s\n", prop.getKey(), prop.getValue());
-      }
-   }
-
-   private enum PROP_STATUS {
-      VALID, INV_LEN, INV_VAL;
-   }
-
-   public static void main(String[] args) {
       try {
-         if (args.length > 0) {
-            Configuration.loadConfiguration(new File(args[0]));
-         }
-         else { Configuration.loadConfiguration(new File("props-standard.cfg")); }
+         configScanner = new Scanner(configFile);
+         mConfig = new Configuration(Configuration.parseConfig(configScanner));
 
-         Configuration.debug();
+         configScanner.close();
       }
-      catch(InvalidPropertyException err) {
-         System.out.println(err);
+      catch(java.io.FileNotFoundException err) {
+         err.printStackTrace();
+         try {
+            FileWriter tmpWriter = new FileWriter(configFile);
+            tmpWriter.write("test test!");
+            tmpWriter.close();
+         }
+         catch(java.io.IOException ioErr) {
+            ioErr.printStackTrace();
+         }
       }
+
+      return mConfig;
+   }
+
+   public static void createDefaultConfig() {
+      File configFile = new File(DEFAULT_CONFIG_FILE);
+
+      if (!configFile.exists()) {
+         try {
+            FileWriter configWriter = new FileWriter(configFile);
+            configWriter.write(getDefaultConfigContent());
+            configWriter.close();
+         }
+         catch(java.io.IOException ioErr) {
+            ioErr.printStackTrace();
+         }
+      }
+   }
+
+   private static String getDefaultConfigContent() {
+      String paramStr = "";
+
+      String regDefault = String.format("pyroLength: %s\nalpha: %s\nbeta: %s\n",
+                                        "93", "99.5", "99");
+      String metrics = String.format("metrics: {\ncluster: %s\nisolate: %s\nitsregion: %s\npyroprint: %s\n}\n",
+                                     "com.drin.java.metrics.ClusterAverageMetric",
+                                     "com.drin.java.metrics.IsolateAverageMetric",
+                                     "com.drin.java.metrics.ITSRegionAverageMetric",
+                                     "com.drin.java.metrics.PyroprintUnstablePearsonMetric");
+
+      paramStr += "debug: true\n";
+      paramStr += "transform: true\n";
+
+      paramStr += "regions: {\n";
+      paramStr += "16-23: {\n";
+      paramStr += regDefault;
+      paramStr += "}\n";
+      paramStr += "23-5: {\n";
+      paramStr += regDefault;
+      paramStr += "}\n";
+      paramStr += "}\n";
+      paramStr += metrics;
+
+      return paramStr;
+   }
+
+
+   private static Map<String, Object> parseConfig(Scanner configScanner) {
+      Map<String, Object> attrMap = new HashMap<String, Object>();
+      String configLine = null, attrName = null, attrVal = null;
+
+      while (configScanner.hasNextLine()) {
+         configLine = configScanner.nextLine();
+
+         if (configLine.replace(" ", "").equals("}")) { return attrMap; }
+
+         mRegexMatch = mRegexPattern.matcher(configLine);
+
+         if (mRegexMatch.matches()) {
+            attrName = mRegexMatch.group(NAME_NDX);
+            attrVal  = mRegexMatch.group(VAL_NDX);
+
+            if (attrVal.startsWith("{")) {
+               Map<String, Object> subMap = Configuration.parseConfig(configScanner);
+               attrMap.put(attrName, subMap);
+            }
+            else { attrMap.put(attrName, attrVal); }
+         }
+      }
+
+      return attrMap;
+   }
+
+   /*
+    * Setters
+    */
+   public void setAttr(String attrName, String attrVal) {
+      mAttributeMap.put(attrName, attrVal);
+   }
+
+   @SuppressWarnings("unchecked")
+   public void setRegionAttr(String regionName, String attrName, String attrVal) {
+      Map<String, Object> regionMap = (Map<String, Object>) mAttributeMap.get(REGION_KEY);
+      Map<String, Object> regionSubMap = (Map<String, Object>) regionMap.get(regionName);
+
+      regionSubMap.put(attrName, attrVal);
+   }
+
+   @SuppressWarnings("unchecked")
+   public void setMetric(String attrName, String attrVal) {
+      Map<String, Object> metricMap = (Map<String, Object>) mAttributeMap.get(METRIC_KEY);
+      metricMap.put(attrName, attrVal);
+   }
+
+   /*
+    * Getters
+    */
+   public Map<String, Object> getAttributes() {
+      return mAttributeMap;
+   }
+
+   public String getAttr(String attrName) {
+      Object mapping = mAttributeMap.get(attrName);
+      if (mapping != null && !(mapping instanceof Map<?, ?>)) {
+         return String.valueOf(mapping);
+      }
+
+      return null;
+   }
+
+   @SuppressWarnings("unchecked")
+   public String getRegionAttr(String regionName, String attrName) {
+      Object mapping = mAttributeMap.get(REGION_KEY);
+      if (mapping != null && mapping instanceof Map<?, ?>) {
+         Object regionMapping = ((Map<String, Object>) mapping).get(regionName);
+
+         if (regionMapping != null && regionMapping instanceof Map<?, ?>) {
+            Map<String, String> regionMap = (Map<String, String>) regionMapping;
+            return regionMap.get(attrName);
+         }
+      }
+
+      return null;
+   }
+
+   public String getMetric(String attrName) {
+      return getSubMapping(METRIC_KEY, attrName);
+   }
+
+   @SuppressWarnings("unchecked")
+   public String getSubMapping(String mapName, String attrName) {
+      Object mapping = mAttributeMap.get(mapName);
+      if (mapping != null && mapping instanceof Map<?, ?>) {
+         return ((Map<String, String>) mapping).get(attrName);
+      }
+      
+      return null;
+   }
+
+   /*
+    * Utility Methods
+    */
+   public String toString() {
+      return Configuration.stringifyAttrMap(mAttributeMap, "");
+   }
+
+   @SuppressWarnings("unchecked")
+   private static String stringifyAttrMap(Map<String, Object> attrMap, String indent) {
+      String stringifiedMap = "";
+
+      for (Map.Entry<String, Object> entry : attrMap.entrySet()) {
+         if (entry.getValue() instanceof Map<?, ?>) {
+            stringifiedMap += String.format("%s%s => \n%s\n", indent, entry.getKey(),
+                                            stringifyAttrMap((Map<String, Object>) entry.getValue(),
+                                                             indent + "\t"));
+         }
+         else {
+            stringifiedMap += String.format("%s%s => %s\n", indent,
+                                            entry.getKey(), entry.getValue());
+         }
+      }
+
+      return stringifiedMap;
    }
 }

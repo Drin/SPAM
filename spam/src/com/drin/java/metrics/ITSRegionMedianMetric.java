@@ -5,15 +5,18 @@ import com.drin.java.biology.Pyroprint;
 
 import com.drin.java.metrics.DataMetric;
 
+import java.util.List;
+import java.util.ArrayList;
+
 import com.drin.java.util.Configuration;
 import com.drin.java.util.Logger;
 
-public class ITSRegionAverageMetric extends DataMetric<ITSRegion> {
+public class ITSRegionMedianMetric extends DataMetric<ITSRegion> {
    private static Configuration mConfig;
+   private List<Double> mPyroComparisons;
    private String mRegionName;
-   private int mPairCount;
 
-   public ITSRegionAverageMetric() {
+   public ITSRegionMedianMetric() {
       super();
 
       mConfig = Configuration.getConfig();
@@ -22,42 +25,55 @@ public class ITSRegionAverageMetric extends DataMetric<ITSRegion> {
    @Override
    public void reset() {
       super.reset();
-      mPairCount = 0;
+      mPyroComparisons = new ArrayList<Double>();
       mRegionName = "";
    }
 
    @Override
    public void apply(ITSRegion elem_A, ITSRegion elem_B) {
       if (elem_A.getName().equals(elem_B.getName())) {
+         mRegionName = elem_A.getName();
 
          for (Pyroprint pyro_A : elem_A.getData()) {
             for (Pyroprint pyro_B : elem_B.getData()) {
-               double result = pyro_A.compareTo(pyro_B);
 
-               Logger.debug(String.format("ITSRegionAverageMetric:\n\t" +
-                                          "comparison between '%s' and " +
-                                          "'%s' [%d]: %.04f", pyro_A.getName(),
-                                          pyro_B.getName(), pyro_A.getDispLen(),
-                                          result));
+               addComparison(pyro_A.compareTo(pyro_B));
 
-               mResult += result;
-               mPairCount++;
             }
          }
 
       }
    }
 
+   private void addComparison(double result) {
+      int compareNdx = 0;
+
+      for (; compareNdx < mPyroComparisons.size(); compareNdx++) {
+         double tmp_val = mPyroComparisons.get(compareNdx).doubleValue();
+         if (tmp_val - result > 0) { break; }
+      }
+
+      mPyroComparisons.add(compareNdx, result);
+   }
+
    @Override
    public double result() {
-      double result = mResult;
+      double median = 0;
 
-      if (mPairCount <= 0) { setError(-1); }
-      else { result /= mPairCount; }
+      if (!mPyroComparisons.isEmpty()) {
+         int low_ndx = (mPyroComparisons.size() - 1)/2;
+         int high_ndx = ((mPyroComparisons.size() - 1)/2) + 1;
+
+         median = mPyroComparisons.get(low_ndx);
+
+         if (mPyroComparisons.size() % 2 == 0) {
+            median = (median + mPyroComparisons.get(high_ndx)) / 2;
+         }
+      }
+      else { setError(-1); }
 
       reset();
-
-      return transformResult(result);
+      return transformResult(median);
    }
 
    private double transformResult(double result) {

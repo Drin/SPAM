@@ -1,5 +1,7 @@
 package com.drin.java.util;
 
+import com.drin.java.util.Configuration;
+
 import java.io.File;
 import java.io.FileWriter;
 import java.util.Date;
@@ -12,12 +14,16 @@ public class Logger {
                                WARNING_PREFIX = "WARNING";
 
    private static Logger mLogger = null;
+   private static Configuration mConfig = null;
 
    private File mLogFile;
    private FileWriter mWriter;
-   private boolean mDebug;
 
    public static Logger getLogger() {
+      if (mConfig == null) {
+         mConfig = Configuration.loadConfig();
+      }
+
       if (mLogger == null) {
          mLogger = new Logger(DEFAULT_LOG_FILE + LOG_FILE_EXT);
       }
@@ -26,15 +32,17 @@ public class Logger {
    }
 
    private Logger(String filename) {
-      this(filename, true);
-   }
-
-   private Logger(String filename, boolean debugMode) {
-      mDebug = debugMode;
       mLogFile = new File(filename);
 
       try {
          mWriter = new FileWriter(mLogFile);
+         
+         if (!mLogFile.exists()) {
+            mLogFile.createNewFile();
+            mWriter.write(
+               String.format("[%s] Log file initialized\n", new Date())
+            );
+         }
       }
       catch (java.io.IOException ioErr) {
          System.err.printf("IO Error when opening file '%s'\n", filename);
@@ -54,7 +62,9 @@ public class Logger {
    }
 
    public static void debug(String dbgString) {
-      if (getLogger().mDebug) {
+      Configuration config = Configuration.getConfig();
+      
+      if (config != null && Boolean.parseBoolean(config.getAttr("debug"))) {
          writeString(String.format("(%s) %s: %s\n", new Date(),
                                    DEBUG_PREFIX, dbgString));
       }

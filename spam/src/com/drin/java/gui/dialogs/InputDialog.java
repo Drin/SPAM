@@ -3,17 +3,20 @@ package com.drin.java.gui.dialogs;
 import com.drin.java.biology.Isolate;
 import com.drin.java.biology.ITSRegion;
 import com.drin.java.biology.Pyroprint;
+
+import com.drin.java.clustering.Clusterable;
 import com.drin.java.clustering.Cluster;
 import com.drin.java.clustering.HCluster;
 
+import com.drin.java.metrics.DataMetric;
 import com.drin.java.metrics.ClusterAverageMetric;
 import com.drin.java.metrics.IsolateAverageMetric;
 import com.drin.java.metrics.ITSRegionAverageMetric;
+import com.drin.java.metrics.ITSRegionMedianMetric;
 import com.drin.java.metrics.PyroprintUnstablePearsonMetric;
 
 import com.drin.java.ontology.Ontology;
 import com.drin.java.analysis.clustering.Clusterer;
-import com.drin.java.analysis.clustering.AgglomerativeClusterer;
 import com.drin.java.analysis.clustering.OHClusterer;
 
 import com.drin.java.gui.MainWindow;
@@ -21,6 +24,7 @@ import com.drin.java.gui.listeners.DataQueryButtonListener;
 import com.drin.java.gui.components.AnalysisWorker;
 import com.drin.java.database.CPLOPConnection;
 
+import com.drin.java.util.Configuration;
 import com.drin.java.util.Logger;
 
 import java.awt.Component;
@@ -47,34 +51,41 @@ import java.io.File;
 
 import java.util.Map;
 import java.util.List;
-import java.util.Set;
 import java.util.HashMap;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Set;
 
-@SuppressWarnings("serial")
 public class InputDialog extends JDialog {
    /*
     * CONSTANTS
     */
    private final static String DEFAULT_TITLE = "Parameter Input Dialog";
-   private final int DIALOG_HEIGHT = 400, DIALOG_WIDTH = 500;
+   private final int DIALOG_HEIGHT = 400, DIALOG_WIDTH = 550;
+
+   private final static String DEFAULT_REGION_A = "16-23",
+                               DEFAULT_REGION_B = "23-5";
+   
+   private final static String ONT_DIR    = "ontologies",
+                               USER_DIR   = System.getProperty("user.dir"),
+                               FILE_SEP   = System.getProperty("file.separator");
+   
+   private final String[] ITS_REGIONS = new String[] { DEFAULT_REGION_A, DEFAULT_REGION_B };
    private final String[] DATA_TYPE_VALUES = new String[] {"Isolates",
                                                            "Pyroprints",
                                                            "Experiments"};
    /*
     * GUI Components
     */
-   @SuppressWarnings("unused")
-   private Container mPane = null, mOwner = null;
-   @SuppressWarnings("unused")
-   private JDialog mDialog = null;
-   private JComboBox<String> mDataSetType;
-   @SuppressWarnings("unused")
-   private JTextField mDataSet, mDataHierarchy, mOutFile, mOntology;
+   private Container mPane = null;
+   private JComboBox<String> mDataSetType, mRegion_A, mRegion_B;
+   private JTextField mDataSet, mOutFile, mOntology,
+                      mAlpha_A, mAlpha_B, mBeta_A, mBeta_B,
+                      mPyroLen_A, mPyroLen_B;
    private String mRecentDir;
 
+   private Configuration mConf;
    private CPLOPConnection mConn;
+   private long startTime;
 
    public InputDialog(Frame owner, String title) {
       super(owner, title);
@@ -83,39 +94,38 @@ public class InputDialog extends JDialog {
       this.setResizable(false);
       this.setLocationRelativeTo(null);
 
-      mOwner = owner;
-      mDialog = this;
-
       mPane = this.getContentPane();
       mPane.setLayout(new BoxLayout(mPane, BoxLayout.Y_AXIS));
       mPane.setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
 
       setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 
-      mDataSet = new JTextField(20);
-      mDataHierarchy = new JTextField(20);
+      mConf = Configuration.loadConfig();
+      mConn = CPLOPConnection.getConnection();
 
-      mOutFile = new JTextField(20);
-      mOntology = new JTextField(15);
+      mDataSet = new JTextField(20);
+
+      mOutFile = new JTextField(20);         
+      mOntology = new JTextField(String.format("%s%s%s%s%s",
+         USER_DIR, FILE_SEP, ONT_DIR, FILE_SEP, mConf.getAttr("ontology")
+      ), 15);
+
+      mRegion_A = new JComboBox<String>(ITS_REGIONS);
+      mRegion_B = new JComboBox<String>(ITS_REGIONS);
+      mRegion_B.setSelectedIndex(1);
+
+      mAlpha_A = new JTextField(mConf.getRegionAttr(DEFAULT_REGION_A, Configuration.ALPHA_KEY), 20);
+      mAlpha_B = new JTextField(mConf.getRegionAttr(DEFAULT_REGION_B, Configuration.ALPHA_KEY), 20);
+
+      mBeta_A  = new JTextField(mConf.getRegionAttr(DEFAULT_REGION_A, Configuration.BETA_KEY), 20);
+      mBeta_B  = new JTextField(mConf.getRegionAttr(DEFAULT_REGION_B, Configuration.BETA_KEY), 20);
+
+      mPyroLen_A = new JTextField(mConf.getRegionAttr(DEFAULT_REGION_A, Configuration.LENGTH_KEY), 10);
+      mPyroLen_B = new JTextField(mConf.getRegionAttr(DEFAULT_REGION_B, Configuration.LENGTH_KEY), 10);
 
       mRecentDir = "";
 
       mDataSetType = new JComboBox<String>(DATA_TYPE_VALUES);
-
-      try {
-         mConn = new CPLOPConnection();
-      }
-
-      catch (CPLOPConnection.DriverException driveErr) {
-         System.out.println("Driver Exception:\n" + driveErr + "\nExiting...");
-         //driveErr.printStackTrace();
-         System.exit(1);
-      }
-
-      catch (java.sql.SQLException sqlErr) {
-         System.out.println("SQL Exception:\n" + sqlErr + "\nExiting...");
-         System.exit(1);
-      }
    }
 
    public InputDialog() {
@@ -135,19 +145,17 @@ public class InputDialog extends JDialog {
       JLabel dataSetLabel = new JLabel("Select Data Set:");
       JPanel dataSetField = prepareDataSetField(mDataSetType, mDataSet);
 
-      /*
-      JLabel dataHierarchyLabel = new JLabel("Set Data Clustering Hierarchy:");
-      JPanel dataHierarchyField = prepareDataHierarchyField(mDataHierarchy);
-	  */
+      JLabel thresholdSetLabel = new JLabel("Input Region Thresholds:");
+      JPanel thresholdField_A = inputField(mRegion_A, mPyroLen_A, mAlpha_A, mBeta_A);
+      JPanel thresholdField_B = inputField(mRegion_B, mPyroLen_B, mAlpha_B, mBeta_B);
 
       mPane.add(dataSetLabel);
       mPane.add(dataSetField);
 
-      /*
-      mPane.add(dataHierarchyLabel);
-      mPane.add(dataHierarchyField);
-      */
-      
+      mPane.add(thresholdSetLabel);
+      mPane.add(thresholdField_A);
+      mPane.add(thresholdField_B);
+
       mPane.add(initControls());
 
       mPane.validate();
@@ -163,10 +171,36 @@ public class InputDialog extends JDialog {
 
       layout.add(horizontal_input("Output file name:", outfile));
       //layout.add(horizontal_input("Clustering Method:", method));
-      //layout.add(ontologySection);
+      layout.add(ontologySection);
       layout.setAlignmentY(Component.CENTER_ALIGNMENT);
 
       return layout;
+   }
+
+   public JPanel inputField(JComboBox<String> region, JTextField pyro_len, JTextField alpha, JTextField beta) {
+      JPanel selection = new JPanel(), fileInput = new JPanel(), fileInputPanel = new JPanel();
+
+      selection.setLayout(new BoxLayout(selection, BoxLayout.Y_AXIS));
+      selection.add(new JLabel("ITS Region:"));
+      selection.add(region);
+      //pyro_len is how much of the pyroprint's dispensations to consider for
+      //constructing a pyroprint
+      selection.add(new JLabel("Disp Length:"));
+      selection.add(pyro_len);
+      selection.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+      fileInput.setLayout(new BoxLayout(fileInput, BoxLayout.Y_AXIS));
+      fileInput.add(new JLabel("Thresholds:"));
+      fileInput.add(alpha);
+      fileInput.add(beta);
+      fileInput.setAlignmentY(Component.CENTER_ALIGNMENT);
+
+      fileInputPanel.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
+      fileInputPanel.add(selection);
+      fileInputPanel.add(fileInput);
+      fileInputPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+      return fileInputPanel;
    }
 
    private JButton fileBrowseButton(final JTextField infile, final JTextField outfile) {
@@ -225,18 +259,6 @@ public class InputDialog extends JDialog {
       return dataSetField;
    }
 
-   @SuppressWarnings("unused")
-   private JPanel prepareDataHierarchyField(JTextField dataSchema) {
-      JPanel dataHierarchyField = new JPanel();
-
-      dataHierarchyField.setLayout(new FlowLayout(FlowLayout.LEADING));
-
-      dataHierarchyField.add(dataSchema);
-      dataHierarchyField.add(prepareSchemaButton(dataSchema, "Choose Parameters"));
-
-      return dataHierarchyField;
-   }
-
    private JButton prepareDataQueryButton(JTextField dataSetField, JComboBox<String> dataTypeOptions) {
       final JButton dataQueryButton = new JButton("Choose " + dataTypeOptions.getSelectedItem());
 
@@ -254,21 +276,6 @@ public class InputDialog extends JDialog {
       return dataQueryButton;
    }
 
-   private JButton prepareSchemaButton(final JTextField schemaField, String buttonText) {
-      JButton dataHierarchyButton = new JButton(buttonText);
-
-      dataHierarchyButton.addActionListener(new ActionListener() {
-         public void actionPerformed(ActionEvent e) {
-            DataOrganizationDialog newDialog = new DataOrganizationDialog(schemaField);
-
-            newDialog.init();
-            newDialog.setVisible(true);
-         }
-      });
-
-      return dataHierarchyButton;
-   }
-
    public JPanel initControls() {
       JPanel dialogControls = new JPanel();
 
@@ -282,64 +289,6 @@ public class InputDialog extends JDialog {
       return dialogControls;
    }
 
-   private List<Map<String, Object>> queryData() {
-      List<Map<String, Object>> dataList = null;
-      String dataSet = mDataSet.getText();
-
-      if (String.valueOf(mDataSetType.getSelectedItem()).equals(DATA_TYPE_VALUES[0])) {
-         try {
-            dataList = mConn.getDataByIsoID(dataSet);
-         }
-         catch (java.sql.SQLException sqlErr) {
-            System.out.println("SQLException:\nExiting...");
-            sqlErr.printStackTrace();
-            System.exit(1);
-         }
-      }
-
-      else if (String.valueOf(mDataSetType.getSelectedItem()).equals(DATA_TYPE_VALUES[1])) {
-         try {
-            dataList = mConn.getDataByPyroID(dataSet);
-         }
-         catch (java.sql.SQLException sqlErr) {
-            System.out.println("SQLException:\nExiting...");
-            sqlErr.printStackTrace();
-            System.exit(1);
-         }
-      }
-
-      return dataList;
-   }
-
-   private boolean doWork() {
-      Ontology ontology = null;
-      Clusterer clusterer = null;
-      Set<Cluster> clusters = new HashSet<Cluster>();
-
-      if (!mOntology.getText().equals("")) {
-         ontology = Ontology.createOntology(mOntology.getText());
-      }
-
-      Map<String, Isolate> isoMap = constructIsolates(queryData());
-      
-      ClusterAverageMetric clustMetric = new ClusterAverageMetric();
-
-      for (Map.Entry<String, Isolate> isoEntry : isoMap.entrySet()) {
-         clusters.add(new HCluster(clustMetric, isoEntry.getValue()));
-      }
-
-      if (mOntology != null) { clusterer = new OHClusterer(clusters, ontology); }
-      else if (mOntology == null) { clusterer = new AgglomerativeClusterer(clusters); }
-
-      AnalysisWorker worker = new AnalysisWorker(clusterer,
-       MainWindow.getMainFrame().getOutputCanvas());
-
-      worker.setOutputFile(mOutFile.getText());
-      worker.execute();
-
-      return true;
-   }
-
    private JButton createOkayButton() {
       JButton okayButton = new JButton("Okay");
 
@@ -351,7 +300,6 @@ public class InputDialog extends JDialog {
             }
 
             doWork();
-
             dispose();
          }
       });
@@ -372,101 +320,232 @@ public class InputDialog extends JDialog {
       return cancelButton;
    }
 
-   @SuppressWarnings("unchecked")
-   private Map<String, Isolate> constructIsolates(List<Map<String, Object>> dataList) {
-      Map<String, Isolate> isoMap = new HashMap<String, Isolate>();
-      Map<String, Map<Integer, Object[]>> pyroDataMap =
-         new HashMap<String, Map<Integer, Object[]>>();
+   private List<Map<String, Object>> queryData(Ontology ont) {
+      long queryStart = System.currentTimeMillis();
 
-      double tmp_alpha = .99, tmp_beta = .995;
+      List<Map<String, Object>> dataList = null;
+      String dataSet = mDataSet.getText();
 
-      //First pass over the data where ITSRegions and Isolates are constructed.
-      @SuppressWarnings("unused")
-      String pyroList = "";
-      for (Map<String, Object> dataMap : dataList) {
-         String isoID = String.valueOf(dataMap.get("isolate"));
-         String regName = String.valueOf(dataMap.get("region"));
-         String wellID = String.valueOf(dataMap.get("well"));
-         Integer pyroID = new Integer(String.valueOf(dataMap.get("pyroprint")));
-         double peakHeight = Double.parseDouble(String.valueOf(dataMap.get("pHeight")));
-         String nucleotide = String.valueOf(dataMap.get("nucleotide"));
+      try {
+         String selection = String.valueOf(mDataSetType.getSelectedItem());
 
+         //Isolates : 0
+         //Pyroprints : 1
+         //Experiments : 2
 
-         //Retrieve Isolate
-         if (!isoMap.containsKey(isoID)) {
-            isoMap.put(isoID, new Isolate(isoID, new HashSet<ITSRegion>(),
-                                          new IsolateAverageMetric()));
-         }
-
-         isoMap.get(isoID).getData().add(new ITSRegion(regName, tmp_alpha, tmp_beta,
-                                         new ITSRegionAverageMetric(tmp_alpha, tmp_beta)));
-
-         if (!pyroDataMap.containsKey(isoID)) {
-            pyroDataMap.put(isoID, new HashMap<Integer, Object[]>());
-         }
-
-         Map<Integer, Object[]> pyroMap = pyroDataMap.get(isoID);
-
-         if (!pyroMap.containsKey(pyroID)) {
-            pyroMap.put(pyroID, new Object[] {pyroID, wellID, "",
-                                              new ArrayList<Double>(),
-                                              regName});
-         }
-
-         Object[] pyroData = pyroMap.get(pyroID);
-
-         if (pyroData[2] instanceof String) {
-            pyroData[2] = String.valueOf(pyroData[2]).concat(nucleotide);
-         }
-         if (pyroData[3] instanceof List<?>) {
-            List<Double> peakList = (List<Double>) pyroData[3];
-            peakList.add(new Double(peakHeight));
-         }
+         dataList = selection.equals(DATA_TYPE_VALUES[0]) ? mConn.getDataByIsoID(ont, dataSet) :
+                    selection.equals(DATA_TYPE_VALUES[1]) ? mConn.getDataByPyroID(ont, dataSet) :
+                    selection.equals(DATA_TYPE_VALUES[2]) ? mConn.getDataByExperimentName(dataSet) :
+                                                            null;
+      }
+      catch (java.sql.SQLException sqlErr) {
+         System.out.println("SQLException:\nExiting...");
+         sqlErr.printStackTrace();
+         System.exit(1);
       }
 
-      for (Map.Entry<String, Map<Integer, Object[]>> pyroDataEntry : pyroDataMap.entrySet()) {
+      System.out.println("time to query: " + (System.currentTimeMillis() - queryStart));
 
-         for (Map.Entry<Integer, Object[]> pyroEntry : pyroDataEntry.getValue().entrySet()) {
-            Object[] pyroData = pyroEntry.getValue();
+      return dataList;
+   }
 
-            Pyroprint newPyro = new Pyroprint(Integer.parseInt(String.valueOf(pyroData[0])),
-                                              String.valueOf(pyroData[1]),
-                                              String.valueOf(pyroData[2]),
-                                              (List<Double>) pyroData[3],
-                                              new PyroprintUnstablePearsonMetric());
+   private void updateConfig() {
+      String region_A  = String.valueOf(mRegion_A.getSelectedItem());
+      String region_B  = String.valueOf(mRegion_B.getSelectedItem());
 
-            for (ITSRegion region : isoMap.get(pyroDataEntry.getKey()).getData()) {
-               if (region.getName().equals(pyroData[4])) {
-                  region.getData().add(newPyro);
+      mConf.setRegionAttr(region_A, Configuration.LENGTH_KEY, mPyroLen_A.getText());
+      mConf.setRegionAttr(region_A, Configuration.ALPHA_KEY, mAlpha_A.getText());
+      mConf.setRegionAttr(region_A, Configuration.BETA_KEY, mBeta_A.getText());
+
+      mConf.setRegionAttr(region_B, Configuration.LENGTH_KEY, mPyroLen_B.getText());
+      mConf.setRegionAttr(region_B, Configuration.ALPHA_KEY, mAlpha_B.getText());
+      mConf.setRegionAttr(region_B, Configuration.BETA_KEY, mBeta_B.getText());
+
+      if (!mOntology.getText().equals("")) {
+         mConf.setAttr(Configuration.ONT_KEY, mOntology.getText());
+      }
+      else {
+         mConf.setAttr(Configuration.ONT_KEY, null);
+      }
+   }
+
+   private boolean doWork() {
+      List<Cluster> clusters = new ArrayList<Cluster>();
+      Clusterer clusterer = null;
+      Ontology ontology = null;
+      updateConfig();
+
+      if (mConf != null && mConf.getAttr(Configuration.ONT_KEY) != null) {
+         ontology = Ontology.createOntology(new File(mConf.getAttr(Configuration.ONT_KEY)));
+      }
+      
+      ClusterAverageMetric clustMetric = new ClusterAverageMetric();
+
+      startTime = System.currentTimeMillis();
+
+      List<Double> thresholds = new ArrayList<Double>();
+      thresholds.add(new Double(mConf.getRegionAttr("16-23", Configuration.ALPHA_KEY)));
+      thresholds.add(new Double(mConf.getRegionAttr("16-23", Configuration.BETA_KEY)));
+
+      List<Clusterable<?>> dataList = null;
+      String selection = String.valueOf(mDataSetType.getSelectedItem());
+
+      dataList = selection.equals(DATA_TYPE_VALUES[0]) ? constructEntities(queryData(ontology), ontology) :
+                 selection.equals(DATA_TYPE_VALUES[1]) ? constructPyroprints(queryData(ontology), ontology) :
+                 selection.equals(DATA_TYPE_VALUES[2]) ? constructPyroprints(queryData(ontology), ontology) :
+                                                         null;
+                 
+      Logger.debug(String.format("Clustering %d entities", dataList.size()));
+
+      if (dataList == null) {
+         return false;
+      }
+      
+      Cluster.resetClusterIDs();
+      for (Clusterable<?> entity : dataList) {
+         clusters.add(new HCluster(clustMetric, entity));
+      }
+
+      clusterer = new OHClusterer(ontology, thresholds);
+      clusterer.setProgressCanvas(MainWindow.getMainFrame().getOutputCanvas());
+
+      AnalysisWorker worker = new AnalysisWorker(clusterer, clusters,
+       MainWindow.getMainFrame().getOutputCanvas());
+
+      worker.setOutputFile(mOutFile.getText());
+      worker.execute();
+
+      Logger.debug(String.format("Time to prepare clusterer: %d ms",
+                   (System.currentTimeMillis() - startTime)));
+
+      return true;
+   }
+
+   @SuppressWarnings({ "unchecked", "rawtypes" })
+   private List<Clusterable<?>> constructPyroprints(List<Map<String, Object>> dataList, Ontology ont) {
+      long constructStart = System.currentTimeMillis();
+      List<Clusterable<?>> entityList = new ArrayList<Clusterable<?>>();
+
+      DataMetric<Pyroprint> pyroMetric = null;
+
+      try {
+         pyroMetric = (DataMetric) Class.forName(mConf.getMetric(Configuration.PYROPRINT_KEY)).newInstance();
+      }
+      catch(Exception err) {
+         err.printStackTrace();
+         return null;
+      }
+
+      Pyroprint tmpPyro = null;
+      for (Map<String, Object> dataMap : dataList) {
+         String wellID = String.valueOf(dataMap.get("well"));
+         String regName = String.valueOf(dataMap.get("region"));
+
+         Integer pyroID = new Integer(String.valueOf(dataMap.get("pyroprint")));
+
+         String nucleotide = String.valueOf(dataMap.get("nucleotide"));
+         double peakHeight = Double.parseDouble(String.valueOf(dataMap.get("pHeight")));
+
+         String pyroName = String.format("%d (%s)", pyroID.intValue(), wellID);
+
+         if (tmpPyro == null || !tmpPyro.getName().equals(pyroName)) {
+            if (tmpPyro != null) {
+               entityList.add(tmpPyro);
+            }
+
+            tmpPyro = new Pyroprint(pyroID.intValue(), wellID, pyroMetric);
+
+            if (ont != null) {
+               for (Map.Entry<String, Set<String>> tableCols : ont.getTableColumns().entrySet()) {
+                  for (String colName : tableCols.getValue()) {
+                     if (colName.replace(" ", "").equals("")) { continue; }
+
+                     tmpPyro.addLabel(String.valueOf(dataMap.get(colName)));
+                  }
                }
             }
          }
 
+         if (tmpPyro.getName().equals(pyroName) && tmpPyro.getDispLen() <
+             Integer.parseInt(mConf.getRegionAttr(regName, Configuration.LENGTH_KEY))) {
+               tmpPyro.addDispensation(nucleotide, peakHeight);
+         }
+
+      }
+      
+      Logger.debug(String.format("Time to construct Pyroprints: %d ms",
+                   (System.currentTimeMillis() - constructStart)));
+
+      return entityList;
+   }
+
+   @SuppressWarnings({ "unchecked", "rawtypes" })
+   private List<Clusterable<?>> constructEntities(List<Map<String, Object>> dataList, Ontology ont) {
+      long constructStart = System.currentTimeMillis();
+      List<Clusterable<?>> entityList = new ArrayList<Clusterable<?>>();
+
+
+      DataMetric<Isolate> isoMetric = null;
+      DataMetric<ITSRegion> regionMetric = null;
+      DataMetric<Pyroprint> pyroMetric = null;
+
+      try {
+         isoMetric = (DataMetric) Class.forName(mConf.getMetric(Configuration.ISOLATE_KEY)).newInstance();
+         regionMetric = (DataMetric) Class.forName(mConf.getMetric(Configuration.ITSREGION_KEY)).newInstance();
+         pyroMetric = (DataMetric) Class.forName(mConf.getMetric(Configuration.PYROPRINT_KEY)).newInstance();
+      }
+      catch(Exception err) {
+         err.printStackTrace();
+         return null;
       }
 
-      Map<String, Isolate> finalIsoMap = new HashMap<String, Isolate>();
+      Isolate tmpIso = null;
+      Pyroprint tmpPyro = null;
+      for (Map<String, Object> dataMap : dataList) {
+         String wellID = String.valueOf(dataMap.get("well"));
+         String isoID = String.valueOf(dataMap.get("isolate"));
+         String regName = String.valueOf(dataMap.get("region"));
+         Integer pyroID = new Integer(String.valueOf(dataMap.get("pyroprint")));
 
-      Logger.debug("Isolates retrieved from CPLOP:");
-      for (Map.Entry<String, Isolate> isoEntry : isoMap.entrySet()) {
-         Logger.debug(String.format("%s: %s\n", isoEntry.getKey(),
-                                    isoEntry.getValue().toString()));
+         String nucleotide = String.valueOf(dataMap.get("nucleotide"));
+         double peakHeight = Double.parseDouble(String.valueOf(dataMap.get("pHeight")));
 
-         boolean isCompleteIsolate = true;
+         String pyroName = String.format("%d (%s)", pyroID.intValue(), wellID);
 
-         for (ITSRegion region : isoEntry.getValue().getData()) {
-            if (region.getData().isEmpty()) {
-               Logger.debug(String.format("%s[%s] has no pyroprints\n",
-                                          isoEntry.getValue().getName(),
-                                          region.getName()));
-               isCompleteIsolate = false;
+         if (tmpIso == null || !tmpIso.getName().equals(isoID)) {
+            tmpIso = new Isolate(isoID, isoMetric);
+
+            if (ont != null) {
+               for (Map.Entry<String, Set<String>> tableCols : ont.getTableColumns().entrySet()) {
+                  for (String colName : tableCols.getValue()) {
+                     if (colName.replace(" ", "").equals("")) { continue; }
+
+                     tmpIso.addLabel(String.valueOf(dataMap.get(colName)));
+                  }
+               }
             }
+
+            entityList.add(tmpIso);
          }
 
-         if (isCompleteIsolate) {
-            finalIsoMap.put(isoEntry.getKey(), isoEntry.getValue());
+         if (tmpIso != null) {
+            tmpIso.getData().add(new ITSRegion(regName, regionMetric));
+         }
+
+         if (tmpPyro == null || !tmpPyro.getName().equals(pyroName)) {
+            tmpPyro = new Pyroprint(pyroID.intValue(), wellID, pyroMetric);
+            tmpIso.getRegion(regName).add(tmpPyro);
+         }
+
+         if (tmpPyro.getName().equals(pyroName) && tmpPyro.getDispLen() <
+             Integer.parseInt(mConf.getRegionAttr(regName, Configuration.LENGTH_KEY))) {
+               tmpPyro.addDispensation(nucleotide, peakHeight);
          }
       }
 
-      return isoMap;
+      Logger.debug(String.format("Time to construct Isolates: %d ms",
+                   (System.currentTimeMillis() - constructStart)));
+
+      return entityList;
    }
 }

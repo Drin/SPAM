@@ -26,11 +26,10 @@ public abstract class Clusterable<E> {
       return false;
    }
 
-   public int size() { return mData.size(); }
    public String getName() { return mName; }
    public Collection<E> getData() { return mData; }
+   public int size() { return mData.size(); }
+   public void add(E element) { mData.add(element); }
 
    public abstract double compareTo(Clusterable<?> otherData);
-   public abstract boolean isSimilar(Clusterable<?> otherData);
-   public abstract boolean isDifferent(Clusterable<?> otherData);
 }

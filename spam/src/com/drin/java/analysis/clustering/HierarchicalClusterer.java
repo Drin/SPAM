@@ -3,56 +3,84 @@ package com.drin.java.analysis.clustering;
 import com.drin.java.analysis.clustering.Clusterer;
 
 import com.drin.java.clustering.Cluster;
+import com.drin.java.clustering.CandidatePair;
+import com.drin.java.util.Logger;
 
-import java.util.Set;
-import java.util.HashSet;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.List;
+import java.util.ArrayList;
+
+import javax.swing.JTextArea;
 
 public abstract class HierarchicalClusterer implements Clusterer {
-   protected Set<Cluster> mClusters;
-   protected Set<Cluster> mResultClusters;
+   protected Map<String, Map<String, Double>> mSimMap;
+   protected Map<Double, List<Cluster>> mResultClusters;
+   protected List<Double> mThresholds;
 
-   public HierarchicalClusterer(Set<Cluster> clusters) {
-      mClusters = clusters;
+   protected JTextArea mCanvas;
+   protected double mPercentComplete, mPercentIncr;
+   
+   private long mStartTime;
 
-      mResultClusters = new HashSet<Cluster>();
+   public HierarchicalClusterer(List<Double> thresholds) {
+      mResultClusters = new HashMap<Double, List<Cluster>>();
+      mSimMap = new HashMap<String, Map<String, Double>>();
+      mThresholds = thresholds;
+
+      mPercentComplete = 0;
+      mPercentIncr = 0;
    }
 
-   protected Set<Cluster> clusterDataSet(Set<Cluster> clusterSet) {
-      Set<Cluster> newClustSet = new HashSet<Cluster>(clusterSet);
+   public void resetSimilarityCache() { mSimMap.clear(); }
+   public Map<Double, List<Cluster>> getClusters() { return mResultClusters; }
 
-      System.out.println("Hierarchical Clustering...");
+   @Override
+   public void setProgressCanvas(JTextArea canvas) { mCanvas = canvas; }
 
-      while (newClustSet.size() > 1) {
-         Cluster[] closeClusters = findCloseClusters(newClustSet);
-
-         if (closeClusters != null) {
-            newClustSet = combineClusters(closeClusters, newClustSet);
-         }
-
-         else { break; }
+   @Override
+   public void writeProgress() {
+      if (mCanvas != null) {
+         mCanvas.setText(String.format("\n\n\t\t%.02f%% Complete!", mPercentComplete));
+                  
+         Logger.debug(String.format("Elapsed time at %.02f%% completion: %d ms",
+                                    mPercentComplete,
+                                    (System.currentTimeMillis() - mStartTime)));
+         
+         mPercentComplete += mPercentIncr;
       }
-
-      return newClustSet;
    }
 
    @Override
-   public void clusterData() {
-      for (Cluster cluster : clusterDataSet(mClusters)) {
-         mResultClusters.add(cluster);
+   public void clusterData(List<Cluster> clusters) {
+      mResultClusters.clear();
+      
+      mStartTime = System.currentTimeMillis();
+
+      for (Double threshold : mThresholds) {
+         mPercentComplete = 0;
+         clusterDataSet(clusters, threshold);
+
+         mResultClusters.put(threshold, new ArrayList<Cluster>(clusters));
       }
    }
 
-   public Set<Cluster> getClusters() {
-      Set<Cluster> resultClusters = new HashSet<Cluster>();
+   protected void clusterDataSet(List<Cluster> clusters, double threshold) {
+      CandidatePair closeClusters = null;
+      mPercentIncr = 100.0/clusters.size();
 
-      for (Cluster cluster : mResultClusters) {
-         resultClusters.add(cluster);
-      }
+      do {
+         writeProgress();
 
-      return resultClusters;
+         closeClusters = findCloseClusters(clusters, threshold);
+
+         if (closeClusters != null) {
+            combineClusters(closeClusters, clusters);
+         }
+
+      } while (closeClusters != null && clusters.size() > 1);
    }
 
-   protected abstract Cluster[] findCloseClusters(Set<Cluster> clusterSet);
-   protected abstract Set<Cluster> combineClusters(Cluster[] closeClusters,
-                                                   Set<Cluster> clusterSet);
+   protected abstract CandidatePair findCloseClusters(List<Cluster> clusters, double threshold);
+   protected abstract Cluster combineClusters(CandidatePair closeClusters, List<Cluster> clusters);
 }

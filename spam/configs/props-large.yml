@@ -1,0 +1,29 @@
+initialSize: 500
+updateSize: 50
+numUpdates: 1000
+
+ontology: large.ont
+
+debug: true
+transform: false
+
+regions: {
+   16-23: {
+      pyroLength: 93
+      alpha: 0.995
+      beta: 0.99
+   }
+
+   23-5: {
+      pyroLength: 93
+      alpha: 0.995
+      beta: 0.99
+   }
+}
+
+metrics: {
+   cluster: com.drin.java.metrics.ClusterAverageMetric
+   isolate: com.drin.java.metrics.IsolateAverageMetric
+   itsregion: com.drin.java.metrics.ITSRegionMedianMetric
+   pyroprint: com.drin.java.metrics.PyroprintUnstablePearsonMetric
+}

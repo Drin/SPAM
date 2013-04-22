@@ -1,5 +1,6 @@
 package com.drin.java.clustering;
 
+import com.drin.java.ontology.Labelable;
 import com.drin.java.clustering.Clusterable;
 import com.drin.java.clustering.Cluster;
 
@@ -15,11 +16,19 @@ public class HCluster extends Cluster {
 
    public HCluster(DataMetric<Cluster> metric) { super(metric); }
 
+   public HCluster(int clustId, DataMetric<Cluster> metric) {
+      super(clustId, metric);
+   }
+
    public HCluster(DataMetric<Cluster> metric, Clusterable<?> elem) {
       this(metric);
 
       mElements.add(elem);
       mDendogram = new DendogramLeaf(elem);
+
+      if (elem instanceof Labelable) {
+         mLabel.getLabels().putAll(((Labelable) elem).getLabels());
+      }
    }
 
    public void computeStatistics() {
@@ -45,12 +54,15 @@ public class HCluster extends Cluster {
 
    public Cluster join(Cluster otherClust) {
       if (otherClust instanceof HCluster) {
-         Cluster newCluster = new HCluster(this.mMetric);
+         Cluster newCluster = new HCluster(Integer.parseInt(this.getName()), this.mMetric);
 
          Collection<Clusterable<?>> otherData = ((HCluster)otherClust).mElements;
 
          newCluster.mElements.addAll(this.mElements);
          newCluster.mElements.addAll(otherData);
+
+         newCluster.mLabel.addAll(this.mLabel);
+         newCluster.mLabel.addAll(otherClust.mLabel);
 
          newCluster.computeStatistics();
 

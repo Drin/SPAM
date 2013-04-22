@@ -1,72 +1,97 @@
 package com.drin.java.analysis.clustering;
 
 import com.drin.java.clustering.Cluster;
+import com.drin.java.clustering.CandidatePair;
 
 import com.drin.java.util.Logger;
 
-import java.util.Set;
-import java.util.HashSet;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.List;
 
 public class AgglomerativeClusterer extends HierarchicalClusterer {
-   protected static final int CLUSTER_PAIR_SIZE = 2;
 
-   public AgglomerativeClusterer(Set<Cluster> clusters) {
-      super(clusters);
+   public AgglomerativeClusterer(List<Double> thresholds) {
+      super(thresholds);
    }
 
    @Override
-   protected Cluster[] findCloseClusters(Set<Cluster> clusterSet) {
+   protected CandidatePair findCloseClusters(List<Cluster> clusters, double threshold) {
+      Map<String, Double> clustSimMap = null;
+      Cluster close_A = null, close_B = null;
       double maxSim = 0;
-      Cluster closeClust_A = null, closeClust_B = null;
 
-      for (Cluster clust_A : clusterSet) {
-         for (Cluster clust_B : clusterSet) {
-            if (clust_A.getName().equals(clust_B.getName())) { continue; }
+      for (int ndx_A = 0; ndx_A < clusters.size(); ndx_A++) {
+         Cluster clust_A = clusters.get(ndx_A);
 
-            double clustDist = clust_A.compareTo(clust_B);
+         if (!mSimMap.containsKey(clust_A.getName())) {
+            mSimMap.put(clust_A.getName(), new HashMap<String, Double>());
+         }
 
-            if (clustDist > maxSim && !clust_A.isDifferent(clust_B)) {
-               closeClust_A = clust_A;
-               closeClust_B = clust_B;
+         clustSimMap = mSimMap.get(clust_A.getName());
 
-               maxSim = clustDist;
+         for (int ndx_B = ndx_A + 1; ndx_B < clusters.size(); ndx_B++) {
+            Cluster clust_B = clusters.get(ndx_B);
+
+            if (!clust_A.getName().equals(clust_B.getName())) {
+               if (!clustSimMap.containsKey(clust_B.getName())) {
+                  clustSimMap.put(clust_B.getName(), clust_A.compareTo(clust_B));
+               }
+
+               double clustDist = clustSimMap.get(clust_B.getName());
+
+               if (clustDist > maxSim && clustDist > threshold) {
+                  close_A = clust_A;
+                  close_B = clust_B;
+                  maxSim = clustDist;
+               }
+            }
+            else {
+               /*
+               System.out.printf("comparing %s and %s\n", clust_A.getName(),
+                                 clust_B.getName());
+                                 */
             }
          }
+
+         clustSimMap = null;
       }
 
-      if (closeClust_A != null && closeClust_B != null) {
-         Cluster[] closeClusters = new Cluster[] {closeClust_A, closeClust_B};
-         return closeClusters;
+      if (close_A != null && close_B != null) {
+         return new CandidatePair(close_A, close_B, maxSim);
       }
 
       return null;
    }
 
    @Override
-   protected Set<Cluster> combineClusters(Cluster[] closeClusters,
-                                          Set<Cluster> clusterSet) {
-      Set<Cluster> newClusterSet = new HashSet<Cluster>();
-
-      if (closeClusters.length != CLUSTER_PAIR_SIZE) {
-         Logger.error(-1, "Invalid cluster pair to be combined\n");
-      }
-
+   protected Cluster combineClusters(CandidatePair closeClusters, List<Cluster> clusters) {
+      int removeNdx = -1;
+      Cluster combinedCluster = null;
 
       Logger.debug(String.format("combining clusters '%s' and '%s'",
-                                 closeClusters[0], closeClusters[1]));
+                                 closeClusters.getLeftClusterName(),
+                                 closeClusters.getRightClusterName()));
 
-      for (Cluster clust_A : clusterSet) {
-         if (clust_A.getName().equals(closeClusters[0].getName())) {
-            Cluster clust_B = closeClusters[1];
-            newClusterSet.add(clust_A.join(clust_B));
+      for (int clustNdx = 0; clustNdx < clusters.size(); clustNdx++) {
+         Cluster tmpClust = clusters.get(clustNdx);
+
+         if (tmpClust.getName().equals(closeClusters.getLeftClusterName())) {
+            combinedCluster = tmpClust.join(closeClusters.getRightCluster());
+
+            clusters.set(clustNdx, combinedCluster);
          }
 
-         else if (clust_A.getName().equals(closeClusters[1].getName())) {
-            continue;
+         else if (tmpClust.getName().equals(closeClusters.getRightClusterName())) {
+            removeNdx = clustNdx;
          }
-         else { newClusterSet.add(clust_A); }
       }
 
-      return newClusterSet;
+      if (removeNdx != -1) { clusters.remove(removeNdx); }
+      else {
+         Logger.error(-1, "Remove Index is -1. Error during clustering.\n");
+      }
+
+      return combinedCluster;
    }
 }

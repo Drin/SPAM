@@ -76,13 +76,13 @@ public class MainWindow extends JFrame {
     * Initialize menu items that will be present in the 'File' menu, then
     * return the initialized 'File' menu
     */
-   @SuppressWarnings("unused")
    private JMenu initFileMenu() {
+      /*
       JMenuItem importDendogram = new JMenuItem("View dendogram file");
       //JMenuItem importPyrogram = new JMenuItem("Open Pyroprint file");
 
       JMenuItem saveFile = new JMenuItem("Save As...");
-      /*
+      
       SaveFileListener saveListener = new SaveFileListener();
       saveListener.setOwner(this);
       saveFile.addActionListener(saveListener);
@@ -134,62 +134,6 @@ public class MainWindow extends JFrame {
       analysisMenu.add(strainIdentifySubMenu);
 
       return analysisMenu;
-   }
-
-   @SuppressWarnings("unused")
-   private JMenu initDendogramMenu() {
-      JMenuItem thresholdDendogram = new JMenuItem("Apply dendogram threshold");
-      /*
-      DendogramListener dendThresholdListener = new DendogramListener(this);
-      thresholdDendogram.addActionListener(dendThresholdListener);
-      */
-
-      JMenu dendogramMenu = new JMenu("Dendogram");
-      dendogramMenu.add(thresholdDendogram);
-
-      return dendogramMenu;
-   }
-
-   @SuppressWarnings("unused")
-   private JMenu initLibMenu() {
-      JMenuItem libDisplay = new JMenuItem("Display Pyroprints");
-      JMenuItem libCompare = new JMenuItem("Compare Pyroprints");
-      /*
-      DisplayPyrogramListener libDisplayListener = new DisplayPyrogramListener();
-      libDisplayListener.setOwner(this);
-      libDisplay.addActionListener(libDisplayListener);
-
-      ComparePyrogramsListener libCompareListener = new ComparePyrogramsListener();
-      libCompareListener.setOwner(this);
-      libCompare.addActionListener(libCompareListener);
-      */
-
-      JMenu libMenu = new JMenu("Library");
-      libMenu.add(libDisplay);
-      libMenu.add(libCompare);
-
-      return libMenu;
-   }
-
-   @SuppressWarnings("unused")
-   private JMenu initPyroMenu() {
-      JMenuItem pyroDisplay = new JMenuItem("Display Pyroprints");
-      JMenuItem pyroCompare = new JMenuItem("Compare Pyroprints");
-      /*
-      DisplayXMLPyrogramListener pyroDisplayListener = new DisplayXMLPyrogramListener();
-      pyroDisplayListener.setOwner(this);
-      pyroDisplay.addActionListener(pyroDisplayListener);
-
-      CompareXMLPyrogramsListener pyroCompareListener = new CompareXMLPyrogramsListener();
-      pyroCompareListener.setOwner(this);
-      pyroCompare.addActionListener(pyroCompareListener);
-      */
-
-      JMenu pyroMenu = new JMenu("PyroSequencing");
-      pyroMenu.add(pyroDisplay);
-      pyroMenu.add(pyroCompare);
-
-      return pyroMenu;
    }
 
    public JTextArea getOutputCanvas() {

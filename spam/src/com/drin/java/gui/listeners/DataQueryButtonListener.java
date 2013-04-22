@@ -36,16 +36,12 @@ public class DataQueryButtonListener implements ActionListener {
    private Object[][] mTableData = null;
    private Object[] mTableDataColumns = null;
 
-   @SuppressWarnings("unused")
-   private String mRecentDir;
-
    private CPLOPConnection mConn = null;
 
    public DataQueryButtonListener(JTextField textField, JComboBox<String> dataTypeOptions,
     CPLOPConnection conn) {
       mDataTypeOptions = dataTypeOptions;
       mDataSetField = textField;
-      mRecentDir = null;
 
       mDialog = new JDialog(mDialog);
       mDialog.setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
@@ -74,9 +70,8 @@ public class DataQueryButtonListener implements ActionListener {
       }
 
       else if (dataType.equals("Experiments")) {
-      }
-
-      else if (dataType.equals("Matrix")) {
+         mDialog.setTitle("Pyroprint Data Set");
+         mPane.add(prepareExperimentDataView());
       }
 
       else {
@@ -211,6 +206,42 @@ public class DataQueryButtonListener implements ActionListener {
 
          for (int colNdx = 0; colNdx < mTableDataColumns.length; colNdx++) {
             tupleData[colNdx] = isoTuple.get((String) mTableDataColumns[colNdx]);
+         }
+
+         mTableData[rowNdx] = tupleData;
+      }
+
+      mTable = new JTable(mTableData, mTableDataColumns);
+      JScrollPane isolateScrollPane = new JScrollPane(mTable);
+
+      mTable.setAutoCreateRowSorter(true);
+      mTable.setFillsViewportHeight(true);
+
+      return isolateScrollPane;
+   }
+
+   private JScrollPane prepareExperimentDataView() {
+      List<Map<String, Object>> experiments = null;
+
+      try {
+         experiments = mConn.getExperimentDataSet();
+      }
+
+      catch (java.sql.SQLException sqlErr) {
+         System.out.println("SQLException:\nExiting...");
+         sqlErr.printStackTrace();
+         System.exit(1);
+      }
+
+      mTableData = new Object[experiments.size()][];
+      mTableDataColumns = new Object[] {"name", "isolate count"};
+
+      for (int rowNdx = 0; rowNdx < experiments.size(); rowNdx++) {
+         Map<String, Object> expTuple = experiments.get(rowNdx);
+         Object[] tupleData = new Object[expTuple.size()];
+
+         for (int colNdx = 0; colNdx < mTableDataColumns.length; colNdx++) {
+            tupleData[colNdx] = expTuple.get(String.valueOf(mTableDataColumns[colNdx]));
          }
 
          mTableData[rowNdx] = tupleData;

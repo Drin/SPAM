@@ -65,8 +65,11 @@ public class MatrixParser {
          tupleMap.putAll(constructTuple(tupleColMap,
           tupleStr.replace("\"","").split(mTokenDelim)));
       }
+      
+      if (fileScanner != null) {
+         fileScanner.close();
+      }
 
-      fileScanner.close();
       return tupleMap;
    }
 

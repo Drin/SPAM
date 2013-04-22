@@ -1,0 +1,56 @@
+package com.drin.java.clustering;
+
+import com.drin.java.clustering.Cluster;
+import com.drin.java.clustering.Clusterable;
+
+import java.util.List;
+import java.util.Map;
+
+public class ClusterResults {
+   private Map<Double, List<Cluster>> mClusters;
+   private long mClusterTime;
+
+   public ClusterResults(Map<Double, List<Cluster>> finalClusters) {
+      mClusters = finalClusters;
+      mClusterTime = -1;
+   }
+
+   public ClusterResults(Map<Double, List<Cluster>> finalClusters, long time) {
+      mClusters = finalClusters;
+      mClusterTime = time;
+   }
+   
+   public long getClusterTime() {
+      return mClusterTime;
+   }
+
+   public String toString() {
+      String clustInfo = "", dendInfo = "", clustContents = "", bigClustName = "";
+      int biggestClust = 0;
+
+      for (Map.Entry<Double, List<Cluster>> clusterData : mClusters.entrySet()) {
+         dendInfo += String.format("<Clusters threshold=\"%.04f\">\n", clusterData.getKey());
+         clustInfo += String.format("\nThreshold: %.04f\nNumber of Result Clusters, %d\n",
+                                     clusterData.getKey(), clusterData.getValue().size());
+
+         for (Cluster cluster : clusterData.getValue()) {
+            if (cluster.size() > biggestClust) {
+               biggestClust = cluster.size();
+               bigClustName = String.format("\"Cluster %s\"", cluster.getName());
+            }
+
+            for (Clusterable<?> elem : cluster.getElements()) {
+               clustContents += String.format("Cluster %s, %s\n", cluster.getName(), elem.getName());
+            }
+         }
+
+         dendInfo += "</Clusters>\n";
+         clustInfo += String.format("Largest Cluster, %s\nLargest Cluster Size, %d\n\n%s",
+                                    bigClustName, biggestClust, clustContents);
+      }
+
+      return String.format("Elapsed Time: %dms\n%s%s", mClusterTime,
+                           ("******\n\nDendogram:\n" + dendInfo),
+                           ("******\n\nClusters:\n" + clustInfo));
+   }
+}

@@ -9,131 +9,191 @@ import com.drin.java.clustering.Cluster;
 
 import com.drin.java.util.Logger;
 
-import java.util.Set;
-import java.util.HashSet;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
+import java.util.HashMap;
 
 public class OHClusterer extends AgglomerativeClusterer {
+   private static final int ALPHA_THRESH_NDX = 0, BETA_THRESH_NDX = 1;
+   protected List<Cluster> mBoundaryClusters;
    protected Ontology mOntology;
 
-   //TODO the 2nd param to super (single threshold for hierarchical clustering)
-   //should not be 0...
-   public OHClusterer(Set<Cluster> clusters, Ontology ontology) {
-      super(clusters);
+   public OHClusterer(Ontology ontology, List<Double> thresholds) {
+      super(thresholds);
 
       mOntology = ontology;
+      mBoundaryClusters = new ArrayList<Cluster>();
    }
 
-   private void printOntology() {
-      System.out.printf("cluster tree:\n%s\n", mOntology.printClusters());
+   public List<Cluster> getCoreClusters() {
+      return mOntology.getRoot().getClusters();
    }
 
+   public List<Cluster> getBoundaryClusters() {
+      return mBoundaryClusters;
+   }
+   
    @Override
-   public void clusterData() {
-      if (mOntology == null) { super.clusterData(); }
-      else {
-         for (Cluster cluster : ontologicalCluster(mOntology.getRoot())) {
-            mResultClusters.add(cluster);
-         }
+   public void clusterData(List<Cluster> clusters) {
+      mResultClusters.clear();
+      if (mOntology == null) {
+         super.clusterData(clusters);
+         return;
+      }
+
+      separateCoreClusters(clusters, mThresholds.get(ALPHA_THRESH_NDX));
+
+      ontologicalCluster(mOntology.getRoot(), mThresholds.get(ALPHA_THRESH_NDX));
+
+      if (mOntology.getRoot().getClusters() == null) {
+         System.out.printf("failed clustering. Got null\n");
+         System.exit(1);
+      }
+
+      List<Cluster> resultClusters = mOntology.getRoot().getClusters();
+      resultClusters.addAll(mBoundaryClusters);
+
+      super.clusterDataSet(resultClusters, mThresholds.get(ALPHA_THRESH_NDX));
+      mResultClusters.put(mThresholds.get(ALPHA_THRESH_NDX),
+                          new ArrayList<Cluster>(resultClusters));
+
+      for (int threshNdx = BETA_THRESH_NDX; threshNdx < mThresholds.size(); threshNdx++) {
+         super.clusterDataSet(resultClusters, mThresholds.get(threshNdx));
+
+         mResultClusters.put(mThresholds.get(threshNdx), new ArrayList<Cluster>(resultClusters));
       }
    }
 
-   private Set<Cluster> ontologicalCluster(OntologyTerm root) {
-      if (root == null) { return new HashSet<Cluster>(); }
+   private void ontologicalCluster(OntologyTerm root, double threshold) {
+      List<Cluster> clusters = new ArrayList<Cluster>();
+      boolean unclusteredData = false;
 
-      Set<Cluster> clusters = new HashSet<Cluster>();
+      /*
+      System.out.printf(
+         "clustering node [%s.%s]...\n" +
+         "checking conditions:\n" +
+         "\tis root null: %s\n" +
+         "\tdoes root have new data: %s\n" +
+         "\tdoes root have sub-partitions: %s\n",
+         root.getTableName(), root.getColName(),
+         (root == null), root.hasNewData(),
+         !root.getPartitions().isEmpty()
+      );
+      */
 
-      if (root.getPartitions() != null) {
+      if (root == null || !root.hasNewData()) {
+         return;
+      }
+
+      else if (!root.getPartitions().isEmpty()) {
          for (Map.Entry<String, OntologyTerm> partition : root.getPartitions().entrySet()) {
-            clusters.addAll(ontologicalCluster(partition.getValue()));
-      
-            if (root.isTimeSensitive()) {
+            System.out.printf("clustering partition [%s]\n", partition.getKey());
+
+            if (partition.getValue() == null) {
+               System.out.printf("\tnull node\n");
+               continue;
+            }
+
+            if (partition.getValue().hasNewData()) {
+               System.out.printf("\tnew data in partition\n");
+               ontologicalCluster(partition.getValue(), threshold);
+               unclusteredData = true;
+            }
+
+            if (partition.getValue().getClusters() == null) {
+               System.out.printf("\tpartition has no clusters\n");
+               continue;
+            }
+
+            clusters.addAll(partition.getValue().getClusters());
+
+            if (unclusteredData && root.isTimeSensitive()) {
                Logger.debug("Clustering time sensitive clusters...");
 
-               clusters = clusterDataSet(clusters);
+               clusterDataSet(clusters, threshold);
+               if (clusters == null) {
+                  System.out.printf("spot A is null\n");
+               }
                root.setClusters(clusters);
-
-               printOntology();
             }
          }
       
-         if (!root.isTimeSensitive()) {
+         if (unclusteredData && !root.isTimeSensitive()) {
             Logger.debug("Clustering non time sensitive clusters...");
 
-            clusters = clusterDataSet(clusters);
+            clusterDataSet(clusters, threshold);
+            if (clusters == null) {
+               System.out.printf("spot B is null\n");
+            }
             root.setClusters(clusters);
-
-            printOntology();
-
-            return clusters;
          }
       }
 
       else if (root.getData() != null) {
          Logger.debug("percolating leaf cluster sets");
+         //System.out.printf("This is a leaf node\n");
 
          clusters.addAll(root.getData());
-         clusters = clusterDataSet(clusters);
-         root.setClusters(clusters);
-
-         printOntology();
-      }
-
-      return clusters;
-   }
-
-
-   @Override
-   protected Cluster[] findCloseClusters(Set<Cluster> clusters) {
-      double maxSim = 0;
-      Cluster closeClust_A = null, closeClust_B = null;
-
-      Logger.debug("finding close clusters...");
-
-      for (Cluster clust_A : clusters) {
-         for (Cluster clust_B : clusters) {
-            if (clust_A.getName().equals(clust_B.getName())) { continue; }
-
-            double dist = clust_A.compareTo(clust_B);
-
-            if (dist > maxSim && clust_A.isSimilar(clust_B)) {
-               closeClust_A = clust_A;
-               closeClust_B = clust_B;
-
-               maxSim = dist;
-            }
+         clusterDataSet(clusters, threshold);
+         if (clusters == null) {
+            System.out.printf("spot C is null\n");
          }
+         root.setClusters(clusters);
       }
 
-      if (closeClust_A != null && closeClust_B != null) {
-         Cluster[] closeClusters = new Cluster[] {closeClust_A, closeClust_B};
-         return closeClusters;
-      }
-
-      return null;
-   }
-
-   @Override
-   protected Set<Cluster> combineClusters(Cluster[] closeClusters,
-                                          Set<Cluster> clusters) {
-      Set<Cluster> newClusters = super.combineClusters(closeClusters, clusters);
-
-      if (closeClusters.length != CLUSTER_PAIR_SIZE) {
-         Logger.error(-1, "No cluster distances were recomputed");
+      else {
+         System.out.printf("Node has no data and no edges\n");
       }
 
       /*
-       * TODO: figure out recomputing distances...
-      for (Cluster cluster : newClusters) {
-         if (cluster.isSimilar(closeClusters[0])) { continue; }
+      System.out.printf("finished clustering node [%s.%s]\n",
+                        root.getTableName(), root.getColName());
+                        */
+   }
 
-         Logger.debug(String.format("recomputing clusters '%s' and '%s'\n",
-                                    cluster.getName(), closeClusters[0].getName()));
-   
-         mClusterMetric.recompute(closeClusters[0], cluster);
+   //modifies mSimMap and mBoundaryClusters
+   private void separateCoreClusters(List<Cluster> clusters, double threshold) {
+      Map<String, Cluster> coreClusters = new HashMap<String, Cluster>();
+      Map<String, Double> clustSimMap = null;
+      Cluster clust_A = null, clust_B = null;
+
+      //determine clusters that are close
+      for (int clustNdx_A = 0; clustNdx_A < clusters.size(); clustNdx_A++) {
+         clustSimMap = new HashMap<String, Double>();
+         clust_A = clusters.get(clustNdx_A);
+
+         for (int clustNdx_B = clustNdx_A + 1; clustNdx_B < clusters.size(); clustNdx_B++) {
+            clust_B = clusters.get(clustNdx_B);
+
+            double clustComparison = clust_A.compareTo(clust_B);
+            clustSimMap.put(clust_B.getName(), new Double(clustComparison));
+
+            if (clustComparison >= threshold) {
+               if (!coreClusters.containsKey(clust_A.getName())) {
+                  coreClusters.put(clust_A.getName(), clust_A);
+               }
+               if (!coreClusters.containsKey(clust_B.getName())) {
+                  coreClusters.put(clust_B.getName(), clust_B);
+               }
+            }
+         }
+
+         mSimMap.put(clust_A.getName(), clustSimMap);
       }
-      */
 
-      return newClusters;
+      //clusters that are very similar to another go into ontology tree
+      //clusters that were not similar to anything go into boundary clusters
+      for (int clustNdx = 0; clustNdx < clusters.size(); clustNdx++) {
+         clust_A = clusters.get(clustNdx);
+
+         if (coreClusters.containsKey(clust_A.getName())) {
+            mOntology.addData(coreClusters.get(clust_A.getName()));
+            //System.out.printf("added new data\n");
+         }
+         else {
+            mBoundaryClusters.add(clust_A);
+         }
+      }
    }
 }

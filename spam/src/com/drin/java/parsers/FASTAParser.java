@@ -36,7 +36,9 @@ public class FASTAParser {
          //add last sequence
          mDnaStrings.add(tmpDnaString);
          
-         fileScanner.close();
+         if (fileScanner != null) {
+            fileScanner.close();
+         }
       }
       catch (java.io.FileNotFoundException fileErr) {
          System.out.println("Could not find file: " + mFile);
