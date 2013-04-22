@@ -100,7 +100,9 @@ public class Ontology {
 
          if (term.getPartitions() != null) {
             for (Map.Entry<String, OntologyTerm> feature : term.getPartitions().entrySet()) {
-               ontologyStr += Ontology.printOntology(feature.getValue(), feature.getKey(), prefix + "   ");
+               ontologyStr += Ontology.printOntology(feature.getValue(),
+                                                     feature.getKey(),
+                                                     prefix + "   ");
             }
          }
       }
@@ -182,6 +184,8 @@ public class Ontology {
    
          if (parser.matchString(term)) { ont.addTerm(parser.getTerm()); }
       }
+
+      System.out.println("ontology: \n" + ont);
 
       return ont;
    }

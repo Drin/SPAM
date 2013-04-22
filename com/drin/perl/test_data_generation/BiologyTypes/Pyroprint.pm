@@ -38,7 +38,7 @@ sub similar_protocol {
 }
 
 sub duplicate {
-   my ($self, $config) = (@_);
+   my ($self, $config, $name_prefix, $name_suffix) = (@_);
 
    my $clone = {
       pyroID        => (++$config->{max_pyro_id}),
@@ -52,8 +52,8 @@ sub duplicate {
       $clone->{peak_heights}->[$ndx] = $self->{peak_heights}->[$ndx];
    }
 
-   $clone->{name_prefix} = $self->{name_prefix};
-   $clone->{name_suffix} = $self->{name_suffix};
+   $clone->{name_prefix} = $name_prefix || $self->{name_prefix};
+   $clone->{name_suffix} = $name_suffix || $self->{name_suffix};
    $clone->{appliedRegion} = $self->{appliedRegion};
    $clone->{wellID} = $self->{wellID};
    $clone->{pyroPrintedDate} = $self->{pyroPrintedDate};

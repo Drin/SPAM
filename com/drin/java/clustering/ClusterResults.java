@@ -20,6 +20,10 @@ public class ClusterResults {
       mClusterTime = time;
    }
 
+   public long getClusterTime() {
+      return mClusterTime;
+   }
+
    public String toString() {
       String clustInfo = "", dendInfo = "", clustContents = "", bigClustName = "";
       int biggestClust = 0;
@@ -45,7 +49,8 @@ public class ClusterResults {
                                     bigClustName, biggestClust, clustContents);
       }
 
-      return String.format("%s%s", ("******\n\nDendogram:\n" + dendInfo),
-                          ("******\n\nClusters:\n" + clustInfo));
+      return String.format("Elapsed Time: %dms\n%s%s", mClusterTime,
+                           ("******\n\nDendogram:\n" + dendInfo),
+                           ("******\n\nClusters:\n" + clustInfo));
    }
 }

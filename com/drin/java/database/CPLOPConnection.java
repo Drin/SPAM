@@ -651,20 +651,27 @@ public class CPLOPConnection {
              !colPartitions.getKey().equals("pHeight") &&
              !colPartitions.getValue().isEmpty()) {
 
-            extraWheres += String.format("%s in (", colPartitions.getKey());
+            String partitionClause = String.format("%s in (", colPartitions.getKey());
 
             for (String partition : colPartitions.getValue()) {
                if (partition.equals("")) { continue; }
 
-               extraWheres += String.format("'%s', ", partition);
+               partitionClause += String.format("'%s', ", partition);
             }
 
-            extraWheres = extraWheres.substring(0, extraWheres.length() - 2) + ") AND ";
+            int lastCommaIndex = partitionClause.lastIndexOf(", ");
+            
+            if (lastCommaIndex > -1) {
+               extraWheres += partitionClause.substring(0, lastCommaIndex) + ") AND ";
+            }
          }
       }
+      
+      if (!extraWheres.equals("")) {
+         extraWheres = extraWheres.substring(0, extraWheres.length() - 4);
+      }
 
-      return String.format(query, extraSelects, extraJoins,
-                           extraWheres.substring(0, extraWheres.length() - 4));
+      return String.format(query, extraSelects, extraJoins, extraWheres);
    }
 
    /**
@@ -725,7 +732,7 @@ public class CPLOPConnection {
 
       query = constructOntologicalQuery(ont, query);
 
-      System.err.printf("%s\n", query);
+      System.out.printf("%s\n", query);
 
       try {
          stmt = conn.createStatement();

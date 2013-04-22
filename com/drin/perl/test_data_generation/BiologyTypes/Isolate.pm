@@ -76,7 +76,7 @@ sub duplicate {
 
       for my $pyroprint (@{$self->{pyroprints}->{$region}}) {
          push (@{$clone->{pyroprints}->{$region}},
-               $pyroprint->duplicate($config));
+               $pyroprint->duplicate($config, $clone->{name_prefix}, $clone->{name_suffix}));
       }
    }
 

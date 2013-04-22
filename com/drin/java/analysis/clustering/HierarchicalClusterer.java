@@ -4,7 +4,8 @@ import com.drin.java.analysis.clustering.Clusterer;
 
 import com.drin.java.clustering.Cluster;
 import com.drin.java.clustering.CandidatePair;
-import com.drin.java.clustering.CandidateQueue;
+
+import com.drin.java.util.Logger;
 
 import java.util.Map;
 import java.util.HashMap;
@@ -20,6 +21,8 @@ public abstract class HierarchicalClusterer implements Clusterer {
 
    protected JTextArea mCanvas;
    protected double mPercentComplete, mPercentIncr;
+
+   private long mStartTime;
 
    public HierarchicalClusterer(List<Double> thresholds) {
       mResultClusters = new HashMap<Double, List<Cluster>>();
@@ -40,6 +43,11 @@ public abstract class HierarchicalClusterer implements Clusterer {
    public void writeProgress() {
       if (mCanvas != null) {
          mCanvas.setText(String.format("\n\n\t\t%.02f%% Complete!", mPercentComplete));
+                  
+         Logger.debug(String.format("Elapsed time at %.02f%% completion: %d ms",
+                                    mPercentComplete,
+                                    (System.currentTimeMillis() - mStartTime)));
+
          mPercentComplete += mPercentIncr;
       }
    }

@@ -14,8 +14,6 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 
-import javax.swing.JTextArea;
-
 public class OHClusterer extends AgglomerativeClusterer {
    private static final int ALPHA_THRESH_NDX = 0, BETA_THRESH_NDX = 1;
    protected List<Cluster> mBoundaryClusters;
@@ -26,10 +24,6 @@ public class OHClusterer extends AgglomerativeClusterer {
 
       mOntology = ontology;
       mBoundaryClusters = new ArrayList<Cluster>();
-   }
-
-   private void printOntology() {
-      System.out.printf("cluster tree:\n%s\n", mOntology.printClusters());
    }
 
    public List<Cluster> getCoreClusters() {
@@ -76,34 +70,39 @@ public class OHClusterer extends AgglomerativeClusterer {
       boolean unclusteredData = false;
 
       /*
-      System.out.printf("clustering node [%s.%s]...\n",
-                        root.getTableName(), root.getColName());
-
-      System.out.printf("checking conditions:\n" +
+      System.out.printf(
+         "clustering node [%s.%s]...\n" +
+         "checking conditions:\n" +
          "\tis root null: %s\n" +
          "\tdoes root have new data: %s\n" +
          "\tdoes root have sub-partitions: %s\n",
-         (root == null), root.hasNewData(), !root.getPartitions().isEmpty()
+         root.getTableName(), root.getColName(),
+         (root == null), root.hasNewData(),
+         !root.getPartitions().isEmpty()
       );
       */
 
-      if (root != null && root.hasNewData() && !root.getPartitions().isEmpty()) {
-         //System.out.printf("root is not null and there is new data and this is not the leaf\n");
+      if (root == null || !root.hasNewData()) {
+         return;
+      }
 
+      else if (!root.getPartitions().isEmpty()) {
          for (Map.Entry<String, OntologyTerm> partition : root.getPartitions().entrySet()) {
+            System.out.printf("clustering partition [%s]\n", partition.getKey());
+
             if (partition.getValue() == null) {
-               //System.out.printf("partition [%s] has a null node\n", partition.getKey());
+               System.out.printf("\tnull node\n");
                continue;
             }
 
             if (partition.getValue().hasNewData()) {
-               //System.out.printf("clustering new data in partition [%s]\n", partition.getKey());
+               System.out.printf("\tnew data in partition\n");
                ontologicalCluster(partition.getValue(), threshold);
                unclusteredData = true;
             }
 
             if (partition.getValue().getClusters() == null) {
-               //System.out.printf("partition [%s] has no clusters\n", partition.getKey());
+               System.out.printf("\tpartition has no clusters\n");
                continue;
             }
 
@@ -129,10 +128,9 @@ public class OHClusterer extends AgglomerativeClusterer {
             }
             root.setClusters(clusters);
          }
-
       }
 
-      else if (root != null && root.getData() != null && root.hasNewData()) {
+      else if (root.getData() != null) {
          Logger.debug("percolating leaf cluster sets");
          //System.out.printf("This is a leaf node\n");
 
@@ -145,7 +143,7 @@ public class OHClusterer extends AgglomerativeClusterer {
       }
 
       else {
-         //System.out.printf("WTF\n");
+         System.out.printf("Node has no data and no edges\n");
       }
 
       /*
@@ -159,6 +157,8 @@ public class OHClusterer extends AgglomerativeClusterer {
       Map<String, Cluster> coreClusters = new HashMap<String, Cluster>();
       Map<String, Double> clustSimMap = null;
       Cluster clust_A = null, clust_B = null;
+
+      System.out.printf("Separating core clusters from boundary clusters\n");
 
       //determine clusters that are close
       for (int clustNdx_A = 0; clustNdx_A < clusters.size(); clustNdx_A++) {
@@ -191,7 +191,7 @@ public class OHClusterer extends AgglomerativeClusterer {
 
          if (coreClusters.containsKey(clust_A.getName())) {
             mOntology.addData(coreClusters.get(clust_A.getName()));
-            //System.out.printf("added new data\n");
+            System.out.printf("added new data\n");
          }
          else {
             mBoundaryClusters.add(clust_A);
