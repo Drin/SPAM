@@ -422,6 +422,7 @@ public class InputDialog extends JDialog {
 
    @SuppressWarnings("unchecked")
    private List<Clusterable<?>> constructPyroprints(List<Map<String, Object>> dataList, Ontology ont) {
+      long constructStart = System.currentTimeMillis();
       List<Clusterable<?>> entityList = new ArrayList<Clusterable<?>>();
 
       DataMetric<Isolate> isoMetric = null;
@@ -463,7 +464,7 @@ public class InputDialog extends JDialog {
                   for (String colName : tableCols.getValue()) {
                      if (colName.replace(" ", "").equals("")) { continue; }
 
-                     tmpPyro.addLabel(String.valueOf(dataMap.get(colName)));
+                     tmpPyro.addLabel(String.valueOf(dataMap.get(colName)).trim());
                   }
                }
             }
@@ -485,9 +486,7 @@ public class InputDialog extends JDialog {
    @SuppressWarnings("unchecked")
    private List<Clusterable<?>> constructEntities(List<Map<String, Object>> dataList, Ontology ont) {
       long constructStart = System.currentTimeMillis();
-      Map<String, Isolate> isoMap = new HashMap<String, Isolate>();
       List<Clusterable<?>> entityList = new ArrayList<Clusterable<?>>();
-
 
       DataMetric<Isolate> isoMetric = null;
       DataMetric<ITSRegion> regionMetric = null;
@@ -524,7 +523,7 @@ public class InputDialog extends JDialog {
                   for (String colName : tableCols.getValue()) {
                      if (colName.replace(" ", "").equals("")) { continue; }
 
-                     tmpIso.addLabel(String.valueOf(dataMap.get(colName)));
+                     tmpIso.addLabel(String.valueOf(dataMap.get(colName)).trim());
                   }
                }
             }

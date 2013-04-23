@@ -61,13 +61,7 @@ public abstract class Cluster implements Labelable {
    @Override
    public boolean equals(Object otherObj) {
       if (otherObj instanceof Cluster) {
-         Cluster otherClust = (Cluster) otherObj;
-
-         for (Clusterable<?> elem : mElements) {
-            if (!otherClust.mElements.contains(elem)) { return false; }
-         }
-
-         return true;
+         return mName.equals(((Cluster) otherObj).getName());
       }
 
       return false;

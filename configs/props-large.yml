@@ -1,15 +1,16 @@
 initialSize: 500
-updateSize: 50
-numUpdates: 1000
+updateSize: 500
+numUpdates: 2
+#numUpdates: 1000
 
-ontology: large.ont
+ontology: standard.ont
 
 debug: false
 transform: false
 
 regions: {
    16-23: {
-      pyroLength: 93
+      pyroLength: 95
       alpha: 0.995
       beta: 0.99
    }
