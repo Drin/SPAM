@@ -185,27 +185,6 @@ public class Ontology {
          if (parser.matchString(term)) { ont.addTerm(parser.getTerm()); }
       }
 
-      System.out.println("ontology: \n" + ont);
-
       return ont;
-   }
-
-   /*
-    * old test:
-    * String testOntology = String.format("%s\n%s\n%s",
-    * "Host(): cw, sw;",
-    * "Location():R1, R2, MorroBay;",
-    * "Day(TimeSensitive):     1,2,3,\t4,5,6,7,10;"
-    * );
-    */
-   public static void main(String[] args) {
-      String testOntology = String.format("%s\n%s\n%s\n",
-         "Isolates.commonName():;",
-         "Isolates.hostID(): ;",
-         "Pyroprints.date_pyroPrintedDate(TimeSensitive): \t;"
-      );
-
-      Ontology ont = Ontology.createOntology(new File("ontologies/large.ont"));
-      System.out.println("ontology :\n" + ont);
    }
 }

@@ -800,14 +800,14 @@ public class CPLOPConnection {
       String query = String.format(
           "SELECT pyroID, isoID, appliedRegion, wellID, pHeight, nucleotide%s " +
           "FROM Pyroprints join Isolates using (isoID) join Histograms using (pyroID) %s" +
-          "WHERE %s pyroID in (Select distinct pyroID from Histograms) %s" + 
+          "WHERE %s %s" + 
           "ORDER BY isoID, pyroID, position asc",
           placeHolder, placeHolder, searchClause, placeHolder
       );
 
       query = constructOntologicalQuery(ont, query);
 
-      //System.err.println("query:\n" + query);
+      System.err.println("query:\n" + query);
       try {
          stmt = conn.createStatement();
          results = stmt.executeQuery(query);

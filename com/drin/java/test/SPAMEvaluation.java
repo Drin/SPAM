@@ -126,12 +126,6 @@ public class SPAMEvaluation {
    }
 
    public ClusterResults runSingle(List<Cluster> clusterList) {
-      long startTime = System.currentTimeMillis();
-      mClusterer.clusterData(clusterList);
-      long finishTime = System.currentTimeMillis();
-
-      return new ClusterResults(mClusterer.getClusters(), finishTime - startTime);
-
    }
 
    /*
@@ -158,6 +152,7 @@ public class SPAMEvaluation {
       int updateSize  = Integer.parseInt(mConfig.getAttr("updateSize"));
       int currUpdate = 0, numUpdates  = Integer.parseInt(mConfig.getAttr("numUpdates"));
       int pageSize, pageOffset;
+      long startTime, finishTime;
 
       try {
          mConn.randomizeIsolates(mRand.nextInt(9999));
@@ -181,24 +176,17 @@ public class SPAMEvaluation {
 
          dataList = constructIsolates(mConfig, mOntology, pageSize, pageOffset);
 
-         System.out.printf("******************  CLUSTER LABELS ******************\n");
          for (Clusterable<?> data : dataList) {
-            System.out.printf("Isolate [%s] has labels:\n", data.getName());
-
-            if (data instanceof Labelable) {
-               Labelable dataLabel = (Labelable) data;
-               for (Map.Entry<String, Boolean> label : dataLabel.getLabels().entrySet()) {
-                  System.out.printf("\t%s\n", label.getKey());
-               }
-
-               System.out.printf("\n");
-            }
-
             clusterList.add(new HCluster(mClustMetric, data));
          }
 
-         //TODO persist cluster results
-         resultList.add(runSingle(clusterList));
+         startTime = System.currentTimeMillis();
+
+         mClusterer.clusterData(clusterList);
+
+         finishTime = System.currentTimeMillis();
+         resultList.add(new ClusterResults(mClusterer.getClusters(),
+                                           finishTime - startTime));
 
          currUpdate++;
       }
@@ -270,7 +258,7 @@ public class SPAMEvaluation {
                   for (String colName : tableCols.getValue()) {
                      if (colName.replace(" ", "").equals("")) { continue; }
 
-                     tmpIso.addLabel(String.valueOf(dataMap.get(colName)));
+                     tmpIso.addLabel(String.valueOf(dataMap.get(colName)).trim());
                   }
                }
             }
@@ -289,7 +277,7 @@ public class SPAMEvaluation {
 
          if (tmpPyro.getName().equals(pyroName) && tmpPyro.getDispLen() <
              Integer.parseInt(config.getRegionAttr(regName, Configuration.LENGTH_KEY))) {
-               tmpPyro.addDispensation(nucleotide, peakHeight);
+            tmpPyro.addDispensation(nucleotide, peakHeight);
          }
       }
 

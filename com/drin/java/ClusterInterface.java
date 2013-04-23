@@ -132,7 +132,7 @@ public class ClusterInterface {
                   for (String colName : tableCols.getValue()) {
                      if (colName.replace(" ", "").equals("")) { continue; }
 
-                     tmpIso.addLabel(String.valueOf(dataMap.get(colName)));
+                     tmpIso.addLabel(String.valueOf(dataMap.get(colName)).trim());
                   }
                }
             }
@@ -149,9 +149,9 @@ public class ClusterInterface {
             tmpIso.getRegion(regName).add(tmpPyro);
          }
 
-         //TODO this should *not* be hardcoded
-         if (tmpPyro.getName().equals(pyroName) && tmpPyro.getDispLen() < 93) {
-               tmpPyro.addDispensation(nucleotide, peakHeight);
+         if (tmpPyro.getName().equals(pyroName) && tmpPyro.getDispLen() <
+             Integer.parseInt(config.getRegionAttr(regName, Configuration.LENGTH_KEY))) {
+            tmpPyro.addDispensation(nucleotide, peakHeight);
          }
       }
 
