@@ -13,6 +13,8 @@ public class AgglomerativeClusterer extends HierarchicalClusterer {
 
    public AgglomerativeClusterer(List<Double> thresholds) {
       super(thresholds);
+
+      mName = "Agglomerative";
    }
 
    @Override

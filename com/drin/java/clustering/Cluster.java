@@ -16,17 +16,17 @@ import java.util.HashSet;
 
 public abstract class Cluster implements Labelable {
    private static int CLUST_ID = 1;
-   private String mName;
+   private int mId;
 
    protected OntologyLabel mLabel;
    protected DataMetric<Cluster> mMetric;
    protected Dendogram mDendogram;
    protected Set<Clusterable<?>> mElements;
-   protected double mDiameter, mMean;
+   protected double mDiameter, mMean, mPercentSimilar;
 
    public Cluster(DataMetric<Cluster> metric) { this(CLUST_ID++, metric); }
    public Cluster(int clustId, DataMetric<Cluster> metric) {
-      mName = String.format("%d", clustId);
+      mId = clustId;
       mMetric = metric;
       
       mDendogram = null;
@@ -38,10 +38,14 @@ public abstract class Cluster implements Labelable {
    }
 
    public static void resetClusterIDs() { Cluster.CLUST_ID = 1; }
-   public String getName() { return mName; }
+   public String getName() { return String.format("%s", mId); }
+   public int getId() { return mId; }
    public int size() { return mElements.size(); }
    public double getDiameter() { return mDiameter; }
    public double getMean() { return mMean; }
+   //totally misleading name, this returns the percentage of elements in this
+   //cluster that are similar
+   public double getPercentSimilar() { return mPercentSimilar; }
 
    public abstract void computeStatistics();
    public abstract Cluster join(Cluster otherClust);
@@ -61,7 +65,7 @@ public abstract class Cluster implements Labelable {
    @Override
    public boolean equals(Object otherObj) {
       if (otherObj instanceof Cluster) {
-         return mName.equals(((Cluster) otherObj).getName());
+         return mId == ((Cluster) otherObj).getId();
       }
 
       return false;
@@ -72,15 +76,15 @@ public abstract class Cluster implements Labelable {
       double comparison = mMetric.result();
 
       Logger.error(mMetric.getError(), String.format("error computing metric" +
-                                       " between '%s' and '%s'\n", this.mName,
-                                       otherClust.mName));
+                                       " between '%d' and '%d'\n", this.mId,
+                                       otherClust.mId));
 
       return comparison;
    }
 
    @Override
    public String toString() {
-      String str = this.getName() + ": ";
+      String str = this.getId() + ": ";
 
       for (Clusterable<?> element : mElements) {
          str += String.format("%s, ", element);
@@ -90,7 +94,7 @@ public abstract class Cluster implements Labelable {
    }
 
    public String prettyPrint(String prefix) {
-      String str = this.getName() + ":\n";
+      String str = this.getId() + ":\n";
 
       for (Clusterable<?> element : mElements) {
          str += String.format("%s\n", element);

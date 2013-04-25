@@ -1,25 +1,18 @@
 package com.drin.java.ontology;
 
 import com.drin.java.clustering.Cluster;
-import com.drin.java.clustering.HCluster;
-import com.drin.java.metrics.ClusterAverageMetric;
 
 import com.drin.java.ontology.OntologyTerm;
 import com.drin.java.ontology.OntologyParser;
 
-import com.drin.java.util.Logger;
-
 import java.io.File;
 import java.util.Scanner;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 
 public class Ontology {
    private OntologyTerm mRoot;
@@ -139,13 +132,16 @@ public class Ontology {
    public static Ontology constructOntology(String ontologyStr) {
       Ontology ont = new Ontology();
       OntologyParser parser = new OntologyParser();
-      Scanner termScanner = new Scanner(ontologyStr).useDelimiter("\n");
+      Scanner termScanner = new Scanner(ontologyStr);
+      termScanner.useDelimiter("\n");
 
       while (termScanner.hasNextLine()) {
          String term = termScanner.nextLine();
    
          if (parser.matchString(term)) { ont.addTerm(parser.getTerm()); }
       }
+      
+      termScanner.close();
 
       return ont;
    }
@@ -155,13 +151,16 @@ public class Ontology {
 
       Ontology ont = new Ontology();
       OntologyParser parser = new OntologyParser();
-      Scanner termScanner = new Scanner(ontologyStr).useDelimiter("\n");
+      Scanner termScanner = new Scanner(ontologyStr);
+      termScanner.useDelimiter("\n");
 
       while (termScanner.hasNextLine()) {
          String term = termScanner.nextLine();
    
          if (parser.matchString(term)) { ont.addTerm(parser.getTerm()); }
       }
+      
+      termScanner.close();
 
       return ont;
    }

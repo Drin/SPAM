@@ -397,16 +397,13 @@ public class InputDialog extends JDialog {
 
       Logger.debug(String.format("Clustering %d entities", dataList.size()));
 
-      if (dataList == null) {
-         return false;
-      }
-      
       Cluster.resetClusterIDs();
       for (Clusterable<?> entity : dataList) {
          clusters.add(new HCluster(clustMetric, entity));
       }
 
       clusterer = new OHClusterer(ontology, thresholds);
+      clusterer.setProgressCanvas(MainWindow.getMainFrame().getOutputCanvas());
 
       AnalysisWorker worker = new AnalysisWorker(clusterer, clusters,
        MainWindow.getMainFrame().getOutputCanvas());
@@ -420,18 +417,14 @@ public class InputDialog extends JDialog {
       return true;
    }
 
-   @SuppressWarnings("unchecked")
+   @SuppressWarnings({ "unchecked", "rawtypes" })
    private List<Clusterable<?>> constructPyroprints(List<Map<String, Object>> dataList, Ontology ont) {
       long constructStart = System.currentTimeMillis();
       List<Clusterable<?>> entityList = new ArrayList<Clusterable<?>>();
 
-      DataMetric<Isolate> isoMetric = null;
-      DataMetric<ITSRegion> regionMetric = null;
       DataMetric<Pyroprint> pyroMetric = null;
 
       try {
-         isoMetric = (DataMetric) Class.forName(mConf.getMetric(Configuration.ISOLATE_KEY)).newInstance();
-         regionMetric = (DataMetric) Class.forName(mConf.getMetric(Configuration.ITSREGION_KEY)).newInstance();
          pyroMetric = (DataMetric) Class.forName(mConf.getMetric(Configuration.PYROPRINT_KEY)).newInstance();
       }
       catch(Exception err) {
@@ -442,7 +435,6 @@ public class InputDialog extends JDialog {
       Pyroprint tmpPyro = null;
       for (Map<String, Object> dataMap : dataList) {
          String wellID = String.valueOf(dataMap.get("well"));
-         String isoID = String.valueOf(dataMap.get("isolate"));
          String regName = String.valueOf(dataMap.get("region"));
 
          Integer pyroID = new Integer(String.valueOf(dataMap.get("pyroprint")));
@@ -483,7 +475,7 @@ public class InputDialog extends JDialog {
       return entityList;
    }
 
-   @SuppressWarnings("unchecked")
+   @SuppressWarnings({ "unchecked", "rawtypes" })
    private List<Clusterable<?>> constructEntities(List<Map<String, Object>> dataList, Ontology ont) {
       long constructStart = System.currentTimeMillis();
       List<Clusterable<?>> entityList = new ArrayList<Clusterable<?>>();
@@ -545,8 +537,6 @@ public class InputDialog extends JDialog {
                tmpPyro.addDispensation(nucleotide, peakHeight);
          }
       }
-
-      System.out.println("Time to construct Isolates: " + (System.currentTimeMillis() - constructStart));
 
       Logger.debug(String.format("Time to construct Isolates: %d ms",
                    (System.currentTimeMillis() - constructStart)));

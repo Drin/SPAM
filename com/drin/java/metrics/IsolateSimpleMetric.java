@@ -6,7 +6,6 @@ import com.drin.java.metrics.DataMetric;
 import com.drin.java.util.Logger;
 
 import java.util.Map;
-import java.util.HashMap;
 
 public class IsolateSimpleMetric extends DataMetric<Isolate> {
    protected Map<String, Map<String, Map<String, Double>>> mRegionMap;

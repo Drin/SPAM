@@ -1,7 +1,5 @@
 package com.drin.java.util;
 
-import com.drin.java.metrics.IsolateAverageMetric;
-
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -10,7 +8,6 @@ import java.util.Map;
 import java.util.HashMap;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileWriter;
 
 public class Configuration {
@@ -89,6 +86,7 @@ public class Configuration {
          try {
             FileWriter tmpWriter = new FileWriter(configFile);
             tmpWriter.write("test test!");
+            tmpWriter.close();
          }
          catch(java.io.IOException ioErr) {
             ioErr.printStackTrace();
@@ -105,6 +103,7 @@ public class Configuration {
          try {
             FileWriter configWriter = new FileWriter(configFile);
             configWriter.write(getDefaultConfigContent());
+            configWriter.close();
          }
          catch(java.io.IOException ioErr) {
             ioErr.printStackTrace();
@@ -256,23 +255,5 @@ public class Configuration {
       }
 
       return stringifiedMap;
-   }
-
-   public static void main(String[] args) {
-      Configuration config = Configuration.loadConfig();
-      System.out.println(config);
-
-      IsolateAverageMetric isoMetric = null;
-
-      try {
-         Class<?> isoMetricClass = Class.forName(config.getMetric("isolate"));
-         isoMetric = (IsolateAverageMetric) isoMetricClass.newInstance();
-      }
-      catch(Exception err) {
-         err.printStackTrace();
-         System.exit(1);
-      }
-
-      isoMetric.testMethod();
    }
 }

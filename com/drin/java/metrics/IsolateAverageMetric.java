@@ -5,18 +5,11 @@ import com.drin.java.biology.Isolate;
 
 import com.drin.java.metrics.DataMetric;
 
-import com.drin.java.util.Logger;
-
-import java.util.Collection;
 import java.util.Iterator;
 
 public class IsolateAverageMetric extends DataMetric<Isolate> {
    public IsolateAverageMetric() {
       super();
-   }
-
-   public void testMethod() {
-      System.out.println("IsolateAverageMetric successfully called!\n");
    }
 
    @Override
@@ -36,9 +29,11 @@ public class IsolateAverageMetric extends DataMetric<Isolate> {
             if (region_A.getName().equals(region_B.getName())) {
                double comparison = region_A.compareTo(region_B);
 
+               /*
                Logger.debug(String.format("Isolate Average Metric:\n\tregion " +
                                           "comparison is %.04f for region %s",
                                           comparison, region_A.getName()));
+                                          */
 
                total += comparison;
                regionCount++;
@@ -52,9 +47,11 @@ public class IsolateAverageMetric extends DataMetric<Isolate> {
       }
 
       if (regionCount > 0) {
+         /*
          Logger.debug(String.format("Isolate Average Metric:\n\tregion " +
                                     "comparison is %.04f\n\tresult is " +
                                     "%.04f", total, total/regionCount));
+                                    */
 
          if (mResult != 0) { setError(-1); }
          mResult = total / regionCount;

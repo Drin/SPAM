@@ -5,8 +5,6 @@ import com.drin.java.clustering.Cluster;
 
 import com.drin.java.metrics.DataMetric;
 
-import com.drin.java.util.Logger;
-
 public class ClusterAverageMetric extends DataMetric<Cluster> {
    private int mLinkCount;
 

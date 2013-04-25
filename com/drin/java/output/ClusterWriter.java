@@ -67,11 +67,11 @@ public class ClusterWriter {
              */
             if (cluster.size() > biggestClust) {
                biggestClust = cluster.size();
-               bigClustName = String.format("\"Cluster %s\"", cluster.getName());
+               bigClustName = String.format("\"Cluster %d\"", cluster.getId());
             }
 
             for (Clusterable<?> elem : cluster.getElements()) {
-               clustContents += String.format("Cluster %s, %s\n", cluster.getName(), elem.getName());
+               clustContents += String.format("Cluster %d, %s\n", cluster.getId(), elem.getName());
             }
          }
 

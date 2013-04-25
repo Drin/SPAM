@@ -7,8 +7,6 @@ import com.drin.java.ontology.OntologyTerm;
 
 import com.drin.java.clustering.Cluster;
 
-import com.drin.java.util.Logger;
-
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -22,8 +20,9 @@ public class OHClusterer extends AgglomerativeClusterer {
    public OHClusterer(Ontology ontology, List<Double> thresholds) {
       super(thresholds);
 
-      mOntology = ontology;
       mBoundaryClusters = new ArrayList<Cluster>();
+      mOntology = ontology;
+      mName = "OHClust!";
    }
 
    public List<Cluster> getCoreClusters() {
@@ -47,16 +46,12 @@ public class OHClusterer extends AgglomerativeClusterer {
       if (mOntology.getRoot().hasNewData()) {
          ontologicalCluster(mOntology.getRoot(), mThresholds.get(ALPHA_THRESH_NDX));
       }
-      else {
-         System.out.printf("No new data in ontology.\n");
 
-         if (mOntology.getRoot().getClusters() == null) {
-            System.out.printf("No data in ontology\n");
-            return;
-         }
+      List<Cluster> resultClusters = new ArrayList<Cluster>();
+      if (mOntology.getRoot().getClusters() != null) {
+         resultClusters.addAll(mOntology.getRoot().getClusters());
       }
-
-      List<Cluster> resultClusters = mOntology.getRoot().getClusters();
+      
       resultClusters.addAll(mBoundaryClusters);
 
       super.clusterDataSet(resultClusters, mThresholds.get(ALPHA_THRESH_NDX));
@@ -115,7 +110,7 @@ public class OHClusterer extends AgglomerativeClusterer {
 
       //determine clusters that are close
       for (int clustNdx_A = 0; clustNdx_A < clusters.size(); clustNdx_A++) {
-         clustSimMap = new HashMap<String, Double>();
+         clustSimMap = new HashMap<String, Double>(clusters.size() - clustNdx_A);
          clust_A = clusters.get(clustNdx_A);
 
          for (int clustNdx_B = clustNdx_A + 1; clustNdx_B < clusters.size(); clustNdx_B++) {

@@ -10,18 +10,80 @@ public class ClusterResults {
    private Map<Double, List<Cluster>> mClusters;
    private long mClusterTime;
 
-   public ClusterResults(Map<Double, List<Cluster>> finalClusters) {
-      mClusters = finalClusters;
-      mClusterTime = -1;
-   }
-
    public ClusterResults(Map<Double, List<Cluster>> finalClusters, long time) {
       mClusters = finalClusters;
       mClusterTime = time;
    }
 
+   public ClusterResults(Map<Double, List<Cluster>> finalClusters) {
+      this(finalClusters, -1);
+   }
+
    public long getClusterTime() {
       return mClusterTime;
+   }
+
+   public String getElapsedTime() {
+      long hours = mClusterTime / 3600000;
+      long minutes = (mClusterTime % 3600000) / 60000;
+      long seconds = ((mClusterTime % 3600000) % 60000) / 1000;
+
+      return String.format("'%02d:%02d:%02d'", hours, minutes, seconds);
+   }
+
+   public String[] getSQLInserts(int clusterRun) {
+      String[] sqlInserts = new String[100];
+      int isoId = -1, delimNdx = -1, clustNum = 0, isolateNum = 0, limit = 1000, sqlNdx = 0;
+      String strainInsert = "INSERT INTO test_run_strain_link(" +
+                             "test_run_id, cluster_id, cluster_threshold, " +
+                             "strain_diameter, percent_similar_isolates VALUES ";
+      String isolateInsert = "INSERT INTO test_isolate_strains(" +
+                              "test_run_id, cluster_id, name_prefix, name_suffix VALUES ";
+      String run_strain_link = strainInsert, isolate_strain = "", elementName, isoDesignation;
+
+      for (Map.Entry<Double, List<Cluster>> clusterData : mClusters.entrySet()) {
+         for (Cluster cluster : clusterData.getValue()) {
+
+            if (sqlNdx >= sqlInserts.length - 2) {
+               String[] newArr = new String[sqlInserts.length * 2];
+               for (int ndx = 0; ndx < sqlInserts.length; ndx++) {
+                  newArr[ndx] = sqlInserts[ndx];
+               }
+            }
+
+            if (clustNum > 0 && clustNum++ % limit == 0) {
+               sqlInserts[sqlNdx++] = run_strain_link.substring(0, run_strain_link.length() - 2);
+
+               run_strain_link = strainInsert;
+            }
+
+            run_strain_link += String.format(
+               "(%d, %d, %.04f, %.04f, %.04f%), ",
+               clusterRun, cluster.getId(), clusterData.getKey().doubleValue(),
+               cluster.getDiameter(), cluster.getPercentSimilar()
+            );
+
+            for (Clusterable<?> element : cluster.getElements()) {
+               elementName = element.getName();
+               delimNdx = elementName.indexOf("-");
+               isoDesignation = elementName.substring(0, delimNdx);
+               isoId = Integer.parseInt(elementName.substring(delimNdx, elementName.length()));
+
+               if (isolateNum > 0 && isolateNum++ % limit == 0) {
+                  sqlInserts[sqlNdx++] = isolate_strain.substring(0, isolate_strain.length() - 2);
+
+                  isolate_strain = isolateInsert;
+               }
+
+               isolate_strain += String.format(
+                  "(%d, %d, %s, %d), ",
+                  clusterRun, cluster.getId(), isoDesignation, isoId
+               );
+            }
+         }
+      }
+
+      return sqlInserts;
    }
 
    public String toString() {
@@ -36,11 +98,11 @@ public class ClusterResults {
          for (Cluster cluster : clusterData.getValue()) {
             if (cluster.size() > biggestClust) {
                biggestClust = cluster.size();
-               bigClustName = String.format("\"Cluster %s\"", cluster.getName());
+               bigClustName = String.format("\"Cluster %d\"", cluster.getId());
             }
 
             for (Clusterable<?> elem : cluster.getElements()) {
-               clustContents += String.format("Cluster %s, %s\n", cluster.getName(), elem.getName());
+               clustContents += String.format("Cluster %d, %s\n", cluster.getId(), elem.getName());
             }
          }
 
