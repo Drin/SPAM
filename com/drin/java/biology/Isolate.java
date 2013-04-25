@@ -60,6 +60,7 @@ public class Isolate extends Clusterable<ITSRegion> implements Labelable {
 
             Logger.debug(String.format("'%s' and '%s' => [%.05f]", this.getName(),
                                        otherObj.getName(), comparison));
+
             return comparison;
          }
 

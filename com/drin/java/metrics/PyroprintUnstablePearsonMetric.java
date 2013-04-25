@@ -49,7 +49,9 @@ public class PyroprintUnstablePearsonMetric extends DataMetric<Pyroprint> {
          return;
       }
 
+      /*
       Logger.debug("Comparing pyroprints...");
+      */
 
       Collection<Double> peaks_A = elem_A.getData();
       Collection<Double> peaks_B = elem_B.getData();
@@ -69,6 +71,7 @@ public class PyroprintUnstablePearsonMetric extends DataMetric<Pyroprint> {
       mResult = getUnstablePearson();
    }
 
+   @SuppressWarnings("unused")
    private String debugState() {
       return String.format("numElements: %d, pyro_A_sum: %.06f, pyro_B_sum: " +
                            "%.06f, pyroA_squared_sum: %.06f, " +
@@ -79,7 +82,7 @@ public class PyroprintUnstablePearsonMetric extends DataMetric<Pyroprint> {
    }
 
    private double getUnstablePearson() {
-      Logger.debug(debugState());
+      //Logger.debug(debugState());
 
       if (mPeakCount == 0) { return -2; }
 

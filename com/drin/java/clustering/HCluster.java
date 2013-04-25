@@ -10,6 +10,8 @@ import com.drin.java.clustering.dendogram.Dendogram;
 import com.drin.java.clustering.dendogram.DendogramNode;
 import com.drin.java.clustering.dendogram.DendogramLeaf;
 
+import com.drin.java.util.Configuration;
+
 import java.util.Collection;
 
 public class HCluster extends Cluster {
@@ -32,8 +34,9 @@ public class HCluster extends Cluster {
    }
 
    public void computeStatistics() {
+      Configuration config = Configuration.getConfig();
       double minSim = Double.MAX_VALUE, total = 0;
-      int numComparisons = 0;
+      int numComparisons = 0, numSimilarComparisons = 0;
 
       for (Clusterable<?> elem_A : mElements) {
          for (Clusterable<?> elem_B : mElements) {
@@ -45,11 +48,16 @@ public class HCluster extends Cluster {
             numComparisons++;
 
             if (comparison < minSim) { minSim = comparison; }
+            if (comparison > Double.parseDouble(
+                config.getRegionAttr("16-23", Configuration.ALPHA_KEY))) {
+               numSimilarComparisons++;
+            }
          }
       }
 
       mDiameter = minSim;
       mMean = numComparisons > 0 ? total / numComparisons : 0;
+      mPercentSimilar = ((double) numSimilarComparisons) / numComparisons;
    }
 
    public Cluster join(Cluster otherClust) {

@@ -47,6 +47,10 @@ public class CSVParser {
           fileScanner.nextLine().replace("\"","").split(mTokenDelim)));
       }
 
+      if (fileScanner != null) {
+         fileScanner.close();
+      }
+
       return tupleList;
    }
 

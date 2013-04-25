@@ -7,14 +7,15 @@ import com.drin.java.biology.ITSRegion;
 import com.drin.java.biology.Pyroprint;
 
 import com.drin.java.metrics.DataMetric;
+/*
 import com.drin.java.metrics.ITSRegionAverageMetric;
 import com.drin.java.metrics.ITSRegionMedianMetric;
 import com.drin.java.metrics.IsolateAverageMetric;
 import com.drin.java.metrics.PyroprintUnstablePearsonMetric;
 import com.drin.java.metrics.ClusterAverageMetric;
+*/
 
 import com.drin.java.ontology.Ontology;
-import com.drin.java.ontology.Labelable;
 
 import com.drin.java.clustering.Clusterable;
 import com.drin.java.clustering.Cluster;
@@ -22,20 +23,14 @@ import com.drin.java.clustering.HCluster;
 import com.drin.java.clustering.ClusterResults;
 
 import com.drin.java.analysis.clustering.Clusterer;
-import com.drin.java.analysis.clustering.AgglomerativeClusterer;
 import com.drin.java.analysis.clustering.OHClusterer;
 
-import com.drin.java.output.ClusterWriter;
-
 import com.drin.java.util.Configuration;
-import com.drin.java.util.Logger;
 
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.Random;
 
 import java.io.File;
@@ -71,8 +66,7 @@ public class SPAMEvaluation {
    private DataMetric<Cluster> mClustMetric;
    private Random mRand;
 
-   private int mSQLRandSeed;
-
+   @SuppressWarnings("unchecked")
    public SPAMEvaluation(Configuration config, Ontology ontology) {
       mConn = CPLOPConnection.getConnection();
       mRand = new Random();
@@ -94,7 +88,6 @@ public class SPAMEvaluation {
       }
    }
 
-   @SuppressWarnings("unchecked")
    public static void main(String[] args) {
       File configDir = new File(CONFIG_DIR);
       Configuration config = null;
@@ -125,9 +118,6 @@ public class SPAMEvaluation {
       }
    }
 
-   public ClusterResults runSingle(List<Cluster> clusterList) {
-   }
-
    /*
    String outFile = "HClust_Test";
    if (mOntology != null) { outFile = "OHClust_Test_3_layer"; }
@@ -144,14 +134,11 @@ public class SPAMEvaluation {
    */
 
    public void runTests() {
-      List<ClusterResults> resultList = new ArrayList<ClusterResults>();
-      List<Clusterable<?>> dataList = null;
-      List<Cluster> clusterList = null;
-
+      List<Cluster> clusterList = new ArrayList<Cluster>();
       int initialSize = Integer.parseInt(mConfig.getAttr("initialSize"));
       int updateSize  = Integer.parseInt(mConfig.getAttr("updateSize"));
       int currUpdate = 0, numUpdates  = Integer.parseInt(mConfig.getAttr("numUpdates"));
-      int pageSize, pageOffset;
+      int pageSize, pageOffset, clusterRun = -1;
       long startTime, finishTime;
 
       try {
@@ -162,39 +149,54 @@ public class SPAMEvaluation {
          System.exit(1);
       }
 
+      startTime = System.currentTimeMillis();
       while (currUpdate <= numUpdates) {
-         clusterList = new ArrayList<Cluster>();
+         pageOffset = (updateSize * currUpdate) + initialSize;
+         pageSize = updateSize;
 
          if (currUpdate == 0) {
-            pageSize = initialSize;
             pageOffset = 0;
-         }
-         else {
-            pageSize = updateSize;
-            pageOffset = (updateSize * currUpdate) + initialSize;
+            pageSize = initialSize;
          }
 
-         dataList = constructIsolates(mConfig, mOntology, pageSize, pageOffset);
-
-         for (Clusterable<?> data : dataList) {
+         clusterList.clear();
+         for (Clusterable<?> data : constructIsolates(mConfig, mOntology,
+                                                      pageSize, pageOffset)) {
             clusterList.add(new HCluster(mClustMetric, data));
          }
 
-         startTime = System.currentTimeMillis();
-
          mClusterer.clusterData(clusterList);
-
-         finishTime = System.currentTimeMillis();
-         resultList.add(new ClusterResults(mClusterer.getClusters(),
-                                           finishTime - startTime));
 
          currUpdate++;
       }
 
-      /* TODO construct bulk insert query for inserting into database
-       */
-      for (ClusterResults result : resultList) {
-         System.out.printf("%s\n", result);
+      finishTime = System.currentTimeMillis();
+      ClusterResults results = new ClusterResults(mClusterer.getClusters(),
+                                                  finishTime - startTime);
+      try {
+         mConn.insertNewRun(String.format(
+            "INSERT INTO test_runs(run_date, run_time, cluster_algorithm," +
+                                  "average_strain_similarity) " +
+            "VALUES (?, %s, %s, %.04f)",
+            mClusterer.getName(), results.getElapsedTime(),
+            mClusterer.getInterClusterSimilarity()
+         ));
+
+         clusterRun = mConn.getTestRunId();
+      }
+      catch(java.sql.SQLException sqlErr) {
+         sqlErr.printStackTrace();
+      }
+
+      if (clusterRun != -1) {
+         for (String sqlQuery : results.getSQLInserts(clusterRun)) {
+            try {
+               mConn.executeInsert(sqlQuery);
+            }
+            catch(java.sql.SQLException sqlErr) {
+               sqlErr.printStackTrace();
+            }
+         }
       }
    }
 

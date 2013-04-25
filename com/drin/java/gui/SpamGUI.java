@@ -3,10 +3,6 @@ package com.drin.java.gui;
 import com.drin.java.gui.MainWindow;
 import com.drin.java.util.Configuration;
 
-import com.drin.java.util.InvalidPropertyException;
-
-import java.io.File;
-
 public class SpamGUI {
    private static SpamGUI main = new SpamGUI();
 

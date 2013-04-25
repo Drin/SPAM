@@ -126,7 +126,7 @@ public class OntologyParser {
          String[] valueArr = mRegexMatch.group(VALUE_NDX).split(VALUE_DELIM);
 
          for (int valNdx = 0; valNdx < valueArr.length; valNdx++) {
-            if (!valueArr[valNdx].equals("")) {
+            if (!valueArr[valNdx].replaceAll(" ", "").equals("")) {
                valueList.add(valueArr[valNdx].trim());
             }
          }

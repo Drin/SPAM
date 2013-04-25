@@ -66,6 +66,10 @@ public class MatrixParser {
           tupleStr.replace("\"","").split(mTokenDelim)));
       }
 
+      if (fileScanner != null) {
+         fileScanner.close();
+      }
+
       return tupleMap;
    }
 

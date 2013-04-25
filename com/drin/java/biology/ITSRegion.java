@@ -5,7 +5,6 @@ import com.drin.java.biology.Pyroprint;
 
 import com.drin.java.metrics.DataMetric;
 
-import com.drin.java.util.Configuration;
 import com.drin.java.util.Logger;
 
 import java.util.HashSet;

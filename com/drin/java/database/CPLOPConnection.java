@@ -6,15 +6,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import java.util.Date;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 
+import java.sql.Timestamp;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.sql.CallableStatement;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 /**
@@ -649,6 +652,7 @@ public class CPLOPConnection {
              !colPartitions.getKey().equals("isoID") &&
              !colPartitions.getKey().equals("nucleotide") &&
              !colPartitions.getKey().equals("pHeight") &&
+             !colPartitions.getKey().equals("pyroPrintedDate") &&
              !colPartitions.getValue().isEmpty()) {
 
             String partitionClause = String.format("%s in (", colPartitions.getKey());
@@ -695,6 +699,70 @@ public class CPLOPConnection {
       }
    }
 
+   public void executeInsert(String insertQuery) throws SQLException {
+      PreparedStatement insertSQL = null;
+
+      try {
+         insertSQL = conn.prepareStatement(insertQuery);
+         insertSQL.executeUpdate();
+      }
+      catch (SQLException sqlEx) { throw sqlEx; }
+      finally
+      {
+         if (insertSQL != null) { insertSQL.close(); }
+      }
+   }
+
+   public void insertNewRun(String insertQuery) throws SQLException {
+      Timestamp runDate = new Timestamp(new Date().getTime());
+      PreparedStatement insertSQL = null;
+
+      try {
+         insertSQL = conn.prepareStatement(insertQuery);
+         insertSQL.setTimestamp(1, runDate);
+         insertSQL.executeUpdate();
+      }
+      catch (SQLException sqlEx) { throw sqlEx; }
+      finally
+      {
+         if (insertSQL != null) { insertSQL.close(); }
+      }
+   }
+
+   public int getTestRunId() throws SQLException {
+      Statement stmt = null;
+      ResultSet results = null;
+      int newRunId = -1;
+
+      String query = String.format(
+          "SELECT last_insert_id()"
+      );
+
+      try {
+         stmt = conn.createStatement();
+         results = stmt.executeQuery(query);
+         int numRows = 0;
+
+         while (results.next()) {
+            newRunId = results.getInt(1);
+            numRows++;
+         }
+
+         if (numRows > 1) {
+            System.err.printf("Retrieving last insert id " +
+                              "returned multiple rows\n");
+         }
+      }
+      catch (SQLException sqlEx) { throw sqlEx; }
+      finally
+      {
+         if (results != null) { results.close(); }
+         if (stmt != null) { stmt.close(); }
+      }
+
+      return newRunId;
+   }
+
    /**
     * Get all relevant random data.
     *
@@ -731,7 +799,6 @@ public class CPLOPConnection {
       );
 
       query = constructOntologicalQuery(ont, query);
-
       System.out.printf("%s\n", query);
 
       try {
@@ -806,8 +873,8 @@ public class CPLOPConnection {
       );
 
       query = constructOntologicalQuery(ont, query);
-
       System.err.println("query:\n" + query);
+
       try {
          stmt = conn.createStatement();
          results = stmt.executeQuery(query);

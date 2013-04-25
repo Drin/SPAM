@@ -16,8 +16,7 @@ import java.util.ArrayList;
  * the name of the partition.
  */
 public class OntologyTerm {
-   private static final String TIME_OPTION_KEY = "TimeSensitive",
-                               SCHEME_NAME_DELIMITER = "-";
+   private static final String TIME_OPTION_KEY = "TimeSensitive";
 
    private String mTableName, mColName;
    private Map<String, Boolean> mOptions;
@@ -117,6 +116,7 @@ public class OntologyTerm {
 
             }
          }
+
       }
 
       if (!dataAdded && !mData.contains(element)) {

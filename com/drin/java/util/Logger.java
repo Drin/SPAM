@@ -18,7 +18,6 @@ public class Logger {
 
    private File mLogFile;
    private FileWriter mWriter;
-   private boolean mDebug;
 
    public static Logger getLogger() {
       if (mConfig == null) {
@@ -33,16 +32,21 @@ public class Logger {
    }
 
    private Logger(String filename) {
-      if (mConfig != null && mConfig.getAttr("debug").equals(true)) {
-         mLogFile = new File(filename);
+      mLogFile = new File(filename);
 
-         try {
-            mWriter = new FileWriter(mLogFile);
+      try {
+         mWriter = new FileWriter(mLogFile);
+         
+         if (!mLogFile.exists()) {
+            mLogFile.createNewFile();
+            mWriter.write(
+               String.format("[%s] Log file initialized\n", new Date())
+            );
          }
-         catch (java.io.IOException ioErr) {
-            System.err.printf("IO Error when opening file '%s'\n", filename);
-            ioErr.printStackTrace();
-         }
+      }
+      catch (java.io.IOException ioErr) {
+         System.err.printf("IO Error when opening file '%s'\n", filename);
+         ioErr.printStackTrace();
       }
    }
 
@@ -58,7 +62,9 @@ public class Logger {
    }
 
    public static void debug(String dbgString) {
-      if (mConfig != null && mConfig.getAttr("debug").equals("true")) {
+      Configuration config = Configuration.getConfig();
+      
+      if (config != null && Boolean.parseBoolean(config.getAttr("debug"))) {
          writeString(String.format("(%s) %s: %s\n", new Date(),
                                    DEBUG_PREFIX, dbgString));
       }
