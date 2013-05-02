@@ -4,6 +4,7 @@
 
 -- Drop Tables
 
+DROP TABLE IF EXISTS test_run_performance;
 DROP TABLE IF EXISTS test_isolate_strains;
 DROP TABLE IF EXISTS test_run_strain_link;
 DROP TABLE IF EXISTS test_runs;
@@ -20,9 +21,11 @@ CREATE TABLE IF NOT EXISTS test_runs (
   run_time TIME NOT NULL,
   cluster_algorithm VARCHAR(100) NOT NULL,
   average_strain_similarity FLOAT NOT NULL,
+  use_transform TINYINT NOT NULL,
   PRIMARY KEY  (test_run_id),
   KEY date_index (run_date),
-  KEY algorithm_index (cluster_algorithm)
+  KEY algorithm_index (cluster_algorithm),
+  KEY transform_index (use_transform)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
@@ -61,4 +64,21 @@ CREATE TABLE IF NOT EXISTS test_isolate_strains (
   FOREIGN KEY (name_prefix, name_suffix) REFERENCES test_isolates (name_prefix, name_suffix),
   KEY cluster_id_index (test_run_id, cluster_id, cluster_threshold),
   KEY isolate_id_index (name_prefix, name_suffix)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table test_run_performance
+--
+
+CREATE TABLE IF NOT EXISTS test_run_performance (
+  test_run_id INT NOT NULL,
+  update_id INT NOT NULL,
+  update_size INT NOT NULL,
+  run_time INT NOT NULL,
+  PRIMARY KEY (test_run_id, update_id),
+  FOREIGN KEY (test_run_id) REFERENCES test_runs (test_run_id),
+  KEY update_size_index (update_size),
+  KEY run_time_index (run_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;

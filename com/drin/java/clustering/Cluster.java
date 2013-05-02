@@ -58,9 +58,19 @@ public abstract class Cluster implements Labelable {
     * This is for ontological labels. Clusters should have a set of labels that
     * is a superset of the labels of its data points.
     */
-   public Map<String, Boolean> getLabels() { return mLabel.getLabels(); }
-   public void addLabel(String label) { mLabel.addLabel(label); }
-   public boolean hasLabel(String label) { return mLabel.hasLabel(label); }
+   public Map<String, String> getLabels() { return mLabel.getLabels(); }
+
+   public void addLabel(String labelName, String labelValue) {
+      mLabel.addLabel(labelName, labelValue);
+   }
+
+   public boolean hasLabel(String labelName) {
+      return mLabel.hasLabel(labelName);
+   }
+
+   public String getLabelValue(String labelName) {
+      return mLabel.getLabelValue(labelName);
+   }
 
    @Override
    public boolean equals(Object otherObj) {
