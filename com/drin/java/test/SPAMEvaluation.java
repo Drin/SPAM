@@ -7,13 +7,11 @@ import com.drin.java.biology.ITSRegion;
 import com.drin.java.biology.Pyroprint;
 
 import com.drin.java.metrics.DataMetric;
-/*
 import com.drin.java.metrics.ITSRegionAverageMetric;
 import com.drin.java.metrics.ITSRegionMedianMetric;
 import com.drin.java.metrics.IsolateAverageMetric;
 import com.drin.java.metrics.PyroprintUnstablePearsonMetric;
 import com.drin.java.metrics.ClusterAverageMetric;
-*/
 
 import com.drin.java.ontology.Ontology;
 
@@ -134,12 +132,18 @@ public class SPAMEvaluation {
    */
 
    public void runTests() {
+      List<Long> performanceTimes = new ArrayList<Long>();
+      List<Integer> updateSizes = new ArrayList<Integer>();
       List<Cluster> clusterList = new ArrayList<Cluster>();
       int initialSize = Integer.parseInt(mConfig.getAttr("initialSize"));
       int updateSize  = Integer.parseInt(mConfig.getAttr("updateSize"));
       int currUpdate = 0, numUpdates  = Integer.parseInt(mConfig.getAttr("numUpdates"));
-      int pageSize, pageOffset, clusterRun = -1;
-      long startTime, finishTime;
+      int pageSize, pageOffset, clusterRun = -1, use_transform = 0;
+      long startTime, finishTime, startCluster, finishCluster;
+
+      String performanceInsert = "INSERT INTO test_run_performance(" +
+                                 "test_run_id, update_id, update_size, " +
+                                 "run_time) VALUES ";
 
       try {
          mConn.randomizeIsolates(mRand.nextInt(9999));
@@ -151,6 +155,9 @@ public class SPAMEvaluation {
 
       startTime = System.currentTimeMillis();
       while (currUpdate <= numUpdates) {
+         System.out.printf("running update #%d out of %d updates\n",
+                           currUpdate, numUpdates);
+
          pageOffset = (updateSize * currUpdate) + initialSize;
          pageSize = updateSize;
 
@@ -165,7 +172,12 @@ public class SPAMEvaluation {
             clusterList.add(new HCluster(mClustMetric, data));
          }
 
+         startCluster = System.currentTimeMillis();
          mClusterer.clusterData(clusterList);
+         finishCluster = System.currentTimeMillis();
+
+         performanceTimes.add(new Long(finishCluster - startCluster));
+         updateSizes.add(new Integer(pageSize));
 
          currUpdate++;
       }
@@ -173,16 +185,35 @@ public class SPAMEvaluation {
       finishTime = System.currentTimeMillis();
       ClusterResults results = new ClusterResults(mClusterer.getClusters(),
                                                   finishTime - startTime);
+
+      if (Boolean.parseBoolean(mConfig.getAttr(Configuration.TRANSFORM_KEY))) {
+         use_transform = 1;
+      }
+
       try {
          mConn.insertNewRun(String.format(
             "INSERT INTO test_runs(run_date, run_time, cluster_algorithm," +
-                                  "average_strain_similarity) " +
-            "VALUES (?, %s, %s, %.04f)",
-            mClusterer.getName(), results.getElapsedTime(),
-            mClusterer.getInterClusterSimilarity()
+                                  "average_strain_similarity, use_transform) " +
+            "VALUES (?, '%s', '%s', %.04f, %d)",
+            results.getElapsedTime(), mClusterer.getName(),
+            mClusterer.getInterClusterSimilarity(),
+            use_transform
          ));
 
          clusterRun = mConn.getTestRunId();
+
+         if (clusterRun != -1) {
+            for (int timeNdx = 0; timeNdx < performanceTimes.size(); timeNdx++) {
+               performanceInsert += String.format(
+                  "(%d, %d, %d, %d), ",
+                  clusterRun, timeNdx, updateSizes.get(timeNdx).intValue(),
+                  performanceTimes.get(timeNdx).longValue()
+               );
+            }
+
+            mConn.executeInsert(performanceInsert.substring(0,
+                                performanceInsert.length() - 2));
+         }
       }
       catch(java.sql.SQLException sqlErr) {
          sqlErr.printStackTrace();
@@ -190,11 +221,13 @@ public class SPAMEvaluation {
 
       if (clusterRun != -1) {
          for (String sqlQuery : results.getSQLInserts(clusterRun)) {
-            try {
-               mConn.executeInsert(sqlQuery);
-            }
-            catch(java.sql.SQLException sqlErr) {
-               sqlErr.printStackTrace();
+            if (sqlQuery != null) {
+               System.out.printf("%s\n", sqlQuery);
+
+               try { mConn.executeInsert(sqlQuery); }
+               catch(java.sql.SQLException sqlErr) {
+                  sqlErr.printStackTrace();
+               }
             }
          }
       }
@@ -260,7 +293,7 @@ public class SPAMEvaluation {
                   for (String colName : tableCols.getValue()) {
                      if (colName.replace(" ", "").equals("")) { continue; }
 
-                     tmpIso.addLabel(String.valueOf(dataMap.get(colName)).trim());
+                     tmpIso.addLabel(colName, String.valueOf(dataMap.get(colName)).trim());
                   }
                }
             }

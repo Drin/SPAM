@@ -14,13 +14,11 @@ import java.util.HashMap;
 
 public class OHClusterer extends AgglomerativeClusterer {
    private static final int ALPHA_THRESH_NDX = 0, BETA_THRESH_NDX = 1;
-   protected List<Cluster> mBoundaryClusters;
    protected Ontology mOntology;
 
    public OHClusterer(Ontology ontology, List<Double> thresholds) {
       super(thresholds);
 
-      mBoundaryClusters = new ArrayList<Cluster>();
       mOntology = ontology;
       mName = "OHClust!";
    }
@@ -29,10 +27,6 @@ public class OHClusterer extends AgglomerativeClusterer {
       return mOntology.getRoot().getClusters();
    }
 
-   public List<Cluster> getBoundaryClusters() {
-      return mBoundaryClusters;
-   }
-   
    @Override
    public void clusterData(List<Cluster> clusters) {
       mResultClusters.clear();
@@ -41,27 +35,38 @@ public class OHClusterer extends AgglomerativeClusterer {
          return;
       }
 
-      separateCoreClusters(clusters, mThresholds.get(ALPHA_THRESH_NDX));
+      //separateCoreClusters(clusters, mThresholds.get(ALPHA_THRESH_NDX));
+      incorporateClusters(clusters);
 
       if (mOntology.getRoot().hasNewData()) {
          ontologicalCluster(mOntology.getRoot(), mThresholds.get(ALPHA_THRESH_NDX));
       }
 
-      List<Cluster> resultClusters = new ArrayList<Cluster>();
+      List<Cluster> resultClusters = null;
       if (mOntology.getRoot().getClusters() != null) {
-         resultClusters.addAll(mOntology.getRoot().getClusters());
-      }
-      
-      resultClusters.addAll(mBoundaryClusters);
+         resultClusters = new ArrayList<Cluster>(mOntology.getRoot().getClusters());
 
-      super.clusterDataSet(resultClusters, mThresholds.get(ALPHA_THRESH_NDX));
-      mResultClusters.put(mThresholds.get(ALPHA_THRESH_NDX),
-                          new ArrayList<Cluster>(resultClusters));
+         mResultClusters.put(mThresholds.get(ALPHA_THRESH_NDX),
+                             new ArrayList<Cluster>(mOntology.getRoot().getClusters()));
+
+         System.out.printf("threshold %.02f has %d clusters\n",
+                           mThresholds.get(ALPHA_THRESH_NDX),
+                           mResultClusters.get(mThresholds.get(ALPHA_THRESH_NDX)).size());
+      }
+      else {
+         System.err.println("No clusters formed!?");
+         System.exit(1);
+      }
 
       for (int threshNdx = BETA_THRESH_NDX; threshNdx < mThresholds.size(); threshNdx++) {
          super.clusterDataSet(resultClusters, mThresholds.get(threshNdx));
 
-         mResultClusters.put(mThresholds.get(threshNdx), new ArrayList<Cluster>(resultClusters));
+         mResultClusters.put(mThresholds.get(threshNdx),
+                             new ArrayList<Cluster>(resultClusters));
+
+         System.out.printf("threshold %.02f has %d clusters\n",
+                           mThresholds.get(threshNdx),
+                           mResultClusters.get(mThresholds.get(threshNdx)).size());
       }
    }
 
@@ -102,9 +107,7 @@ public class OHClusterer extends AgglomerativeClusterer {
       }
    }
 
-   //modifies mSimMap and mBoundaryClusters
-   private void separateCoreClusters(List<Cluster> clusters, double threshold) {
-      Map<String, Cluster> coreClusters = new HashMap<String, Cluster>();
+   private void incorporateClusters(List<Cluster> clusters) {
       Map<String, Double> clustSimMap = null;
       Cluster clust_A = null, clust_B = null;
 
@@ -118,29 +121,10 @@ public class OHClusterer extends AgglomerativeClusterer {
 
             double clustComparison = clust_A.compareTo(clust_B);
             clustSimMap.put(clust_B.getName(), new Double(clustComparison));
-
-            if (clustComparison >= threshold) {
-               if (!coreClusters.containsKey(clust_A.getName())) {
-                  coreClusters.put(clust_A.getName(), clust_A);
-               }
-               if (!coreClusters.containsKey(clust_B.getName())) {
-                  coreClusters.put(clust_B.getName(), clust_B);
-               }
-            }
          }
 
          mSimMap.put(clust_A.getName(), clustSimMap);
-      }
-
-      //clusters that are very similar to another go into ontology tree
-      //clusters that were not similar to anything go into boundary clusters
-      for (int clustNdx = 0; clustNdx < clusters.size(); clustNdx++) {
-         clust_A = clusters.get(clustNdx);
-
-         if (coreClusters.containsKey(clust_A.getName())) {
-            mOntology.addData(coreClusters.get(clust_A.getName()));
-         }
-         else { mBoundaryClusters.add(clust_A); }
+         mOntology.addData(clust_A);
       }
    }
 }
