@@ -100,28 +100,26 @@ public class OntologyTerm {
    public boolean addData(Cluster element) {
       boolean dataAdded = false;
 
-      if (mPartitions != null && !mPartitions.isEmpty()) {
-         for (Map.Entry<String, OntologyTerm> partition : mPartitions.entrySet()) {
-            if (element instanceof Labelable) {
+      if (mPartitions != null && (element instanceof Labelable)) {
+         String elementLabel = ((Labelable) element).getLabelValue(mColName);
 
-               if (((Labelable) element).hasLabel(partition.getKey())) {
-                  if (partition.getValue() == null) {
-                     partition.setValue(new OntologyTerm(element));
-                     dataAdded = true;
-                  }
-                  else { dataAdded = partition.getValue().addData(element); }
-
-                  break;
-               }
-
+         if (elementLabel != null && mPartitions.containsKey(elementLabel)) {
+            if (mPartitions.get(elementLabel) == null) {
+               mPartitions.put(elementLabel, new OntologyTerm(element));
+               dataAdded = true;
             }
-         }
 
+            else { dataAdded = mPartitions.get(elementLabel).addData(element); }
+         }
       }
 
-      if (!dataAdded && !mData.contains(element)) {
-         mData.add(element);
-         dataAdded = true;
+      if (!dataAdded) {
+         if (mData == null) { mData = new ArrayList<Cluster>(); }
+
+         if (!mData.contains(element)) {
+            mData.add(element);
+            dataAdded = true;
+         }
       }
 
       mHasNewData = dataAdded;
