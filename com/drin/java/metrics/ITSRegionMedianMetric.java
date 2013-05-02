@@ -26,7 +26,7 @@ public class ITSRegionMedianMetric extends DataMetric<ITSRegion> {
    public void reset() {
       super.reset();
       mPyroComparisons = new ArrayList<Double>();
-      mRegionName = "";
+      mRegionName = "16-23";
    }
 
    @Override

@@ -7,8 +7,9 @@ SPAM_GUI_MAIN=com.drin.java.gui.SpamGUI
 SPAM_TEST_MAIN=com.drin.java.test.SPAMEvaluation
 
 CC = javac
-ENGINE = java -Xmx6g
+ENGINE = java -Xmx8g
 JFLAGS = -deprecation -Xlint
+NICE = nice
 
 compile: clean spam
 
@@ -39,7 +40,7 @@ runGUI:
 
 runTest:
 	@echo "running..."
-	$(ENGINE) $(SPAM_TEST_MAIN)
+	$(NICE) $(ENGINE) $(SPAM_TEST_MAIN)
 	@echo "finished running."
 
 document: docSpam
@@ -63,5 +64,5 @@ cleanDocs:
 clean:
 	@echo "-------------------------------"
 	@echo "*** Cleaning Files..."
-	find $(PACKAGE_PATH) -name *.class | xargs rm -f
+	find $(PACKAGE_PATH) -name "*.class" | xargs rm -f
 	@echo "-------------------------------"

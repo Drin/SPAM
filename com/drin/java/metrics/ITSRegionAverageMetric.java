@@ -23,7 +23,7 @@ public class ITSRegionAverageMetric extends DataMetric<ITSRegion> {
    public void reset() {
       super.reset();
       mPairCount = 0;
-      mRegionName = "";
+      mRegionName = "16-23";
    }
 
    @Override

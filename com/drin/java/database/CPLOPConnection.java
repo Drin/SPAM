@@ -27,13 +27,10 @@ import java.sql.SQLException;
  */
 public class CPLOPConnection {
    private static final String DB_DRIVER = "com.mysql.jdbc.Driver";
-   //private static final String DB_URL = "jdbc:mysql://cslvm96.csc.calpoly.edu/CPLOP?autoReconnect=true";
-   //private static final String DB_INFO_URL = "jdbc:mysql://cslvm96.csc.calpoly.edu/information_schema?autoReconnect=true";
-   private static final String DB_URL = "jdbc:mysql://localhost:8906/CPLOP?autoReconnect=true";
-   private static final String DB_INFO_URL = "jdbc:mysql://localhost:8906/information_schema?autoReconnect=true";
-   private static final String DB_USER = "drin";
-   //private static final String DB_PASS = "ILoveData#";
-   private static final String DB_PASS = "";
+   private static final String DB_URL = "jdbc:mysql://localhost/CPLOP?autoReconnect=true";
+   private static final String DB_INFO_URL = "jdbc:mysql://localhost/information_schema?autoReconnect=true";
+   private static final String DB_USER = "amontana";
+   private static final String DB_PASS = "4ldr1n*(";
 
    private Connection conn, schemaConn;
    private static CPLOPConnection mCPLOPConnection = null;
@@ -703,6 +700,7 @@ public class CPLOPConnection {
       PreparedStatement insertSQL = null;
 
       try {
+         System.out.printf("preparing insert:\n'%s'\n", insertQuery);
          insertSQL = conn.prepareStatement(insertQuery);
          insertSQL.executeUpdate();
       }
@@ -716,6 +714,8 @@ public class CPLOPConnection {
    public void insertNewRun(String insertQuery) throws SQLException {
       Timestamp runDate = new Timestamp(new Date().getTime());
       PreparedStatement insertSQL = null;
+
+      System.out.printf("%s\n", insertQuery);
 
       try {
          insertSQL = conn.prepareStatement(insertQuery);
