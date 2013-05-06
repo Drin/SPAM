@@ -3,7 +3,14 @@ import sys
 import array
 import random
 
-import pymysql
+import numpy
+
+USING_PY3 = True
+if (sys.version.find('3.3') == -1):
+   import MySQLdb
+   USING_PY3 = False
+else:
+   import pymysql
 
 REGION_23_5 = 0
 REGION_16_23 = 1
@@ -54,8 +61,12 @@ class connection(object):
 
    def __init__(self, host='localhost', port=8906, db='CPLOP'):
       if (self.CPLOP_CONNECTION is None):
-         self.CPLOP_CONNECTION = pymysql.connect(host=host, port=port, db=db,
-                                                 user='drin', passwd='')
+         if (USING_PY3):
+            self.CPLOP_CONNECTION = pymysql.connect(host=host, port=port, db=db,
+                                                    user='drin', passwd='')
+         else:
+            self.CPLOP_CONNECTION = MySQLdb.connect(host=host, port=port, db=db,
+                                                    user='drin', passwd='')
 
    def get_isolate_ids(self, db_seed=random.randrange(9999), limit=110000):
       pyro_id_list_1 = array.array('L', (0,) * limit)
@@ -75,25 +86,25 @@ class connection(object):
       cplop_cursor.close()
       return (pyro_id_list_1, pyro_id_list_2) 
 
-   def get_isolate_data(self, data=None, limit=110000):
-      if (data is None): return
+   def get_isolate_data(self, pyro_ids=None, limit=110000):
+      if (pyro_ids is None): return
 
-      isolate_data = dict()
       cplop_cursor = self.CPLOP_CONNECTION.cursor()
       cplop_cursor.execute(DATA_QUERY % (
-         ','.join([str(val) for val in data[REGION_23_5]]),
-         ','.join([str(val) for val in data[REGION_16_23]])
+         ','.join([str(val) for val in pyro_ids[REGION_23_5]]),
+         ','.join([str(val) for val in pyro_ids[REGION_16_23]])
       ))
 
-      (isolate_id, peak_ndx) = (None, 0)
+      (ids, data, isolate_id, peak_ndx) = ([], [], None, 0)
       for data_tuple in cplop_cursor.fetchall():
          tmp_isolate_id = "%s%s" % (data_tuple[0], str(data_tuple[1]))
 
          if (tmp_isolate_id != isolate_id):
             (isolate_id, peak_ndx) = (tmp_isolate_id, 0)
-            isolate_data[isolate_id] = array.array('f', (0,) * ISOLATE_LEN)
+            ids.append(isolate_id)
+            data.append(array.array('f', (0,) * ISOLATE_LEN))
 
-         isolate_arr = isolate_data[isolate_id]
+         isolate_arr = data[-1]
 
          if (peak_ndx < REGION_23_5_LEN):
             isolate_arr[peak_ndx] = data_tuple[REGION_23_5 + DATA_QUERY_OFF]
@@ -104,4 +115,4 @@ class connection(object):
          peak_ndx += 1
 
       cplop_cursor.close()
-      return isolate_data
+      return (ids, data)
