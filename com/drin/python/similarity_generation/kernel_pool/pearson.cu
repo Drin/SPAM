@@ -7,7 +7,7 @@
 
 __global__ void pearson(uint32_t num_isolates, uint32_t tile_size,
                         uint32_t tile_row, uint32_t tile_col,
-                        float **isolates, float *sim_matrix) {
+                        float *isolates, float *sim_matrix) {
    uint32_t iso_B_tile_ndx = blockIdx.x * blockDim.x + threadIdx.x; // column
    uint32_t iso_A_tile_ndx = blockIdx.y * blockDim.y + threadIdx.y; // row
 
@@ -19,19 +19,20 @@ __global__ void pearson(uint32_t num_isolates, uint32_t tile_size,
    // isolates (order doesn't matter) will only be compared once. This will
    // cause divergence only in the warps that lie along the main diagonal
    // of the comparison matrix.
-   if (iso_A_ndx <= iso_B_ndx)
-      return;
+   if (iso_A_ndx >= iso_B_ndx ||
+       iso_A_ndx >= num_isolates ||
+       iso_B_ndx >= num_isolates) { return; }
 
    // Initialize accumulators and the result.
-   float pearson_sum = 0;
-   float sum_A = 0, sum_B = 0, sum_A_squared = 0, sum_B_squared = 0, sum_AB = 0;
+   float pearson_sum = 0.0f;
+   float peak_height_A = 0.0f, peak_height_B = 0.0f;
+   float sum_A = 0.0f, sum_B = 0.0f, sum_AB = 0.0f,
+         sum_A_squared = 0.0f, sum_B_squared = 0.0f;
 
    // Compute the sums for the 23-5 region (first 93).
    for (uint8_t ndx = 0; ndx < LEN_23S; ndx++) {
-      float peak_height_A = 0, peak_height_B = 0;
-
-      peak_height_A += isolates[iso_A_ndx][ndx];
-      peak_height_B += isolates[iso_B_ndx][ndx];
+      peak_height_A = isolates[iso_A_ndx * ISOLATE_LEN + ndx];
+      peak_height_B = isolates[iso_B_ndx * ISOLATE_LEN + ndx];
 
       sum_A += peak_height_A;
       sum_B += peak_height_B;
@@ -44,13 +45,14 @@ __global__ void pearson(uint32_t num_isolates, uint32_t tile_size,
                   sqrtf((LEN_23S * sum_A_squared - sum_A * sum_A) * 
                         (LEN_23S * sum_B_squared - sum_B * sum_B));
 
+   peak_height_A = 0.0f, peak_height_B = 0.0f;
+   sum_A = 0.0f, sum_B = 0.0f, sum_AB = 0.0f;
+   sum_A_squared = 0.0f, sum_B_squared = 0.0f;
+
    // Compute the sums for the 16-23 region (last 95).
    for (uint8_t ndx = 0; ndx < LEN_16S; ndx++) {
-      float peak_height_A = 0, peak_height_B = 0;
-
-      //peak_height_A += isolates[iso_A_ndx * ISOLATE_LEN + LEN_23S + ndx];
-      peak_height_A += isolates[iso_A_ndx][LEN_23S + ndx];
-      peak_height_B += isolates[iso_B_ndx][LEN_23S + ndx];
+      peak_height_A = isolates[iso_A_ndx * ISOLATE_LEN + LEN_23S + ndx];
+      peak_height_B = isolates[iso_B_ndx * ISOLATE_LEN + LEN_23S + ndx];
 
       sum_A += peak_height_A;
       sum_B += peak_height_B;
@@ -70,5 +72,7 @@ __global__ void pearson(uint32_t num_isolates, uint32_t tile_size,
       result_ndx += (num_isolates - 1) - row_num;
    }
 
-   sim_matrix[result_ndx] = pearson_sum / 2;
+   if (result_ndx < (num_isolates * num_isolates - 1) / 2) {
+      sim_matrix[result_ndx] = pearson_sum / 2;
+   }
 }

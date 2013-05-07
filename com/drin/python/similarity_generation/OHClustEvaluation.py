@@ -1,16 +1,10 @@
 import os
 import sys
 import time
+import math
 
 import numpy
 import CPLOP
-
-DEBUG_PEEK_SIZE = 10
-REGION_23_5_LEN = 93
-REGION_16_23_LEN = 95
-ISOLATE_LEN = 188
-
-CUDA_KERNEL_DIR = 'kernel_pool'
 
 try:
    import pycuda.driver
@@ -21,6 +15,14 @@ except:
    print("Could not load pyCUDA")
    sys.exit(1)
 
+DEBUG_PEEK_SIZE = 10
+CUDA_KERNEL_DIR = 'kernel_pool'
+
+#############################################################################
+#
+# Load CUDA Kernel
+#
+#############################################################################
 def load_cuda():
    cuda_src = ''
 
@@ -30,86 +32,79 @@ def load_cuda():
 
    return pycuda.compiler.SourceModule(cuda_src)
 
-if (__name__ == '__main__'):
-   #(initialSize, updateSize, numUpdates) = (10000, 1000, 100)
-   (initialSize, updateSize, numUpdates) = (500, 500, 1)
-   dataset_size = initialSize + (updateSize * numUpdates)
-
-   #############################################################################
-   #
-   # GET DATA FROM CPLOP
-   #
-   #############################################################################
-
+#############################################################################
+#
+# Retrieve CPLOP Data
+#
+#############################################################################
+def get_data(initial_size=10000, update_size=1000, num_updates=1):
    conn = CPLOP.connection()
-   isolate_ids = conn.get_isolate_ids(db_seed=3, limit=dataset_size)
 
-   if ('DEBUG' in os.environ and 'VERBOSE' in os.environ):
-      print("isolate_ids:")
-      for isolate_ndx in range(min(DEBUG_PEEK_SIZE, len(isolate_ids))):
-         print("\t%s" % (isolate_ids[isolate_ndx]))
+   dataset_size = initial_size + (update_size * num_updates)
+   data_ids = conn.get_pyro_ids(db_seed=3, data_size=dataset_size)
 
    start_time = time.time()
-   (isolate_ids, isolate_data) = conn.get_isolate_data(pyro_ids=isolate_ids, limit=initialSize)
-   finish_time = time.time() - start_time
 
-   sim_matrix_size = (len(isolate_data) * len(isolate_data) - 1) / 2
+   (iso_ids, iso_data) = conn.get_isolate_data(pyro_ids=data_ids,
+                                               data_size=dataset_size)
 
    if ('DEBUG' in os.environ and 'VERBOSE' in os.environ):
-      print("isolate_data:")
-      for iso_ndx in range(len(isolate_ids)):
-         print("\tisolate [%s]: %s" % (isolate_ids[iso_ndx], isolate_data[iso_ndx]))
+      print("%d isolates in %ds" % (len(isolate_data),
+                                    time.time() - start_time))
 
-   if ('DEBUG' in os.environ):
-      print("grabbed data for %d isolates in %d minutes" %
-            (len(isolate_data), finish_time / 60))
+   return (iso_ids, iso_data)
 
-   #############################################################################
+#############################################################################
+#
+# CUDA Workload
+#
+#############################################################################
+def compute_similarity(isolate_data, num_threads=16, num_blocks=32,
+                       kernel_name='pearson', device_id=0):
+   # Convenience Variables
+   (num_isolates, tile_size) = (len(isolate_data), (num_threads * num_blocks))
+   sim_matrix_size = num_isolates * (num_isolates - 1) / 2
+   num_tiles = math.ceil(num_isolates / tile_size)
+
+   ############################################################################
    #
-   # BEGIN CUDA
+   # Init CUDA
    #
-   #############################################################################
-
+   ############################################################################
    pycuda.driver.init()
-   (num_isolates, num_threads, num_blocks) = (len(isolate_data), 16, 32)
-   tile_size = (num_threads * num_blocks)
+   cuda_context = pycuda.driver.Device(device_id).make_context()
+   cuda_kernel = load_cuda().get_function(kernel_name)
 
-   cuda_context = pycuda.driver.Device(0).make_context()
-   cuda_kernel = load_cuda().get_function('pearson')
+   ############################################################################
+   #
+   # Main Workload
+   #
+   ############################################################################
 
-   isolate_data_cpu = numpy.zeros(shape=(len(isolate_data), ISOLATE_LEN),
-                                  dtype=numpy.float32, order='C')
-   for isolate_ndx in range(len(isolate_data)):
-      numpy.put(isolate_data_cpu[isolate_ndx], range(ISOLATE_LEN),
-                isolate_data[isolate_ndx])
-
-   if ('DEBUG' in os.environ):
-      print("%s : %s" % (isolate_ids[0], isolate_data_cpu[0]))
-
-   sim_matrix_cpu = numpy.zeros(shape=(1, sim_matrix_size),
+   sim_matrix_cpu = numpy.zeros(shape=(sim_matrix_size),
                                 dtype=numpy.float32, order='C')
    sim_matrix_gpu = pycuda.gpuarray.to_gpu(sim_matrix_cpu)
 
-   for tile_row in range(num_isolates / (tile_size + 1)):
-      for tile_col in range(tile_row, num_isolates / (tile_size + 1)):
-
+   for tile_row in range(num_tiles):
+      for tile_col in range(tile_row, num_tiles):
          cuda_kernel(numpy.uint32(num_isolates), numpy.uint32(tile_size),
                      numpy.uint32(tile_row), numpy.uint32(tile_col),
-                     pycuda.driver.In(isolate_data_cpu),
+                     pycuda.driver.In(isolate_data),
                      sim_matrix_gpu.gpudata,
                      block = (num_threads, num_threads, 1),
                      grid  = (num_blocks,  num_blocks))
-
    sim_matrix_gpu.get(sim_matrix_cpu)
 
+   ############################################################################
+   #
+   # Cleanup CUDA
+   #
+   ############################################################################
    pycuda.driver.Context.pop()
 
-   #############################################################################
-   #
-   # CHECK RESULTS
-   #
-   #############################################################################
+   return sim_matrix_cpu
 
+def output_similarity_matrix(sim_matrix):
    sim_ndx = 0
    for iso_A_ndx in range(num_isolates):
       iso_A = isolate_ids[iso_A_ndx]
@@ -117,7 +112,23 @@ if (__name__ == '__main__'):
       for iso_B_ndx in range(iso_A_ndx + 1, num_isolates):
          iso_B = isolate_ids[iso_B_ndx]
 
-         print("isolate [%s] and isolate [%s]: %.04f" %
-               (iso_A, iso_B, sim_matrix_cpu[sim_ndx]))
-
+         print("(%s, %s): %.04f " % (iso_A, iso_B, sim_matrix_cpu[sim_ndx]))
          sim_ndx += 1
+
+#############################################################################
+#
+# Main Function
+#
+#############################################################################
+def main():
+   (isolate_ids, isolate_data) = get_data(initial_size=100, update_size=100)
+   sim_matrix = compute_similarity(isolate_data)
+
+   if ('DEBUG' in os.environ):
+      for tmp_ndx in range(10):
+         print(sim_matrix[tmp_ndx])
+
+      if ('VERBOSE' in os.environ): output_similarity_matrix(sim_matrix)
+
+if (__name__ == '__main__'):
+   main()
