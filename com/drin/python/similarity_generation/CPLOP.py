@@ -1,6 +1,6 @@
 import os
 import sys
-import array
+import math
 import random
 
 import numpy
@@ -12,11 +12,11 @@ if (sys.version.find('3.3') == -1):
 else:
    import pymysql
 
-REGION_23_5 = 0
-REGION_16_23 = 1
+NDX_23_5 = 0
+NDX_16_23 = 1
 
-REGION_23_5_LEN = 93
-REGION_16_23_LEN = 95
+LEN_23_5 = 93
+LEN_16_23 = 95
 ISOLATE_LEN = 188
 
 ID_QUERY_OFF = 1
@@ -36,7 +36,7 @@ ID_QUERY = '''
            p2.appliedRegion = '16-23'
         )
    ORDER BY RAND(%d)
-   LIMIT %d
+   LIMIT %d OFFSET %d
 '''
 
 DATA_QUERY = '''
@@ -54,6 +54,7 @@ DATA_QUERY = '''
            h2.pyroID = p2.pyroID AND
            p2.pyroID IN (%s)
         )
+   LIMIT %d OFFSET %d
 '''
 
 class connection(object):
@@ -68,51 +69,61 @@ class connection(object):
             self.CPLOP_CONNECTION = MySQLdb.connect(host=host, port=port, db=db,
                                                     user='drin', passwd='')
 
-   def get_isolate_ids(self, db_seed=random.randrange(9999), limit=110000):
-      pyro_id_list_1 = array.array('L', (0,) * limit)
-      pyro_id_list_2 = array.array('L', (0,) * limit)
-
+   def get_pyro_ids(self, db_seed=random.randrange(9999),
+                       data_size=2000, page_size=2000):
       cplop_cursor = self.CPLOP_CONNECTION.cursor()
-      cplop_cursor.execute(ID_QUERY % (db_seed, limit))
+      pyros_1 = numpy.zeros(shape=(data_size), dtype=numpy.uint32, order='C')
+      pyros_2 = numpy.zeros(shape=(data_size), dtype=numpy.uint32, order='C')
 
-      data_ndx = 0
-      for iso_tuple in cplop_cursor.fetchall():
-         # attribute index is shifted by one because of test_isolate_id
-         pyro_id_list_1[data_ndx] = iso_tuple[REGION_23_5 + ID_QUERY_OFF]
-         pyro_id_list_2[data_ndx] = iso_tuple[REGION_16_23 + ID_QUERY_OFF]
+      for page_ndx in range(math.ceil(data_size/page_size)):
+         cplop_cursor.execute(ID_QUERY % (
+               db_seed,
+               min(page_size, data_size - (page_ndx * page_size)),
+               page_ndx * page_size
+         ))
 
-         data_ndx += 1
+         data_ndx = 0
+         for iso_tuple in cplop_cursor.fetchall():
+            # attribute index is shifted by one because of test_isolate_id
+            pyros_1[data_ndx] = iso_tuple[NDX_23_5 + ID_QUERY_OFF]
+            pyros_2[data_ndx] = iso_tuple[NDX_16_23 + ID_QUERY_OFF]
+
+            data_ndx += 1
 
       cplop_cursor.close()
-      return (pyro_id_list_1, pyro_id_list_2) 
+      return (pyros_1, pyros_2) 
 
-   def get_isolate_data(self, pyro_ids=None, limit=110000):
-      if (pyro_ids is None): return
+   def get_isolate_data(self, pyro_ids, data_size=2000, page_size=2000):
+      (cplop_cursor, ids, isolate_ndx) = (self.CPLOP_CONNECTION.cursor(), [], 0)
+      data = numpy.zeros(shape=(data_size * ISOLATE_LEN),
+                         dtype=numpy.float32, order='C')
 
-      cplop_cursor = self.CPLOP_CONNECTION.cursor()
-      cplop_cursor.execute(DATA_QUERY % (
-         ','.join([str(val) for val in pyro_ids[REGION_23_5]]),
-         ','.join([str(val) for val in pyro_ids[REGION_16_23]])
-      ))
+      for page_ndx in range(math.ceil(data_size/page_size)):
+         cplop_cursor.execute(DATA_QUERY % (
+            ','.join([str(val) for val in pyro_ids[NDX_23_5]]),
+            ','.join([str(val) for val in pyro_ids[NDX_16_23]]),
+            min(page_size, data_size - (page_ndx * page_size)),
+            (page_ndx * page_size)
+         ))
 
-      (ids, data, isolate_id, peak_ndx) = ([], [], None, 0)
-      for data_tuple in cplop_cursor.fetchall():
-         tmp_isolate_id = "%s%s" % (data_tuple[0], str(data_tuple[1]))
+         (isolate_id, peak_ndx) = (None, 0)
+         for data_tuple in cplop_cursor.fetchall():
+            tmp_isolate_id = "%s%s" % (data_tuple[0], str(data_tuple[1]))
 
-         if (tmp_isolate_id != isolate_id):
-            (isolate_id, peak_ndx) = (tmp_isolate_id, 0)
-            ids.append(isolate_id)
-            data.append(array.array('f', (0,) * ISOLATE_LEN))
+            if (tmp_isolate_id != isolate_id):
+               (isolate_id, peak_ndx) = (tmp_isolate_id, 0)
+               isolate_ndx += 1
+               ids.append(isolate_id)
 
-         isolate_arr = data[-1]
+            if (peak_ndx < LEN_23_5):
+               offset_23_5 = isolate_ndx * ISOLATE_LEN + peak_ndx
+               data[offset_23_5] = data_tuple[NDX_23_5 + DATA_QUERY_OFF]
 
-         if (peak_ndx < REGION_23_5_LEN):
-            isolate_arr[peak_ndx] = data_tuple[REGION_23_5 + DATA_QUERY_OFF]
+            if (LEN_23_5 + peak_ndx < ISOLATE_LEN):
+               offset_16_23 = isolate_ndx * ISOLATE_LEN + LEN_23_5 + peak_ndx
+               data[offset_16_23] = data_tuple[NDX_16_23 + DATA_QUERY_OFF]
 
-         if (REGION_23_5_LEN + peak_ndx < ISOLATE_LEN):
-            isolate_arr[REGION_23_5_LEN + peak_ndx] = data_tuple[REGION_16_23 + DATA_QUERY_OFF]
-
-         peak_ndx += 1
+            peak_ndx += 1
 
       cplop_cursor.close()
       return (ids, data)
