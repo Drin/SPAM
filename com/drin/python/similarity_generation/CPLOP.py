@@ -54,6 +54,7 @@ DATA_QUERY = '''
            h2.pyroID = p2.pyroID AND
            p2.pyroID IN (%s)
         )
+   ORDER BY p1.name_prefix, p1.name_suffix, h1.position
    LIMIT %d OFFSET %d
 '''
 
@@ -93,17 +94,21 @@ class connection(object):
       cplop_cursor.close()
       return (pyros_1, pyros_2) 
 
+   # data_size is in isolates
    def get_isolate_data(self, pyro_ids, data_size=2000, page_size=2000):
-      (cplop_cursor, ids, isolate_ndx) = (self.CPLOP_CONNECTION.cursor(), [], 0)
+      (cplop_cursor, ids, isolate_ndx) = (self.CPLOP_CONNECTION.cursor(), [], -1)
       data = numpy.zeros(shape=(data_size * ISOLATE_LEN),
                          dtype=numpy.float32, order='C')
 
-      for page_ndx in range(math.ceil(data_size/page_size)):
+      peak_data_size = (data_size * max(LEN_23_5, LEN_16_23))
+      peak_page_size = (page_size * max(LEN_23_5, LEN_16_23))
+
+      for page_ndx in range(math.ceil(peak_data_size/peak_page_size)):
          cplop_cursor.execute(DATA_QUERY % (
             ','.join([str(val) for val in pyro_ids[NDX_23_5]]),
             ','.join([str(val) for val in pyro_ids[NDX_16_23]]),
-            min(page_size, data_size - (page_ndx * page_size)),
-            (page_ndx * page_size)
+            min(peak_page_size, peak_data_size - (page_ndx * peak_page_size)),
+            (page_ndx * peak_page_size)
          ))
 
          (isolate_id, peak_ndx) = (None, 0)

@@ -45,12 +45,13 @@ def get_data(initial_size=10000, update_size=1000, num_updates=1):
 
    start_time = time.time()
 
-   (iso_ids, iso_data) = conn.get_isolate_data(pyro_ids=data_ids,
-                                               data_size=dataset_size)
+   (iso_ids, iso_data) = conn.get_isolate_data(
+      pyro_ids=data_ids, data_size=(dataset_size)
+   )
 
-   if ('DEBUG' in os.environ and 'VERBOSE' in os.environ):
-      print("%d isolates in %ds" % (len(isolate_data),
-                                    time.time() - start_time))
+   if ('DEBUG' in os.environ):
+      print("%d[%d] isolates in %ds" % (len(iso_ids), len(iso_data),
+                                        time.time() - start_time))
 
    return (iso_ids, iso_data)
 
@@ -59,12 +60,16 @@ def get_data(initial_size=10000, update_size=1000, num_updates=1):
 # CUDA Workload
 #
 #############################################################################
-def compute_similarity(isolate_data, num_threads=16, num_blocks=32,
+def compute_similarity(num_isolates, isolate_data, num_threads=16, num_blocks=32,
                        kernel_name='pearson', device_id=0):
    # Convenience Variables
-   (num_isolates, tile_size) = (len(isolate_data), (num_threads * num_blocks))
+   tile_size = (num_threads * num_blocks)
    sim_matrix_size = num_isolates * (num_isolates - 1) / 2
    num_tiles = math.ceil(num_isolates / tile_size)
+
+   if ('DEBUG' in os.environ):
+      print("num isolates: %d" % num_isolates)
+      print("num similarities: %d" % sim_matrix_size)
 
    ############################################################################
    #
@@ -122,7 +127,7 @@ def output_similarity_matrix(sim_matrix):
 #############################################################################
 def main():
    (isolate_ids, isolate_data) = get_data(initial_size=100, update_size=100)
-   sim_matrix = compute_similarity(isolate_data)
+   sim_matrix = compute_similarity(len(isolate_ids), isolate_data)
 
    if ('DEBUG' in os.environ):
       for tmp_ndx in range(10):
