@@ -19,22 +19,21 @@ except:
 #
 #############################################################################
 class Clusterer(object):
-   def __init__(self, thresholds, ontology=None):
+   def __init__(self, threshold, ontology=None):
       self.ontology = ontology
-      self.thresholds = thresholds
+      self.threshold = threshold
       self.average_inter_similarity = 0
 
    def cluster_data(self, clusters):
-      for threshold in self.thresholds:
-         print("clustering using threshold: %.04f" % threshold)
-         if (self.ontology is not None):
-            for cluster in clusters:
-               self.ontology.add_data(cluster)
+      print("clustering using threshold: %.04f" % self.threshold)
+      if (self.ontology is not None):
+         for cluster in clusters:
+            self.ontology.add_data(cluster)
 
-            self.cluster_ontology(self.ontology.root, threshold)
+         self.cluster_ontology(self.ontology.root, self.threshold)
 
-         else:
-            self.cluster_dataset(clusters, threshold)
+      else:
+         self.cluster_dataset(clusters, self.threshold)
 
    def cluster_ontology(self, ontology_term, threshold):
       if (ontology_term is None or ontology_term.new_data is False):
@@ -54,11 +53,15 @@ class Clusterer(object):
 
    def cluster_dataset(self, clusters, threshold):
       while(len(clusters) > 1):
+         cluster_time = time.time()
+
          close_clusters = self.find_close_clusters(clusters, threshold)
 
          if (close_clusters[0] != -1 and close_clusters[1] != -1):
             self.combine_clusters(clusters, close_clusters)
+            print("time to cluster: %ds" % time.time() - cluster_time)
          else:
+            print("time to cluster: %ds" % time.time() - cluster_time)
             break
 
    def find_close_clusters(self, clusters, threshold):
@@ -143,6 +146,11 @@ class Cluster(object):
                if (clust_sim < self.max_dist):
                   self.max_dist = clust_sim
 
+         if (count == 0):
+            print("no similarities computed between [%s] and [%s]" % (
+               self.elements, other_cluster.elements
+            ))
+            return 0
          return (self.total_sim / self.count)
 
       elif (Cluster.sClust_comparator is not None):
