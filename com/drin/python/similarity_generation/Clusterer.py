@@ -91,7 +91,7 @@ class Cluster(object):
 
    def __init__(self, comparator, data_point=-1, labels=None):
       self.elements = numpy.zeros(shape=(0), dtype=numpy.uint32, order='C')
-      self.labels = labels
+      self.labels = dict()
 
       if (data_point != -1):
          self.elements = numpy.append(self.elements, data_point)
