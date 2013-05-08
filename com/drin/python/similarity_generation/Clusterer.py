@@ -2,6 +2,8 @@ import os
 import sys
 import numpy
 
+import Ontology
+
 try:
    import pycuda.driver
    import pycuda.compiler
@@ -10,10 +12,6 @@ try:
 except:
    print("Could not load pyCUDA")
    sys.exit(1)
-
-#import Ontology
-
-# TODO: Ontology
 
 #############################################################################
 #
@@ -27,7 +25,30 @@ class Clusterer(object):
 
    def cluster_data(self, clusters):
       for threshold in self.thresholds:
-         self.cluster_dataset(clusters, threshold)
+         if (self.ontology is not None):
+            for cluster in clusters:
+               self.ontology.add_data(cluster)
+
+            self.cluster_ontology(self.ontology.root, threshold)
+
+         else:
+            self.cluster_dataset(clusters, threshold)
+
+   def cluster_ontology(self, ontology_term, threshold):
+      if (ontology_term is None or ontology_term.new_data is False):
+         return
+
+      clusters = []
+      for term in ontology_term.children.items():
+         if (term[1].new_data):
+            self.cluster_ontology(term[1], threshold)
+
+         if (term[1].data is None): continue
+
+         clusters.append(term[1].data)
+         #self.cluster_dataset(clusters, threshold)
+
+      self.cluster_dataset(clusters, threshold)
 
    def cluster_dataset(self, clusters, threshold):
       while(len(clusters) > 1):
@@ -65,8 +86,9 @@ class Clusterer(object):
 class Cluster(object):
    sClust_comparator = None
 
-   def __init__(self, comparator, data_point=-1):
+   def __init__(self, comparator, data_point=-1, labels=None):
       self.elements = numpy.zeros(shape=(0), dtype=numpy.uint32, order='C')
+      self.labels = labels
 
       if (data_point != -1):
          self.elements = numpy.append(self.elements, data_point)
