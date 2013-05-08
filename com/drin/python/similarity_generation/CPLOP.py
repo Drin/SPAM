@@ -58,6 +58,30 @@ DATA_QUERY = '''
    LIMIT %d OFFSET %d
 '''
 
+META_QUERY = '''
+   SELECT name_prefix, name_suffix %s
+   FROM test_isolates join test_pyroprints using (name_prefix, name_suffix)
+   WHERE name_prefix in (%s) AND name_suffix in (%s)
+   ORDER BY name_prefix, name_suffix
+   LIMIT %d OFFSET %d
+'''
+
+TEST_RUN_ID_QUERY = '''
+   SELECT last_insert_id()
+'''
+
+INSERT_TEST_RUN = '''
+   INSERT INTO test_runs(run_date, run_time, cluster_algorithm,
+                         average_strain_similarity, use_transform)
+   VALUES (NOW(), '%s', '%s', %.04f, %d)
+'''
+
+INSERT_RUN_PERF = '''
+   INSERT INTO test_run_performance(test_run_id, update_id,
+                                    update_size, run_time)
+   VALUES (%d, %d, %d, %d)
+'''
+
 class connection(object):
    CPLOP_CONNECTION = None
 
@@ -112,9 +136,11 @@ class connection(object):
          ))
 
          for data_tuple in cplop_cursor.fetchall():
-            tmp_isolate_id = "%s%s" % (data_tuple[0], str(data_tuple[1]))
+            tmp_isolate_id = (data_tuple[0], str(data_tuple[1]))
 
-            if (tmp_isolate_id != isolate_id):
+            if (isolate_id is None or
+                (tmp_isolate_id[0] != isolate_id[0] and
+                 tmp_isolate_id[1] != isolate_id[1])):
                (isolate_id, peak_ndx) = (tmp_isolate_id, 0)
                isolate_ndx += 1
                ids.append(isolate_id)
@@ -132,3 +158,81 @@ class connection(object):
       print("num isolates: %d" % isolate_ndx)
       cplop_cursor.close()
       return (ids, data)
+
+   def get_meta_data(self, ids, ont=None, data_size=2000, page_size=10000):
+      cplop_cursor = self.CPLOP_CONNECTION.cursor()
+
+      (table_cols, id_prefixes, id_suffixes) = ([], [], [])
+
+      for table_col in ont.table_columns.items():
+         table_cols.append(str(table_col[1]))
+
+      for val in ids:
+         id_prefixes.append(str(val[0]))
+         id_suffixes.append(str(va[1]))
+
+      (iso_labels, isolate_id, isolate_ndx) = ([], None, -1)
+      for page_ndx in range(math.ceil(peak_data_size/page_size)):
+         cplop_cursor.execute(DATA_QUERY % (
+            ', %s' % (', '.join(table_cols)),
+            ','.join(id_prefixes),
+            ','.join(id_suffixes),
+            min(page_size, peak_data_size - (page_ndx * page_size)),
+            (page_ndx * page_size)
+         ))
+
+         for data_tuple in cplop_cursor.fetchall():
+            tmp_isolate_id = (data_tuple[0], str(data_tuple[1]))
+
+            if (isolate_id is None or
+                (tmp_isolate_id[0] != isolate_id[0] and
+                 tmp_isolate_id[1] != isolate_id[1])):
+               isolate_id = tmp_isolate_id
+               isolate_ndx += 1
+               if (ids[isolate_ndx][0] != isolate_id[0] and
+                   ids[isolate_ndx][1] != isolate_id[1]):
+                  print("meta data mismatch for isolate %s-%s" % (isolate_id))
+
+            iso_labels.append([attr for attr in range(2, len(data_tuple))])
+
+      cplop_cursor.close()
+      return iso_labels
+
+   def get_run_id():
+      cplop_cursor = self.CPLOP_CONNECTION.cursor()
+      cplop_cursor.execute(TEST_RUN_ID_QUERY)
+
+      (test_run_id, num_tuples) = (-1, 0)
+      for data_tuple in cplop_cursor.fetchall():
+         num_tuples += 1
+         test_run_id = data_tuple[0]
+
+      if (num_tuples > 1):
+         print("got multiple tuples when querying test_run_id?")
+
+      cplop_cursor.close()
+      return test_run_id
+
+   def insert_new_run(average_similarity, run_time,
+                      cluster_algorithm='OHClust!', use_transform=0):
+      cplop_cursor = self.CPLOP_CONNECTION.cursor()
+
+      run_time_str = '%02d:%02d:%02d' % (
+         run_time / 3600000, (run_time % 3600000) / 60000,
+         ((run_time % 3600000) % 60000) / 1000
+      )
+
+      cplop_cursor.execute(INSERT_TEST_RUN % (
+         run_time_str, cluster_algorithm, average_similarity, use_transform
+      ))
+
+      cplop_cursor.close()
+
+   def insert_run_perf(test_run_id, up_num, up_size, run_time):
+      cplop_cursor = self.CPLOP_CONNECTION.cursor()
+
+      cplop_cursor.execute(INSERT_TEST_RUN % (
+         test_run_id, up_num, up_size, run_time
+      ))
+
+      cplop_cursor.close()

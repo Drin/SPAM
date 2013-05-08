@@ -22,6 +22,7 @@ class Clusterer(object):
    def __init__(self, thresholds, ontology=None):
       self.ontology = ontology
       self.thresholds = thresholds
+      self.average_inter_similarity = 0
 
    def cluster_data(self, clusters):
       for threshold in self.thresholds:
@@ -62,6 +63,7 @@ class Clusterer(object):
 
    def find_close_clusters(self, clusters, threshold):
       close_clusters = (-1, -1, 0)
+      (average_inter_similarity, count) = (0, 0)
 
       for ndx_A in range(len(clusters)):
          clust_A = clusters[ndx_A]
@@ -74,6 +76,11 @@ class Clusterer(object):
             if (clust_sim > threshold and clust_sim > close_clusters[2]):
                close_clusters = (ndx_A, ndx_B, clust_sim)
 
+            else:
+               average_inter_similarity += clust_sim
+               count += 1
+
+      self.average_inter_similarity = average_inter_similarity/count
       return close_clusters
 
    def combine_clusters(self, clusters, close_clusters):
@@ -92,6 +99,10 @@ class Cluster(object):
    def __init__(self, comparator, data_point=-1, labels=None):
       self.elements = numpy.zeros(shape=(0), dtype=numpy.uint32, order='C')
       self.labels = dict()
+      (self.total_sim, self.total_intra_sim) = (0, 0)
+      (self.total_count, self.count) = (0, 0)
+      (self.diameter, self.max_dist) = (2, 2)
+      self.other_clust = -1
 
       if (data_point != -1):
          self.elements = numpy.append(self.elements, data_point)
@@ -99,24 +110,40 @@ class Cluster(object):
    def incorporate(self, other_cluster):
       self.elements = numpy.append(self.elements, other_cluster.elements)
 
+      if (self.other_clust == other_cluster[0]):
+         self.total_intra_sim += self.total_sim
+         self.total_count += self.count
+         if (self.max_dist < self.diameter):
+            self.diameter = self.max_dist
+
+   def get_intra_similarity(self):
+      return self.total_intra_sim / self.total_count
+
    def compare_to(self, other_cluster):
       if (Cluster.sSim_matrix is not None):
-         (total_sim, count) = (0, 0)
+         (self.total_sim, self.count, self.other_clust, self.max_dist) = (
+            0, 0, other_cluster.elements[0], 2
+         )
 
          for iso_ndx_A in self.elements:
             for iso_ndx_B in other_cluster.elements:
-               count += 1
+               self.count += 1
 
+               clust_sim = 0
                if (iso_ndx_B > iso_ndx_A):
-                  total_sim += Cluster.sSim_matrix[1][
+                  clust_sim += Cluster.sSim_matrix[1][
                      Cluster.sSim_matrix[0][iso_ndx_A][iso_ndx_B]
                   ]
                elif (iso_ndx_A > iso_ndx_B):
-                  total_sim += Cluster.sSim_matrix[1][
+                  clust_sim += Cluster.sSim_matrix[1][
                      Cluster.sSim_matrix[0][iso_ndx_B][iso_ndx_A]
                   ]
 
-         return (total_sim / count)
+               self.total_sim += clust_sim
+               if (clust_sim < self.max_dist):
+                  self.max_dist = clust_sim
+
+         return (self.total_sim / self.count)
 
       elif (Cluster.sClust_comparator is not None):
          return Cluster.sClust_comparator(self, other_cluster)
