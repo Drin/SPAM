@@ -265,7 +265,7 @@ def output_similarity_matrix(sim_matrix):
 # Main Function
 #
 #############################################################################
-def main(ont_file_name=None, init_size=1000, up_size=1000, num_up=1):
+def main(ont_file_name=None, init_size=10000, up_size=1000, num_up=10):
    (clust_ontology, algorith_name) = (None, 'agglomerative')
    if (ont_file_name is not None):
       clust_ontology = Ontology.OntologyParser().parse_ontology(ont_file_name)
@@ -302,7 +302,11 @@ def main(ont_file_name=None, init_size=1000, up_size=1000, num_up=1):
    ############################################################################
    pycuda.driver.init()
 
+   cuda_start = time.time()
    sim_matrix_cpu = compute_similarity(len(iso_ids), iso_data_cpu)
+   cuda_end = time.time()
+
+   print("%ds to compute similarity matrix" % (cuda_end - cuda_start))
    #(gpu_device, sim_matrix_gpu) = compute_similarity(len(iso_ids), iso_data)
    #(gpu_device, iso_data_gpu) = prep_gpu_data(iso_data_cpu, device_id=0)
 
@@ -345,7 +349,9 @@ def main(ont_file_name=None, init_size=1000, up_size=1000, num_up=1):
                        time.time() - total_t, cluster_algorithm=algorith_name)
 
    for cluster in clusters:
-      print(cluster)
+      print("cluster:")
+      for element in cluster.elements:
+         print("\t%s" % (iso_ids[element]))
 
    if ('DEBUG' in os.environ):
       for tmp_ndx in range(10):
