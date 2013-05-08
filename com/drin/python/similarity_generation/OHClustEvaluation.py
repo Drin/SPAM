@@ -6,6 +6,7 @@ import math
 import numpy
 import CPLOP
 import Clusterer
+import Ontology
 
 try:
    import pycuda.driver
@@ -34,6 +35,7 @@ def load_cuda():
    for file_name in os.listdir(CUDA_KERNEL_DIR):
       cuda_file = open(os.path.join(CUDA_KERNEL_DIR, file_name), 'r')
       cuda_src += cuda_file.read()
+      cuda_file.close()
 
    return pycuda.compiler.SourceModule(cuda_src)
 
@@ -306,8 +308,13 @@ def main():
    Clusterer.Cluster.sSim_matrix = (iso_sim_mapping, sim_matrix_cpu)
    #Clusterer.Cluster.sClust_comparator = clust_comparator
 
+   clust_ontology = Ontology.OntologyParser().parse_ontology('specific.ont')
    clusters = [Clusterer.Cluster(val) for val in range(num_isolates)]
-   OHClusterer = Clusterer.Clusterer(0.80)
+
+   for cluster in clusters:
+      clust_ontology.add(cluster)
+
+   OHClusterer = Clusterer.Clusterer(0.80, ontology=clust_ontology)
 
    OHClusterer.cluster_data(clusters)
 
