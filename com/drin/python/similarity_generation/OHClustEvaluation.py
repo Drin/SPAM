@@ -262,7 +262,7 @@ def output_similarity_matrix(sim_matrix):
 #
 #############################################################################
 def main():
-   (iso_ids, iso_data_cpu) = get_data(initial_size=1000, update_size=1000)
+   (iso_ids, iso_data_cpu) = get_data(initial_size=10000, update_size=1000)
 
    (iso_sim_mapping, sim_matrix_ndx) = (dict(), 0)
    for ndx_A in range(len(iso_ids)):
@@ -289,7 +289,11 @@ def main():
    ############################################################################
    pycuda.driver.init()
 
+   cuda_start = time.time()
    sim_matrix_cpu = compute_similarity(len(iso_ids), iso_data_cpu)
+   cuda_end = time.time()
+
+   print("%ds to compute similarity matrix" % (cuda_end - cuda_start))
    #(gpu_device, sim_matrix_gpu) = compute_similarity(len(iso_ids), iso_data)
    #(gpu_device, iso_data_gpu) = prep_gpu_data(iso_data_cpu, device_id=0)
 
@@ -303,12 +307,14 @@ def main():
    #Clusterer.Cluster.sClust_comparator = clust_comparator
 
    clusters = [Clusterer.Cluster(val) for val in range(num_isolates)]
-   OHClusterer = Clusterer.Clusterer([0.85, 0.80])
+   OHClusterer = Clusterer.Clusterer(0.80)
 
    OHClusterer.cluster_data(clusters)
 
    for cluster in clusters:
-      print(cluster)
+      print("cluster:")
+      for element in cluster.elements:
+         print("\t%s" % (iso_ids[element]))
 
    if ('DEBUG' in os.environ):
       for tmp_ndx in range(10):
