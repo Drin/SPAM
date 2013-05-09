@@ -35,6 +35,7 @@ ID_QUERY = '''
            t.name_suffix = p2.name_suffix AND
            p2.appliedRegion = '16-23'
         )
+   %s
    ORDER BY RAND(%d)
    LIMIT %d OFFSET %d
 '''
@@ -82,29 +83,55 @@ INSERT_RUN_PERF = '''
    VALUES (%d, %d, %d, %d)
 '''
 
+INSERT_STRAIN = '''
+   INSERT INTO test_run_strain_link (
+      test_run_id, cluster_id, cluster_threshold, strain_diameter,
+      average_isolate_similarity, percent_similar_isolates
+   )
+   VALUES %s
+'''
+
+INSERT_ISOLATES = '''
+   INSERT INTO test_isolate_strains (
+      test_run_id, cluster_id, cluster_threshold, name_prefix, name_suffix
+   )
+   VALUES %s
+'''
+
 class connection(object):
    CPLOP_CONNECTION = None
 
-   def __init__(self, host='localhost', port=8906, db='CPLOP'):
+   def __init__(self, host='localhost', port=3306, db='CPLOP'):
       if (self.CPLOP_CONNECTION is None):
          if (USING_PY3):
             self.CPLOP_CONNECTION = pymysql.connect(host=host, port=port, db=db,
-                                                    user='drin', passwd='')
+                                                    user='', passwd='')
          else:
             self.CPLOP_CONNECTION = MySQLdb.connect(host=host, port=port, db=db,
-                                                    user='drin', passwd='')
+                                                    user='', passwd='')
 
-   def get_pyro_ids(self, db_seed=random.randrange(9999),
-                       data_size=2000, page_size=2000):
+   def get_pyro_ids(self, ont=None, db_seed=random.randrange(9999),
+                       data_size=2000, page_size=10000):
       cplop_cursor = self.CPLOP_CONNECTION.cursor()
       pyros_1 = numpy.zeros(shape=(data_size), dtype=numpy.uint32, order='C')
       pyros_2 = numpy.zeros(shape=(data_size), dtype=numpy.uint32, order='C')
 
+      where_clause = ''
+      if (ont is not None):
+         clauses = []
+         for part_col in ont.column_parts.items():
+            clauses.append('%s in (%s)' % (
+               part_col[0], ', '.join(["'%s'" % part for part in part_col[1]])
+            ))
+         where_clause = 'where ' + (' and '.join(clauses))
+
+
       for page_ndx in range(math.ceil(data_size/page_size)):
          cplop_cursor.execute(ID_QUERY % (
-               db_seed,
-               min(page_size, data_size - (page_ndx * page_size)),
-               page_ndx * page_size
+            where_clause,
+            db_seed,
+            min(page_size, data_size - (page_ndx * page_size)),
+            page_ndx * page_size
          ))
 
          data_ndx = 0
@@ -136,11 +163,11 @@ class connection(object):
          ))
 
          for data_tuple in cplop_cursor.fetchall():
-            tmp_isolate_id = (data_tuple[0], str(data_tuple[1]))
+            tmp_isolate_id = (data_tuple[0], data_tuple[1])
 
             if (isolate_id is None or
-                (tmp_isolate_id[0] != isolate_id[0] and
-                 tmp_isolate_id[1] != isolate_id[1])):
+                tmp_isolate_id[0] != isolate_id[0] or
+                tmp_isolate_id[1] != isolate_id[1]):
                (isolate_id, peak_ndx) = (tmp_isolate_id, 0)
                isolate_ndx += 1
                ids.append(isolate_id)
@@ -155,29 +182,27 @@ class connection(object):
 
             peak_ndx += 1
 
-      print("num isolates: %d" % isolate_ndx)
       cplop_cursor.close()
       return (ids, data)
 
    def get_meta_data(self, ids, ont=None, data_size=2000, page_size=10000):
       cplop_cursor = self.CPLOP_CONNECTION.cursor()
-
-      (table_cols, id_prefixes, id_suffixes) = ([], [], [])
+      (table_cols, id_prefixes, id_suffixes) = ([], set(), [])
 
       for table_col in ont.table_columns.items():
-         table_cols.append(str(table_col[1]))
+         table_cols.append(', '.join(table_col[1]))
 
       for val in ids:
-         id_prefixes.append(str(val[0]))
-         id_suffixes.append(str(va[1]))
+         id_prefixes.add("'%s'" % val[0])
+         id_suffixes.append(str(val[1]))
 
       (iso_labels, isolate_id, isolate_ndx) = ([], None, -1)
-      for page_ndx in range(math.ceil(peak_data_size/page_size)):
-         cplop_cursor.execute(DATA_QUERY % (
+      for page_ndx in range(math.ceil(data_size/page_size)):
+         cplop_cursor.execute(META_QUERY % (
             ', %s' % (', '.join(table_cols)),
             ','.join(id_prefixes),
             ','.join(id_suffixes),
-            min(page_size, peak_data_size - (page_ndx * page_size)),
+            min(page_size, data_size - (page_ndx * page_size)),
             (page_ndx * page_size)
          ))
 
@@ -193,12 +218,12 @@ class connection(object):
                    ids[isolate_ndx][1] != isolate_id[1]):
                   print("meta data mismatch for isolate %s-%s" % (isolate_id))
 
-            iso_labels.append([attr for attr in range(2, len(data_tuple))])
+            iso_labels.append([data_tuple[attr] for attr in range(2, len(data_tuple))])
 
       cplop_cursor.close()
       return iso_labels
 
-   def get_run_id():
+   def get_run_id(self):
       cplop_cursor = self.CPLOP_CONNECTION.cursor()
       cplop_cursor.execute(TEST_RUN_ID_QUERY)
 
@@ -207,13 +232,10 @@ class connection(object):
          num_tuples += 1
          test_run_id = data_tuple[0]
 
-      if (num_tuples > 1):
-         print("got multiple tuples when querying test_run_id?")
-
       cplop_cursor.close()
       return test_run_id
 
-   def insert_new_run(average_similarity, run_time,
+   def insert_new_run(self, average_similarity, run_time,
                       cluster_algorithm='OHClust!', use_transform=0):
       cplop_cursor = self.CPLOP_CONNECTION.cursor()
 
@@ -222,17 +244,61 @@ class connection(object):
          ((run_time % 3600000) % 60000) / 1000
       )
 
+      print("executing insert")
       cplop_cursor.execute(INSERT_TEST_RUN % (
          run_time_str, cluster_algorithm, average_similarity, use_transform
       ))
 
       cplop_cursor.close()
 
-   def insert_run_perf(test_run_id, up_num, up_size, run_time):
+   def insert_run_perf(self, test_run_id, up_num, up_size, run_time):
       cplop_cursor = self.CPLOP_CONNECTION.cursor()
 
+      print("executing insert")
       cplop_cursor.execute(INSERT_TEST_RUN % (
          test_run_id, up_num, up_size, run_time
       ))
+
+      cplop_cursor.close()
+
+   def insert_clusters(self, test_run_id, ids, clusters, threshold,
+                       page_size=2000):
+      import Clusterer
+      cplop_cursor = self.CPLOP_CONNECTION.cursor()
+
+      (clust_id, strain_inserts, isolate_inserts) = (-1, [], [])
+
+      for cluster in clusters:
+         if (type(cluster) is not Clusterer.Cluster):
+            continue
+
+         clust_id += 1
+         strain_inserts.append("(%d, %d, %.04f, %.04f, %.04f, %.04f)" % (
+            test_run_id, clust_id, threshold, cluster.diameter,
+            cluster.get_intra_similarity(), float(0.0)
+         ))
+
+         for iso_ndx in cluster.elements:
+            isolate_inserts.append("(%d, %d, %.04f, '%s', %d)" % (
+               test_run_id, clust_id, threshold, ids[iso_ndx][0],
+               ids[iso_ndx][1]
+            ))
+
+         if (clust_id % page_size == 0):
+            print("executing insert")
+            cplop_cursor.execute(INSERT_STRAIN % (', '.join(strain_inserts)))
+            cplop_cursor.execute(INSERT_ISOLATES % (', '.join(isolate_inserts)))
+            del strain_inserts[:]
+            del isolate_inserts[:]
+      else:
+         if (len(strain_inserts) > 0):
+            print("executing insert")
+            cplop_cursor.execute(INSERT_STRAIN % (', '.join(strain_inserts)))
+            del strain_inserts[:]
+
+         if (len(isolate_inserts) > 0):
+            print("executing insert")
+            cplop_cursor.execute(INSERT_ISOLATES % (', '.join(isolate_inserts)))
+            del isolate_inserts[:]
 
       cplop_cursor.close()

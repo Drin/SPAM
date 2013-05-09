@@ -15,14 +15,22 @@ class Ontology(object):
    def __init__(self):
       self.root = None
       self.table_columns = dict()
+      self.column_parts = dict()
 
    def add_term(self, table_name, new_term):
+      if (self.table_columns.get(table_name) is None):
+         self.table_columns[table_name] = []
+      self.table_columns[table_name].append(new_term.col_name)
+
+      for partition in new_term.children.items():
+         if (self.column_parts.get(new_term.col_name) is None):
+            self.column_parts[new_term.col_name] = []
+         self.column_parts[new_term.col_name].append(partition[0])
+
       if (self.root is not None):
          self.root.add_term(new_term)
       else:
          self.root = new_term
-
-      self.table_columns[table_name] = new_term.col_name
 
    def add_data(self, cluster):
       if (self.root is not None):
@@ -40,13 +48,17 @@ class OntologyTerm(object):
       self.options = dict()
       self.col_name = col_name
 
-      if (data is not None): self.data.append(data)
+      if (data is not None):
+         self.data.append(data)
       self.new_data = (data is not None)
 
-      for partition in partitions:
-         self.children[partition.strip()] = None
-      for option in options:
-         self.options[option] = True
+      if (partitions is not None):
+         for partition in partitions:
+            self.children[partition.strip()] = None
+
+      if (options is not None):
+         for option in options:
+            self.options[option] = True
 
    def add_term(self, new_term):
       for child in self.children.items():
@@ -56,11 +68,21 @@ class OntologyTerm(object):
             self.children[child[0]] = new_term
 
    def add_data(self, cluster):
-      child_node = self.children.get(cluster.labels[self.col_name], 'nomatch')
+      for label in cluster.labels:
+         child_node = self.children.get(label, 'nomatch')
 
-      if (child_node is None): child_node = OntologyTerm(data=cluster)
-      elif (child_node == 'nomatch'): self.data.append(cluster)
-      else: child_node.add_data(cluster)
+         if (child_node is None):
+            child_node = OntologyTerm(data=cluster)
+            break
+
+         elif (child_node == 'nomatch'): continue
+
+         else:
+            child_node.add_data(cluster)
+            break
+
+      else:
+         self.data.append(cluster)
 
       self.new_data = True
 
