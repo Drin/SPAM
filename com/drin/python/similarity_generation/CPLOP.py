@@ -249,6 +249,7 @@ class connection(object):
          run_time_str, cluster_algorithm, average_similarity, use_transform
       ))
 
+      self.CPLOP_CONNECTION.commit()
       cplop_cursor.close()
 
    def insert_run_perf(self, test_run_id, up_num, up_size, run_time):
@@ -259,6 +260,7 @@ class connection(object):
          test_run_id, up_num, up_size, run_time
       ))
 
+      self.CPLOP_CONNECTION.commit()
       cplop_cursor.close()
 
    def insert_clusters(self, test_run_id, ids, clusters, threshold,
