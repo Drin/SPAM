@@ -1,6 +1,7 @@
 import os
 import sys
 import numpy
+import time
 
 import Ontology
 
@@ -25,7 +26,6 @@ class Clusterer(object):
       self.average_inter_similarity = 0
 
    def cluster_data(self, clusters):
-      print("clustering using threshold: %.04f" % self.threshold)
       if (self.ontology is not None):
          for cluster in clusters:
             self.ontology.add_data(cluster)
@@ -39,12 +39,12 @@ class Clusterer(object):
       if (ontology_term is None or ontology_term.new_data is False):
          return
 
-      clusters = []
+      clusters = ontology_term.data
       for term in ontology_term.children.items():
+         if (term[1] is None): continue
+
          if (term[1].new_data):
             self.cluster_ontology(term[1], threshold)
-
-         if (term[1].data is None): continue
 
          clusters.append(term[1].data)
          #self.cluster_dataset(clusters, threshold)
@@ -59,9 +59,7 @@ class Clusterer(object):
 
          if (close_clusters[0] != -1 and close_clusters[1] != -1):
             self.combine_clusters(clusters, close_clusters)
-            print("time to cluster: %ds" % time.time() - cluster_time)
          else:
-            print("time to cluster: %ds" % time.time() - cluster_time)
             break
 
    def find_close_clusters(self, clusters, threshold):
@@ -74,8 +72,10 @@ class Clusterer(object):
          for ndx_B in range(ndx_A + 1, len(clusters)):
             clust_B = clusters[ndx_B]
             
-            clust_sim = clust_A.compare_to(clust_B)
+            if (type(clust_A) is not Cluster or type(clust_B) is not Cluster):
+               continue
 
+            clust_sim = clust_A.compare_to(clust_B)
             if (clust_sim > threshold and clust_sim > close_clusters[2]):
                close_clusters = (ndx_A, ndx_B, clust_sim)
 
@@ -99,9 +99,9 @@ class Cluster(object):
    sSim_matrix = None
    sClust_comparator = None
 
-   def __init__(self, comparator, data_point=-1, labels=None):
+   def __init__(self, data_point=-1, labels=None):
       self.elements = numpy.zeros(shape=(0), dtype=numpy.uint32, order='C')
-      self.labels = dict()
+      self.labels = labels
       (self.total_sim, self.total_intra_sim) = (0, 0)
       (self.total_count, self.count) = (0, 0)
       (self.diameter, self.max_dist) = (2, 2)
@@ -111,15 +111,19 @@ class Cluster(object):
          self.elements = numpy.append(self.elements, data_point)
 
    def incorporate(self, other_cluster):
+      self.compare_to(other_cluster)
       self.elements = numpy.append(self.elements, other_cluster.elements)
 
-      if (self.other_clust == other_cluster[0]):
+      if (self.other_clust == other_cluster.elements[0]):
          self.total_intra_sim += self.total_sim
          self.total_count += self.count
          if (self.max_dist < self.diameter):
             self.diameter = self.max_dist
 
    def get_intra_similarity(self):
+      if (self.total_count == 0):
+         return 1
+
       return self.total_intra_sim / self.total_count
 
    def compare_to(self, other_cluster):
@@ -146,11 +150,9 @@ class Cluster(object):
                if (clust_sim < self.max_dist):
                   self.max_dist = clust_sim
 
-         if (count == 0):
-            print("no similarities computed between [%s] and [%s]" % (
-               self.elements, other_cluster.elements
-            ))
+         if (self.count == 0):
             return 0
+
          return (self.total_sim / self.count)
 
       elif (Cluster.sClust_comparator is not None):

@@ -142,13 +142,11 @@ __global__ void cluster_pearson(uint32_t num_isolates, float *isolates,
    atomicAdd(&clust_sim[0], pearson_sum / 2);
 }
 
-__global__ void cluster_pearson_with_sim_matrix(
-      uint32_t num_isolates, float *isolates, uint32_t num_isolates_A,
-      uint32_t *iso_list_A, uint32_t num_isolates_B, uint32_t *iso_list_B,
-      uint32_t tsize, uint32_t trow, uint32_t tcol, float *clust_sim,
-      float *sim_matrix
-   )
-{
+__global__ void cached_pearson(uint32_t num_isolates, float *sim_matrix,
+                               uint32_t num_isolates_A, uint32_t *iso_list_A,
+                               uint32_t num_isolates_B, uint32_t *iso_list_B,
+                               uint32_t tsize, uint32_t trow, uint32_t tcol,
+                               float *clust_sim) {
    uint32_t iso_B_tile_ndx = blockIdx.x * blockDim.x + threadIdx.x; // column
    uint32_t iso_A_tile_ndx = blockIdx.y * blockDim.y + threadIdx.y; // row
 
@@ -176,49 +174,7 @@ __global__ void cluster_pearson_with_sim_matrix(
    }
 
    if (sim_matrix[result_ndx] == 0) {
-      // Initialize accumulators and the result.
-      float pearson_sum = 0.0f;
-      float peak_height_A = 0.0f, peak_height_B = 0.0f;
-      float sum_A = 0.0f, sum_B = 0.0f, sum_AB = 0.0f,
-            sum_A_squared = 0.0f, sum_B_squared = 0.0f;
-
-      // Compute the sums for the 23-5 region (first 93).
-      for (uint8_t ndx = 0; ndx < LEN_23S; ndx++) {
-         peak_height_A = isolates[iso_A_ndx * ISOLATE_LEN + ndx];
-         peak_height_B = isolates[iso_B_ndx * ISOLATE_LEN + ndx];
-
-         sum_A += peak_height_A;
-         sum_B += peak_height_B;
-         sum_A_squared += peak_height_A * peak_height_A;
-         sum_B_squared += peak_height_B * peak_height_B;
-         sum_AB += peak_height_A * peak_height_B;
-      }
-
-      pearson_sum = (LEN_23S * sum_AB - sum_A * sum_B) /
-                     sqrtf((LEN_23S * sum_A_squared - sum_A * sum_A) * 
-                           (LEN_23S * sum_B_squared - sum_B * sum_B));
-
-      peak_height_A = 0.0f, peak_height_B = 0.0f;
-      sum_A = 0.0f, sum_B = 0.0f, sum_AB = 0.0f;
-      sum_A_squared = 0.0f, sum_B_squared = 0.0f;
-
-      // Compute the sums for the 16-23 region (last 95).
-      for (uint8_t ndx = 0; ndx < LEN_16S; ndx++) {
-         peak_height_A = isolates[iso_A_ndx * ISOLATE_LEN + LEN_23S + ndx];
-         peak_height_B = isolates[iso_B_ndx * ISOLATE_LEN + LEN_23S + ndx];
-
-         sum_A += peak_height_A;
-         sum_B += peak_height_B;
-         sum_A_squared += peak_height_A * peak_height_A;
-         sum_B_squared += peak_height_B * peak_height_B;
-         sum_AB += peak_height_A * peak_height_B;
-      }
-
-      pearson_sum += (LEN_16S * sum_AB - sum_A * sum_B) /
-                      sqrtf((LEN_16S * sum_A_squared - sum_A * sum_A) * 
-                            (LEN_16S * sum_B_squared - sum_B * sum_B));
-
-      sim_matrix[result_ndx] = pearson_sum / 2;
+      //TODO: Compute cluster similarities instead of isolate similarities
    }
 
    atomicAdd(&clust_sim[0], sim_matrix[result_ndx]);

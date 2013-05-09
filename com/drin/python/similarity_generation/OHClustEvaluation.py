@@ -17,7 +17,7 @@ except:
    print("Could not load pyCUDA")
    sys.exit(1)
 
-DEFAULT_DEVICE = 0
+DEFAULT_DEVICE = 3
 NUM_THREADS = 16
 NUM_BLOCKS = 32
 
@@ -223,11 +223,11 @@ def cluster_comparator(num_isolates, iso_data_gpu, clust_A, clust_B,
 # Retrieve CPLOP Data
 #
 #############################################################################
-def get_data(ontology=None, dataset_size):
+def get_data(dataset_size, ontology=None):
    conn = CPLOP.connection()
 
    start_t = time.time()
-   data_ids = conn.get_pyro_ids(db_seed=3, data_size=dataset_size)
+   data_ids = conn.get_pyro_ids(ont=ontology, db_seed=3, data_size=dataset_size)
 
    pyro_t = time.time()
    (iso_ids, iso_data) = conn.get_isolate_data(
@@ -265,7 +265,7 @@ def output_similarity_matrix(sim_matrix):
 # Main Function
 #
 #############################################################################
-def main(ont_file_name=None, init_size=10000, up_size=1000, num_up=10):
+def main(ont_file_name=None, init_size=100000, up_size=1000, num_up=1):
    (clust_ontology, algorith_name) = (None, 'agglomerative')
    if (ont_file_name is not None):
       clust_ontology = Ontology.OntologyParser().parse_ontology(ont_file_name)
@@ -274,7 +274,7 @@ def main(ont_file_name=None, init_size=10000, up_size=1000, num_up=10):
       algorith_name = 'OHClust!'
 
    (iso_ids, iso_labels, iso_data_cpu) = get_data(
-      ontology=clust_ontology, (init_size + (up_size * num_up))
+      (init_size + (up_size * num_up)), ontology=clust_ontology
    )
 
    (iso_sim_mapping, sim_matrix_ndx) = (dict(), 0)
@@ -320,17 +320,19 @@ def main(ont_file_name=None, init_size=10000, up_size=1000, num_up=10):
    #Clusterer.Cluster.sClust_comparator = clust_comparator
 
    conn = CPLOP.connection()
-   test_run_id = conn.get_run_id()
-   (up_start, update_pivot, curr_up) = (0, min(num_isolates, init_size), -1)
+   test_run_id = (conn.get_run_id() + 1)
+
+   threshold = 0.80
+   (up_start, update_pivot, curr_up) = (0, min(init_size, len(iso_ids)), -1)
    (clusters, OHClusterer, perf_info, total_t) = (None, None, [], time.time())
-   while (curr_up < num_up):
-      clusters = [Clusterer.Cluster(val, labels=iso_labels[val])
-                  for val in range(up_start, update_pivot)]
+   while (curr_up < num_up and update_pivot < len(iso_ids)):
+      clusters = []
+      for iso_ndx in range(up_start, update_pivot):
+         clusters.append(
+            Clusterer.Cluster(data_point=iso_ndx, labels=iso_labels[iso_ndx])
+         )
 
-      for cluster in clusters:
-         clust_ontology.add(cluster)
-
-      OHClusterer = Clusterer.Clusterer(0.80, ontology=clust_ontology)
+      OHClusterer = Clusterer.Clusterer(threshold, ontology=clust_ontology)
 
       cluster_t = time.time()
       OHClusterer.cluster_data(clusters)
@@ -342,16 +344,18 @@ def main(ont_file_name=None, init_size=10000, up_size=1000, num_up=10):
 
       #prepare update state for next iteration
       up_start = update_pivot + 1
-      update_pivot += up_size
+      update_pivot += min(up_size, len(iso_ids) - update_pivot)
       curr_up += 1
 
    conn.insert_new_run(OHClusterer.average_inter_similarity,
                        time.time() - total_t, cluster_algorithm=algorith_name)
 
+   conn.insert_clusters(test_run_id, iso_ids, clusters, threshold)
+
    for cluster in clusters:
       print("cluster:")
       for element in cluster.elements:
-         print("\t%s" % (iso_ids[element]))
+         print("\t%s-%s" % (iso_ids[element]))
 
    if ('DEBUG' in os.environ):
       for tmp_ndx in range(10):
