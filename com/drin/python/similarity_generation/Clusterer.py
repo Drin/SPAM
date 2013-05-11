@@ -71,19 +71,20 @@ class Clusterer(object):
 
          for ndx_B in range(ndx_A + 1, len(clusters)):
             clust_B = clusters[ndx_B]
-            
+
             if (type(clust_A) is not Cluster or type(clust_B) is not Cluster):
                continue
 
             clust_sim = clust_A.compare_to(clust_B)
+            average_inter_similarity += clust_sim
+            count += 1
+
             if (clust_sim > threshold and clust_sim > close_clusters[2]):
                close_clusters = (ndx_A, ndx_B, clust_sim)
 
-            else:
-               average_inter_similarity += clust_sim
-               count += 1
+      if (count > 0):
+         self.average_inter_similarity = average_inter_similarity/count
 
-      self.average_inter_similarity = average_inter_similarity/count
       return close_clusters
 
    def combine_clusters(self, clusters, close_clusters):
