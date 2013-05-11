@@ -139,7 +139,9 @@ __global__ void cluster_pearson(uint32_t num_isolates, float *isolates,
                    sqrtf((LEN_16S * sum_A_squared - sum_A * sum_A) * 
                          (LEN_16S * sum_B_squared - sum_B * sum_B));
 
-   atomicAdd(&clust_sim[0], pearson_sum / 2);
+   //This is commented out because the GTX 260 on my home machine cannot do
+   //floating point atomic operations
+   //atomicAdd(&clust_sim[0], pearson_sum / 2);
 }
 
 __global__ void cached_pearson(uint32_t num_isolates, float *sim_matrix,
@@ -177,5 +179,7 @@ __global__ void cached_pearson(uint32_t num_isolates, float *sim_matrix,
       //TODO: Compute cluster similarities instead of isolate similarities
    }
 
-   atomicAdd(&clust_sim[0], sim_matrix[result_ndx]);
+   //This is commented out because the GTX 260 on my home machine cannot do
+   //floating point atomic operations
+   //atomicAdd(&clust_sim[0], sim_matrix[result_ndx]);
 }
