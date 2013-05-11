@@ -96,72 +96,66 @@ class Clusterer(object):
 #
 #############################################################################
 class Cluster(object):
-   sSim_matrix = None
-   sClust_comparator = None
-
-   def __init__(self, data_point=-1, labels=None):
-      self.elements = numpy.zeros(shape=(0), dtype=numpy.uint32, order='C')
+   _sim_matrix_ = None
+   _iso_mapping_ = None
+   _threshold_ = -1
+   
+   def __init__(self, data_point, labels=None):
       self.labels = labels
-      (self.total_sim, self.total_intra_sim) = (0, 0)
-      (self.total_count, self.count) = (0, 0)
-      (self.diameter, self.max_dist) = (2, 2)
-      self.other_clust = -1
+      self.elements = numpy.zeros(shape=(0), dtype=numpy.uint32, order='C')
+      self.elements = numpy.append(self.elements, data_point)
 
-      if (data_point != -1):
-         self.elements = numpy.append(self.elements, data_point)
+   def get_similarity(self, ndx_A, ndx_B):
+      sim_ndx = -1
+
+      if (iso_ndx_B > iso_ndx_A):
+         sim_ndx = Cluster._iso_mapping_[iso_ndx_A][iso_ndx_B]
+      elif (iso_ndx_A > iso_ndx_B):
+         sim_ndx = Cluster._iso_mapping_[iso_ndx_B][iso_ndx_A]
+
+      if (sim_ndx != -1):
+         return Cluster._sim_matrix_[sim_ndx]
+
+      return -1
+
+   def get_statistics(self):
+      (self.diameter, count, clust_sim) = (1, 0, 0)
+      (self.percent_similar, self.average_similarity) = (0, 0)
+
+      for iso_ndx_A in range(len(self.elements)):
+         for iso_ndx_B in range(iso_ndx_A + 1, len(other_cluster.elements)):
+            clust_sim = self.get_similarity(iso_ndx_A, iso_ndx_B)
+
+            count += 1
+            self.average_similarity += clust_sim
+            self.diameter = min(self.diameter, clust_sim)
+            if (clust_sim > _threshold_):
+               self.percent_similar += 1
+
+      if (count > 0):
+         self.average_similarity = self.average_similarity / count
+         self.percent_similar = self.percent_similar / count
+      elif (len(self.elements) != 1):
+         print("cluster with %d elements and %d count. wtf." %
+               (len(self.elements), count))
 
    def incorporate(self, other_cluster):
-      self.compare_to(other_cluster)
       self.elements = numpy.append(self.elements, other_cluster.elements)
-
-      if (self.other_clust == other_cluster.elements[0]):
-         self.total_intra_sim += self.total_sim
-         self.total_count += self.count
-         if (self.max_dist < self.diameter):
-            self.diameter = self.max_dist
-
-   def get_intra_similarity(self):
-      if (self.total_count == 0):
-         return 1
-
-      return self.total_intra_sim / self.total_count
+      self.get_statistics()
 
    def compare_to(self, other_cluster):
-      if (Cluster.sSim_matrix is not None):
-         (self.total_sim, self.count, self.other_clust, self.max_dist) = (
-            0, 0, other_cluster.elements[0], 2
-         )
+      (clust_sim, count) = (0, 0)
 
-         for iso_ndx_A in self.elements:
-            for iso_ndx_B in other_cluster.elements:
-               self.count += 1
+      for iso_ndx_A in self.elements:
+         for iso_ndx_B in other_cluster.elements:
+            count += 1
+            clust_sim += self.get_similarity(iso_ndx_A, iso_ndx_B)
 
-               clust_sim = 0
-               if (iso_ndx_B > iso_ndx_A):
-                  clust_sim += Cluster.sSim_matrix[1][
-                     Cluster.sSim_matrix[0][iso_ndx_A][iso_ndx_B]
-                  ]
-               elif (iso_ndx_A > iso_ndx_B):
-                  clust_sim += Cluster.sSim_matrix[1][
-                     Cluster.sSim_matrix[0][iso_ndx_B][iso_ndx_A]
-                  ]
+      if (count > 0):
+         return (clust_sim / count)
 
-               self.total_sim += clust_sim
-               if (clust_sim < self.max_dist):
-                  self.max_dist = clust_sim
-
-         if (self.count == 0):
-            return 0
-
-         return (self.total_sim / self.count)
-
-      elif (Cluster.sClust_comparator is not None):
-         return Cluster.sClust_comparator(self, other_cluster)
-
-      else:
-         print("clust comparator not set")
-         sys.exit(0)
-
+      print("count is 0 when comparing. wtf")
+      return -2
 
    def __str__(self):
       return ', '.join([str(val) for val in self.elements])

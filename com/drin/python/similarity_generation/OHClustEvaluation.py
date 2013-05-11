@@ -315,22 +315,24 @@ def main(ont_file_name=None, init_size=100000, up_size=1000, num_up=1):
       num_isolates, iso_data_gpu, clust_A, clust_B, device_id=gpu_device
    )
    '''
+   threshold = 0.80
 
-   Clusterer.Cluster.sSim_matrix = (iso_sim_mapping, sim_matrix_cpu)
+   Clusterer.Cluster._sim_matrix_ = sim_matrix_cpu
+   Clusterer.Cluster._iso_mapping_ = iso_sim_mapping
+   Clusterer.Cluster._threshold_ = threshold
    #Clusterer.Cluster.sClust_comparator = clust_comparator
 
    conn = CPLOP.connection()
    test_run_id = (conn.get_run_id() + 1)
 
-   threshold = 0.80
-   (up_start, update_pivot, curr_up) = (0, min(init_size, len(iso_ids)), -1)
+   (start_ndx, end_ndx, curr_up) = (0, min(init_size, len(iso_ids) - 1), -1)
    (clusters, OHClusterer, perf_info, total_t) = (None, None, [], time.time())
-   while (curr_up < num_up and update_pivot < len(iso_ids)):
+
+   while (curr_up < num_up and end_ndx < len(iso_ids)):
       clusters = []
-      for iso_ndx in range(up_start, update_pivot):
-         clusters.append(
-            Clusterer.Cluster(data_point=iso_ndx, labels=iso_labels[iso_ndx])
-         )
+      for iso_ndx in range(start_ndx, end_ndx):
+         clusters.append(Clusterer.Cluster(data_point=iso_ndx,
+                                           labels=iso_labels[iso_ndx]))
 
       OHClusterer = Clusterer.Clusterer(threshold, ontology=clust_ontology)
 
@@ -344,7 +346,7 @@ def main(ont_file_name=None, init_size=100000, up_size=1000, num_up=1):
 
       #prepare update state for next iteration
       up_start = update_pivot + 1
-      update_pivot += min(up_size, len(iso_ids) - update_pivot)
+      update_pivot += min(up_size, (len(iso_ids) - 1) - update_pivot)
       curr_up += 1
 
    conn.insert_new_run(OHClusterer.average_inter_similarity,
