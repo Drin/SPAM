@@ -22,6 +22,15 @@ ISOLATE_LEN = 188
 ID_QUERY_OFF = 1
 DATA_QUERY_OFF = 2
 
+DEFAULT_PAGE_SIZE = 2000
+DEFAULT_DATA_SIZE = 2000
+
+SCHEMA_QUERY = '''
+   SELECT distinct(%s)
+   FROM %s
+   WHERE %s IS NOT NULL
+'''
+
 ID_QUERY = '''
    SELECT distinct test_isolate_id, p1.pyroID, p2.pyroID
    FROM test_isolates t
@@ -35,6 +44,16 @@ ID_QUERY = '''
            t.name_suffix = p2.name_suffix AND
            p2.appliedRegion = '16-23'
         )
+   %s
+   ORDER BY RAND(%d)
+   LIMIT %d OFFSET %d
+'''
+
+#This ID_QUERY is an override of the previous one due to the creation of a
+#table purely for this query.
+ID_QUERY = '''
+   SELECT test_isolate_id, pyro_id_1, pyro_id_2
+   FROM isolate_selection
    %s
    ORDER BY RAND(%d)
    LIMIT %d OFFSET %d
@@ -56,6 +75,21 @@ DATA_QUERY = '''
            p2.pyroID IN (%s)
         )
    ORDER BY p1.name_prefix, p1.name_suffix, h1.position
+   LIMIT %d OFFSET %d
+'''
+
+DATA_QUERY = '''
+   SELECT i.name_prefix, i.name_suffix, h1.pHeight, h2.pHeight
+   FROM test_histograms h1
+        JOIN isolate_selection i ON (
+           h1.pyroID = i.pyro_id_1 AND
+           h1.position < 95
+        )
+        JOIN test_histograms h2 ON (
+           h1.position = h2.position AND
+           h2.pyroID = i.pyro_id_2
+        )
+   ORDER BY i.name_prefix, i.name_suffix, h1.position
    LIMIT %d OFFSET %d
 '''
 
@@ -101,17 +135,30 @@ INSERT_ISOLATES = '''
 class connection(object):
    CPLOP_CONNECTION = None
 
-   def __init__(self, host='localhost', port=3306, db='CPLOP'):
+   def __init__(self, host='localhost', port=8906, db='CPLOP'):
       if (self.CPLOP_CONNECTION is None):
          if (USING_PY3):
             self.CPLOP_CONNECTION = pymysql.connect(host=host, port=port, db=db,
-                                                    user='amontana', passwd='4ldr1n*(')
+                                                    user='drin', passwd='')
          else:
             self.CPLOP_CONNECTION = MySQLdb.connect(host=host, port=port, db=db,
-                                                    user='amontana', passwd='4ldr1n*(')
+                                                    user='drin', passwd='')
+
+   def get_distinct_values(self, table_name, col_name):
+      cplop_cursor = self.CPLOP_CONNECTION.cursor()
+
+      ont_partitions = []
+
+      cplop_cursor.execute(SCHEMA_QUERY % (col_name, table_name, col_name))
+
+      for data_tuple in cplop_cursor.fetchall():
+         ont_partitions.append(data_tuple[0])
+
+      cplop_cursor.close()
+      return ont_partitions
 
    def get_pyro_ids(self, ont=None, db_seed=random.randrange(9999),
-                       data_size=2000, page_size=10000):
+                       data_size=DEFAULT_DATA_SIZE, page_size=DEFAULT_PAGE_SIZE):
       cplop_cursor = self.CPLOP_CONNECTION.cursor()
       pyros_1 = numpy.zeros(shape=(data_size), dtype=numpy.uint32, order='C')
       pyros_2 = numpy.zeros(shape=(data_size), dtype=numpy.uint32, order='C')
@@ -146,7 +193,8 @@ class connection(object):
       return (pyros_1, pyros_2) 
 
    # data_size is in isolates
-   def get_isolate_data(self, pyro_ids, data_size=2000, page_size=10000):
+   def get_isolate_data(self, pyro_ids, data_size=DEFAULT_DATA_SIZE,
+                        page_size=DEFAULT_PAGE_SIZE):
       cplop_cursor = self.CPLOP_CONNECTION.cursor()
       data = numpy.zeros(shape=(data_size * ISOLATE_LEN),
                          dtype=numpy.float32, order='C')
@@ -156,8 +204,8 @@ class connection(object):
       (ids, isolate_id, peak_ndx, isolate_ndx) = ([], None, 0, -1)
       for page_ndx in range(math.ceil(peak_data_size/page_size)):
          cplop_cursor.execute(DATA_QUERY % (
-            ','.join([str(val) for val in pyro_ids[NDX_23_5]]),
-            ','.join([str(val) for val in pyro_ids[NDX_16_23]]),
+            #','.join([str(val) for val in pyro_ids[NDX_23_5]]),
+            #','.join([str(val) for val in pyro_ids[NDX_16_23]]),
             min(page_size, peak_data_size - (page_ndx * page_size)),
             (page_ndx * page_size)
          ))
@@ -185,7 +233,8 @@ class connection(object):
       cplop_cursor.close()
       return (ids, data)
 
-   def get_meta_data(self, ids, ont=None, data_size=2000, page_size=10000):
+   def get_meta_data(self, ids, ont=None, data_size=DEFAULT_DATA_SIZE,
+                     page_size=DEFAULT_PAGE_SIZE):
       cplop_cursor = self.CPLOP_CONNECTION.cursor()
       (table_cols, id_prefixes, id_suffixes) = ([], set(), [])
 
@@ -266,7 +315,7 @@ class connection(object):
       cplop_cursor.close()
 
    def insert_clusters(self, test_run_id, ids, clusters, threshold,
-                       page_size=2000):
+                       page_size=DEFAULT_PAGE_SIZE):
       import Clusterer
       cplop_cursor = self.CPLOP_CONNECTION.cursor()
 

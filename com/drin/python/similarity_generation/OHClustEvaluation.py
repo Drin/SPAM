@@ -4,6 +4,8 @@ import time
 import math
 
 import numpy
+import copy
+
 import CPLOP
 import Clusterer
 import Ontology
@@ -266,16 +268,74 @@ def output_similarity_matrix(sim_matrix):
 # Main Function
 #
 #############################################################################
-def main(ont_file_name=None, init_size=100, up_size=100, num_up=1):
-   (clust_ontology, algorith_name) = (None, 'agglomerative')
-   if (ont_file_name is not None):
-      clust_ontology = Ontology.OntologyParser().parse_ontology(ont_file_name)
-
+def main(iso_ids, iso_labels, iso_data_cpu, iso_sim_mapping, sim_matrix_ndx,
+         clust_ontology=None, init_size=100, up_size=100, num_up=1):
+   algorith_name = 'agglomerative'
    if (clust_ontology is not None):
       algorith_name = 'OHClust!'
 
+   num_isolates = (init_size + (up_size * num_up))
+
+   ############################################################################
+   #
+   # Clustering Section
+   #
+   ############################################################################
+
+   threshold = 0.75
+   Clusterer.Cluster._sim_matrix_ = sim_matrix_cpu
+   Clusterer.Cluster._iso_mapping_ = iso_sim_mapping
+   Clusterer.Cluster._threshold_ = threshold
+
+   conn = CPLOP.connection()
+
+   (start_ndx, end_ndx, curr_up) = (0, init_size, -1)
+   (clusters, OHClusterer, perf_info, total_t) = (None, None, [], time.time())
+
+   while (curr_up < num_up and end_ndx < num_isolates and start_ndx < end_ndx):
+      clusters = []
+      for iso_ndx in range(start_ndx, end_ndx):
+         clusters.append(Clusterer.Cluster(data_point=iso_ndx,
+                                           labels=iso_labels[iso_ndx]))
+
+      OHClusterer = Clusterer.Clusterer(threshold, ontology=clust_ontology)
+
+      cluster_t = time.time()
+      OHClusterer.cluster_data(clusters)
+      finish_t = time.time()
+
+      perf_info.append((curr_up + 1, end_ndx, finish_t - cluster_t))
+
+      #prepare update state for next iteration
+      curr_up += 1
+      start_ndx = end_ndx + 1
+      end_ndx += min(up_size, num_isolates - end_ndx)
+
+   conn.insert_new_run(clust_ontology.get_cluster_separation(),
+                       time.time() - total_t, cluster_algorithm=algorith_name)
+
+   test_run_id = conn.get_run_id()
+   conn.insert_run_perf(test_run_id, perf_info)
+   conn.insert_clusters(test_run_id, iso_ids, clust_ontology.root.data, threshold)
+
+   if ('DEBUG' in os.environ):
+      for tmp_ndx in range(10):
+         print(sim_matrix_cpu[tmp_ndx])
+
+      if ('VERBOSE' in os.environ):
+         output_similarity_matrix(sim_matrix)
+         for cluster in clust_ontology.root.data:
+            print("cluster:")
+            for element in cluster.elements:
+               print("\t%s-%s" % (iso_ids[element]))
+
+if (__name__ == '__main__'):
+   (clust_ontology, algorith_name) = (None, 'agglomerative')
+   clust_ontology = Ontology.OntologyParser().parse_ontology('generic.ont')
+
    (iso_ids, iso_labels, iso_data_cpu) = get_data(
-      (init_size + (up_size * num_up)), ontology=clust_ontology
+      #(2500 + (250 * 100)), ontology=clust_ontology
+      (500 + (50 * 100)), ontology=clust_ontology
    )
 
    (iso_sim_mapping, sim_matrix_ndx) = (dict(), 0)
@@ -285,16 +345,6 @@ def main(ont_file_name=None, init_size=100, up_size=100, num_up=1):
             iso_sim_mapping[ndx_A] = dict()
          iso_sim_mapping[ndx_A][ndx_B] = sim_matrix_ndx
          sim_matrix_ndx += 1
-
-   num_isolates = len(iso_ids)
-   if (num_isolates != len(iso_data_cpu) / 188):
-      print("invalid iso_id length")
-
-   '''
-   sim_matrix_size = num_isolates * (num_isolates - 1) / 2
-   sim_matrix_cpu = numpy.zeros(shape=(sim_matrix_size),
-                                dtype=numpy.float32, order='C')
-   '''
 
    ############################################################################
    #
@@ -308,156 +358,31 @@ def main(ont_file_name=None, init_size=100, up_size=100, num_up=1):
    cuda_end = time.time()
 
    print("%ds to compute similarity matrix" % (cuda_end - cuda_start))
-   #(gpu_device, sim_matrix_gpu) = compute_similarity(len(iso_ids), iso_data)
-   #(gpu_device, iso_data_gpu) = prep_gpu_data(iso_data_cpu, device_id=0)
 
-   '''
-   clust_comparator = lambda clust_A, clust_B: cluster_comparator(
-      num_isolates, iso_data_gpu, clust_A, clust_B, device_id=gpu_device
-   )
-   '''
-   threshold = 0.75
+   ############################################################################
+   #
+   # Testing Section
+   #
+   ############################################################################
 
-   Clusterer.Cluster._sim_matrix_ = sim_matrix_cpu
-   Clusterer.Cluster._iso_mapping_ = iso_sim_mapping
-   Clusterer.Cluster._threshold_ = threshold
-   #Clusterer.Cluster.sClust_comparator = clust_comparator
+   configurations = ((100, 10, 100), (500, 50, 100))
+                     #(1000, 50, 100), (1000, 100, 100),
+                     #(2500, 125, 100), (2500, 250, 100))
 
-   conn = CPLOP.connection()
+   for test_conf in configurations:
+      for test_num in range(3):
+         tmp_ontology = copy.deepcopy(clust_ontology)
 
-   (start_ndx, end_ndx, curr_up) = (0, min(init_size, len(iso_ids) - 1), -1)
-   (clusters, OHClusterer, perf_info, total_t) = (None, None, [], time.time())
+         main(iso_ids, iso_labels, iso_data_cpu, iso_sim_mapping,
+              sim_matrix_ndx, clust_ontology=tmp_ontology,
+              init_size=test_conf[0], up_size=test_conf[1],
+              num_up=test_conf[2])
 
-   while (curr_up < num_up and end_ndx < len(iso_ids)):
-      clusters = []
-      for iso_ndx in range(start_ndx, end_ndx):
-         clusters.append(Clusterer.Cluster(data_point=iso_ndx,
-                                           labels=iso_labels[iso_ndx]))
 
-      OHClusterer = Clusterer.Clusterer(threshold, ontology=clust_ontology)
+   for test_conf_ndx in range(6):
+      test_conf = configurations[test_conf_ndx]
 
-      cluster_t = time.time()
-      OHClusterer.cluster_data(clusters)
-      finish_t = time.time()
-
-      perf_info.append((curr_up + 1, update_pivot, finish_t - cluster_t))
-
-      #prepare update state for next iteration
-      up_start = update_pivot + 1
-      update_pivot += min(up_size, (len(iso_ids) - 1) - update_pivot)
-      curr_up += 1
-
-   conn.insert_new_run(OHClusterer.average_inter_similarity,
-                       time.time() - total_t, cluster_algorithm=algorith_name)
-
-   test_run_id = conn.get_run_id()
-   conn.insert_run_perf(test_run_id, perf_info)
-   conn.insert_clusters(test_run_id, iso_ids, clusters, threshold)
-
-   if ('DEBUG' in os.environ):
-      for tmp_ndx in range(10):
-         print(sim_matrix_cpu[tmp_ndx])
-
-      if ('VERBOSE' in os.environ):
-         output_similarity_matrix(sim_matrix)
-         for cluster in clusters:
-            print("cluster:")
-            for element in cluster.elements:
-               print("\t%s-%s" % (iso_ids[element]))
-
-if (__name__ == '__main__'):
-   main(ont_file_name='specific.ont', init_size=100, up_size = 10, num_up=100)
-   main(ont_file_name='specific.ont', init_size=100, up_size = 10, num_up=100)
-   main(ont_file_name='specific.ont', init_size=100, up_size = 10, num_up=100)
-
-   main(ont_file_name='specific.ont', init_size=100, up_size = 10, num_up=1000)
-   main(ont_file_name='specific.ont', init_size=100, up_size = 10, num_up=1000)
-   main(ont_file_name='specific.ont', init_size=100, up_size = 10, num_up=1000)
-
-   main(ont_file_name='specific.ont', init_size=500, up_size = 50, num_up=100)
-   main(ont_file_name='specific.ont', init_size=500, up_size = 50, num_up=100)
-   main(ont_file_name='specific.ont', init_size=500, up_size = 50, num_up=100)
-
-   main(ont_file_name='specific.ont', init_size=500, up_size = 50, num_up=1000)
-   main(ont_file_name='specific.ont', init_size=500, up_size = 50, num_up=1000)
-   main(ont_file_name='specific.ont', init_size=500, up_size = 50, num_up=1000)
-
-   main(ont_file_name='specific.ont', init_size=1000, up_size = 100, num_up=100)
-   main(ont_file_name='specific.ont', init_size=1000, up_size = 100, num_up=100)
-   main(ont_file_name='specific.ont', init_size=1000, up_size = 100, num_up=100)
-
-   main(ont_file_name='specific.ont', init_size=1000, up_size = 100, num_up=1000)
-   main(ont_file_name='specific.ont', init_size=1000, up_size = 100, num_up=1000)
-   main(ont_file_name='specific.ont', init_size=1000, up_size = 100, num_up=1000)
-
-   main(ont_file_name='specific.ont', init_size=1000, up_size = 50, num_up=100)
-   main(ont_file_name='specific.ont', init_size=1000, up_size = 50, num_up=100)
-   main(ont_file_name='specific.ont', init_size=1000, up_size = 50, num_up=100)
-
-   main(ont_file_name='specific.ont', init_size=1000, up_size = 50, num_up=1000)
-   main(ont_file_name='specific.ont', init_size=1000, up_size = 50, num_up=1000)
-   main(ont_file_name='specific.ont', init_size=1000, up_size = 50, num_up=1000)
-
-   main(ont_file_name='specific.ont', init_size=2500, up_size = 250, num_up=100)
-   main(ont_file_name='specific.ont', init_size=2500, up_size = 250, num_up=100)
-   main(ont_file_name='specific.ont', init_size=2500, up_size = 250, num_up=100)
-
-   main(ont_file_name='specific.ont', init_size=2500, up_size = 250, num_up=1000)
-   main(ont_file_name='specific.ont', init_size=2500, up_size = 250, num_up=1000)
-   main(ont_file_name='specific.ont', init_size=2500, up_size = 250, num_up=1000)
-
-   main(ont_file_name='specific.ont', init_size=2500, up_size = 125, num_up=100)
-   main(ont_file_name='specific.ont', init_size=2500, up_size = 125, num_up=100)
-   main(ont_file_name='specific.ont', init_size=2500, up_size = 125, num_up=100)
-
-   main(ont_file_name='specific.ont', init_size=2500, up_size = 125, num_up=1000)
-   main(ont_file_name='specific.ont', init_size=2500, up_size = 125, num_up=1000)
-   main(ont_file_name='specific.ont', init_size=2500, up_size = 125, num_up=1000)
-
-   main(init_size=100, up_size = 10, num_up=100)
-   main(init_size=100, up_size = 10, num_up=100)
-   main(init_size=100, up_size = 10, num_up=100)
-
-   main(init_size=100, up_size = 10, num_up=1000)
-   main(init_size=100, up_size = 10, num_up=1000)
-   main(init_size=100, up_size = 10, num_up=1000)
-
-   main(init_size=500, up_size = 50, num_up=100)
-   main(init_size=500, up_size = 50, num_up=100)
-   main(init_size=500, up_size = 50, num_up=100)
-
-   main(init_size=500, up_size = 50, num_up=1000)
-   main(init_size=500, up_size = 50, num_up=1000)
-   main(init_size=500, up_size = 50, num_up=1000)
-
-   main(init_size=1000, up_size = 100, num_up=100)
-   main(init_size=1000, up_size = 100, num_up=100)
-   main(init_size=1000, up_size = 100, num_up=100)
-
-   main(init_size=1000, up_size = 100, num_up=1000)
-   main(init_size=1000, up_size = 100, num_up=1000)
-   main(init_size=1000, up_size = 100, num_up=1000)
-
-   main(init_size=1000, up_size = 50, num_up=100)
-   main(init_size=1000, up_size = 50, num_up=100)
-   main(init_size=1000, up_size = 50, num_up=100)
-
-   main(init_size=1000, up_size = 50, num_up=1000)
-   main(init_size=1000, up_size = 50, num_up=1000)
-   main(init_size=1000, up_size = 50, num_up=1000)
-
-   main(init_size=2500, up_size = 250, num_up=100)
-   main(init_size=2500, up_size = 250, num_up=100)
-   main(init_size=2500, up_size = 250, num_up=100)
-
-   main(init_size=2500, up_size = 250, num_up=1000)
-   main(init_size=2500, up_size = 250, num_up=1000)
-   main(init_size=2500, up_size = 250, num_up=1000)
-
-   main(init_size=2500, up_size = 125, num_up=100)
-   main(init_size=2500, up_size = 125, num_up=100)
-   main(init_size=2500, up_size = 125, num_up=100)
-
-   main(init_size=2500, up_size = 125, num_up=1000)
-   main(init_size=2500, up_size = 125, num_up=1000)
-   main(init_size=2500, up_size = 125, num_up=1000)
+      for test_num in range(3):
+         main(iso_ids, iso_labels, iso_data_cpu, iso_sim_mapping,
+              sim_matrix_ndx, init_size=test_conf[0], up_size=test_conf[1],
+              num_up=test_conf[2])

@@ -23,7 +23,6 @@ class Clusterer(object):
    def __init__(self, threshold, ontology=None):
       self.ontology = ontology
       self.threshold = threshold
-      self.average_inter_similarity = 0
 
    def cluster_data(self, clusters):
       if (self.ontology is not None):
@@ -64,7 +63,6 @@ class Clusterer(object):
 
    def find_close_clusters(self, clusters, threshold):
       close_clusters = (-1, -1, 0)
-      (average_inter_similarity, count) = (0, 0)
 
       for ndx_A in range(len(clusters)):
          clust_A = clusters[ndx_A]
@@ -76,14 +74,9 @@ class Clusterer(object):
                continue
 
             clust_sim = clust_A.compare_to(clust_B)
-            average_inter_similarity += clust_sim
-            count += 1
 
             if (clust_sim > threshold and clust_sim > close_clusters[2]):
                close_clusters = (ndx_A, ndx_B, clust_sim)
-
-      if (count > 0):
-         self.average_inter_similarity = average_inter_similarity/count
 
       return close_clusters
 
