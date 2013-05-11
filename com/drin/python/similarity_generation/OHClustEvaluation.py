@@ -227,7 +227,7 @@ def get_data(dataset_size, ontology=None):
    conn = CPLOP.connection()
 
    start_t = time.time()
-   data_ids = conn.get_pyro_ids(ont=ontology, db_seed=3, data_size=dataset_size)
+   data_ids = conn.get_pyro_ids(ont=ontology, data_size=dataset_size)
 
    pyro_t = time.time()
    (iso_ids, iso_data) = conn.get_isolate_data(
@@ -241,11 +241,12 @@ def get_data(dataset_size, ontology=None):
 
    finish_t = time.time()
 
-   if ('DEBUG' in os.environ):
-      print("%d[%d] isolates in (%ds, %ds, %ds, %ds)" % (
-         len(iso_ids), len(iso_data), pyro_t - start_t,
-         meta_t - pyro_t, finish_t - meta_t, finish_t - start_t
-      ))
+   out_file = open('database_access_times', 'a')
+   out_file.write("%d[%d] isolates in (%ds, %ds, %ds, %ds)\n" % (
+      len(iso_ids), len(iso_data), pyro_t - start_t,
+      meta_t - pyro_t, finish_t - meta_t, finish_t - start_t
+   ))
+   out_file.close()
 
    return (iso_ids, iso_labels, iso_data)
 
@@ -265,7 +266,7 @@ def output_similarity_matrix(sim_matrix):
 # Main Function
 #
 #############################################################################
-def main(ont_file_name=None, init_size=100000, up_size=1000, num_up=1):
+def main(ont_file_name=None, init_size=100, up_size=100, num_up=1):
    (clust_ontology, algorith_name) = (None, 'agglomerative')
    if (ont_file_name is not None):
       clust_ontology = Ontology.OntologyParser().parse_ontology(ont_file_name)
@@ -320,9 +321,8 @@ def main(ont_file_name=None, init_size=100000, up_size=1000, num_up=1):
    #Clusterer.Cluster.sClust_comparator = clust_comparator
 
    conn = CPLOP.connection()
-   test_run_id = (conn.get_run_id() + 1)
 
-   threshold = 0.80
+   threshold = 0.70
    (up_start, update_pivot, curr_up) = (0, min(init_size, len(iso_ids)), -1)
    (clusters, OHClusterer, perf_info, total_t) = (None, None, [], time.time())
    while (curr_up < num_up and update_pivot < len(iso_ids)):
@@ -338,9 +338,7 @@ def main(ont_file_name=None, init_size=100000, up_size=1000, num_up=1):
       OHClusterer.cluster_data(clusters)
       finish_t = time.time()
 
-      conn.insert_run_perf(
-         test_run_id, curr_up + 1, update_pivot, finish_t - cluster_t
-      )
+      perf_info.append((curr_up + 1, update_pivot, finish_t - cluster_t))
 
       #prepare update state for next iteration
       up_start = update_pivot + 1
@@ -350,21 +348,114 @@ def main(ont_file_name=None, init_size=100000, up_size=1000, num_up=1):
    conn.insert_new_run(OHClusterer.average_inter_similarity,
                        time.time() - total_t, cluster_algorithm=algorith_name)
 
+   test_run_id = conn.get_run_id()
+   conn.insert_run_perf(test_run_id, perf_info)
    conn.insert_clusters(test_run_id, iso_ids, clusters, threshold)
-
-   for cluster in clusters:
-      print("cluster:")
-      for element in cluster.elements:
-         print("\t%s-%s" % (iso_ids[element]))
 
    if ('DEBUG' in os.environ):
       for tmp_ndx in range(10):
          print(sim_matrix_cpu[tmp_ndx])
 
-      if ('VERBOSE' in os.environ): output_similarity_matrix(sim_matrix)
+      if ('VERBOSE' in os.environ):
+         output_similarity_matrix(sim_matrix)
+         for cluster in clusters:
+            print("cluster:")
+            for element in cluster.elements:
+               print("\t%s-%s" % (iso_ids[element]))
 
 if (__name__ == '__main__'):
-   if (len(sys.argv) > 1):
-      main(sys.argv[1])
-   else:
-      main()
+   main(ont_file_name='specific.ont', init_size=100, up_size = 10, num_up=100)
+   main(ont_file_name='specific.ont', init_size=100, up_size = 10, num_up=100)
+   main(ont_file_name='specific.ont', init_size=100, up_size = 10, num_up=100)
+
+   main(ont_file_name='specific.ont', init_size=100, up_size = 10, num_up=1000)
+   main(ont_file_name='specific.ont', init_size=100, up_size = 10, num_up=1000)
+   main(ont_file_name='specific.ont', init_size=100, up_size = 10, num_up=1000)
+
+   main(ont_file_name='specific.ont', init_size=500, up_size = 50, num_up=100)
+   main(ont_file_name='specific.ont', init_size=500, up_size = 50, num_up=100)
+   main(ont_file_name='specific.ont', init_size=500, up_size = 50, num_up=100)
+
+   main(ont_file_name='specific.ont', init_size=500, up_size = 50, num_up=1000)
+   main(ont_file_name='specific.ont', init_size=500, up_size = 50, num_up=1000)
+   main(ont_file_name='specific.ont', init_size=500, up_size = 50, num_up=1000)
+
+   main(ont_file_name='specific.ont', init_size=1000, up_size = 100, num_up=100)
+   main(ont_file_name='specific.ont', init_size=1000, up_size = 100, num_up=100)
+   main(ont_file_name='specific.ont', init_size=1000, up_size = 100, num_up=100)
+
+   main(ont_file_name='specific.ont', init_size=1000, up_size = 100, num_up=1000)
+   main(ont_file_name='specific.ont', init_size=1000, up_size = 100, num_up=1000)
+   main(ont_file_name='specific.ont', init_size=1000, up_size = 100, num_up=1000)
+
+   main(ont_file_name='specific.ont', init_size=1000, up_size = 50, num_up=100)
+   main(ont_file_name='specific.ont', init_size=1000, up_size = 50, num_up=100)
+   main(ont_file_name='specific.ont', init_size=1000, up_size = 50, num_up=100)
+
+   main(ont_file_name='specific.ont', init_size=1000, up_size = 50, num_up=1000)
+   main(ont_file_name='specific.ont', init_size=1000, up_size = 50, num_up=1000)
+   main(ont_file_name='specific.ont', init_size=1000, up_size = 50, num_up=1000)
+
+   main(ont_file_name='specific.ont', init_size=2500, up_size = 250, num_up=100)
+   main(ont_file_name='specific.ont', init_size=2500, up_size = 250, num_up=100)
+   main(ont_file_name='specific.ont', init_size=2500, up_size = 250, num_up=100)
+
+   main(ont_file_name='specific.ont', init_size=2500, up_size = 250, num_up=1000)
+   main(ont_file_name='specific.ont', init_size=2500, up_size = 250, num_up=1000)
+   main(ont_file_name='specific.ont', init_size=2500, up_size = 250, num_up=1000)
+
+   main(ont_file_name='specific.ont', init_size=2500, up_size = 125, num_up=100)
+   main(ont_file_name='specific.ont', init_size=2500, up_size = 125, num_up=100)
+   main(ont_file_name='specific.ont', init_size=2500, up_size = 125, num_up=100)
+
+   main(ont_file_name='specific.ont', init_size=2500, up_size = 125, num_up=1000)
+   main(ont_file_name='specific.ont', init_size=2500, up_size = 125, num_up=1000)
+   main(ont_file_name='specific.ont', init_size=2500, up_size = 125, num_up=1000)
+
+   main(init_size=100, up_size = 10, num_up=100)
+   main(init_size=100, up_size = 10, num_up=100)
+   main(init_size=100, up_size = 10, num_up=100)
+
+   main(init_size=100, up_size = 10, num_up=1000)
+   main(init_size=100, up_size = 10, num_up=1000)
+   main(init_size=100, up_size = 10, num_up=1000)
+
+   main(init_size=500, up_size = 50, num_up=100)
+   main(init_size=500, up_size = 50, num_up=100)
+   main(init_size=500, up_size = 50, num_up=100)
+
+   main(init_size=500, up_size = 50, num_up=1000)
+   main(init_size=500, up_size = 50, num_up=1000)
+   main(init_size=500, up_size = 50, num_up=1000)
+
+   main(init_size=1000, up_size = 100, num_up=100)
+   main(init_size=1000, up_size = 100, num_up=100)
+   main(init_size=1000, up_size = 100, num_up=100)
+
+   main(init_size=1000, up_size = 100, num_up=1000)
+   main(init_size=1000, up_size = 100, num_up=1000)
+   main(init_size=1000, up_size = 100, num_up=1000)
+
+   main(init_size=1000, up_size = 50, num_up=100)
+   main(init_size=1000, up_size = 50, num_up=100)
+   main(init_size=1000, up_size = 50, num_up=100)
+
+   main(init_size=1000, up_size = 50, num_up=1000)
+   main(init_size=1000, up_size = 50, num_up=1000)
+   main(init_size=1000, up_size = 50, num_up=1000)
+
+   main(init_size=2500, up_size = 250, num_up=100)
+   main(init_size=2500, up_size = 250, num_up=100)
+   main(init_size=2500, up_size = 250, num_up=100)
+
+   main(init_size=2500, up_size = 250, num_up=1000)
+   main(init_size=2500, up_size = 250, num_up=1000)
+   main(init_size=2500, up_size = 250, num_up=1000)
+
+   main(init_size=2500, up_size = 125, num_up=100)
+   main(init_size=2500, up_size = 125, num_up=100)
+   main(init_size=2500, up_size = 125, num_up=100)
+
+   main(init_size=2500, up_size = 125, num_up=1000)
+   main(init_size=2500, up_size = 125, num_up=1000)
+   main(init_size=2500, up_size = 125, num_up=1000)
