@@ -76,14 +76,15 @@ class Clusterer(object):
                continue
 
             clust_sim = clust_A.compare_to(clust_B)
+            average_inter_similarity += clust_sim
+            count += 1
+
             if (clust_sim > threshold and clust_sim > close_clusters[2]):
                close_clusters = (ndx_A, ndx_B, clust_sim)
 
-            else:
-               average_inter_similarity += clust_sim
-               count += 1
+      if (count > 0):
+         self.average_inter_similarity = average_inter_similarity/count
 
-      self.average_inter_similarity = average_inter_similarity/count
       return close_clusters
 
    def combine_clusters(self, clusters, close_clusters):

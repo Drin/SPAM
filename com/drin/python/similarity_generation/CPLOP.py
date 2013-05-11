@@ -80,7 +80,7 @@ INSERT_TEST_RUN = '''
 INSERT_RUN_PERF = '''
    INSERT INTO test_run_performance(test_run_id, update_id,
                                     update_size, run_time)
-   VALUES (%d, %d, %d, %d)
+   VALUES %s
 '''
 
 INSERT_STRAIN = '''
@@ -105,10 +105,10 @@ class connection(object):
       if (self.CPLOP_CONNECTION is None):
          if (USING_PY3):
             self.CPLOP_CONNECTION = pymysql.connect(host=host, port=port, db=db,
-                                                    user='', passwd='')
+                                                    user='amontana', passwd='4ldr1n*(')
          else:
             self.CPLOP_CONNECTION = MySQLdb.connect(host=host, port=port, db=db,
-                                                    user='', passwd='')
+                                                    user='amontana', passwd='4ldr1n*(')
 
    def get_pyro_ids(self, ont=None, db_seed=random.randrange(9999),
                        data_size=2000, page_size=10000):
@@ -217,6 +217,7 @@ class connection(object):
                if (ids[isolate_ndx][0] != isolate_id[0] and
                    ids[isolate_ndx][1] != isolate_id[1]):
                   print("meta data mismatch for isolate %s-%s" % (isolate_id))
+                  continue
 
             iso_labels.append([data_tuple[attr] for attr in range(2, len(data_tuple))])
 
@@ -244,7 +245,6 @@ class connection(object):
          ((run_time % 3600000) % 60000) / 1000
       )
 
-      print("executing insert")
       cplop_cursor.execute(INSERT_TEST_RUN % (
          run_time_str, cluster_algorithm, average_similarity, use_transform
       ))
@@ -252,12 +252,14 @@ class connection(object):
       self.CPLOP_CONNECTION.commit()
       cplop_cursor.close()
 
-   def insert_run_perf(self, test_run_id, up_num, up_size, run_time):
+   def insert_run_perf(self, test_run_id, perf_info):
       cplop_cursor = self.CPLOP_CONNECTION.cursor()
 
-      print("executing insert")
-      cplop_cursor.execute(INSERT_TEST_RUN % (
-         test_run_id, up_num, up_size, run_time
+      run_perf_values = ["(%d, %d, %d, %d)" % (test_run_id, perf[0], perf[1], perf[2])
+                         for perf in perf_info]
+
+      cplop_cursor.execute(INSERT_RUN_PERF % (
+         ', '.join(run_perf_values)
       ))
 
       self.CPLOP_CONNECTION.commit()
@@ -268,13 +270,12 @@ class connection(object):
       import Clusterer
       cplop_cursor = self.CPLOP_CONNECTION.cursor()
 
-      (clust_id, strain_inserts, isolate_inserts) = (-1, [], [])
+      (clust_id, strain_inserts, isolate_inserts) = (0, [], [])
 
       for cluster in clusters:
          if (type(cluster) is not Clusterer.Cluster):
             continue
 
-         clust_id += 1
          strain_inserts.append("(%d, %d, %.04f, %.04f, %.04f, %.04f)" % (
             test_run_id, clust_id, threshold, cluster.diameter,
             cluster.get_intra_similarity(), float(0.0)
@@ -286,21 +287,23 @@ class connection(object):
                ids[iso_ndx][1]
             ))
 
+         clust_id += 1
+
          if (clust_id % page_size == 0):
-            print("executing insert")
             cplop_cursor.execute(INSERT_STRAIN % (', '.join(strain_inserts)))
             cplop_cursor.execute(INSERT_ISOLATES % (', '.join(isolate_inserts)))
             del strain_inserts[:]
             del isolate_inserts[:]
+            self.CPLOP_CONNECTION.commit()
+
       else:
          if (len(strain_inserts) > 0):
-            print("executing insert")
             cplop_cursor.execute(INSERT_STRAIN % (', '.join(strain_inserts)))
             del strain_inserts[:]
 
          if (len(isolate_inserts) > 0):
-            print("executing insert")
             cplop_cursor.execute(INSERT_ISOLATES % (', '.join(isolate_inserts)))
             del isolate_inserts[:]
+         self.CPLOP_CONNECTION.commit()
 
       cplop_cursor.close()
