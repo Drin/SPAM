@@ -315,6 +315,7 @@ def main(iso_ids, iso_labels, iso_data_cpu, iso_sim_mapping, sim_matrix_ndx,
                        time.time() - total_t, cluster_algorithm=algorith_name)
 
    test_run_id = conn.get_run_id()
+   print("inserting data for run id %d" % test_run_id)
    conn.insert_run_perf(test_run_id, perf_info)
    conn.insert_clusters(test_run_id, iso_ids, clust_ontology.root.data, threshold)
 
@@ -334,8 +335,7 @@ if (__name__ == '__main__'):
    clust_ontology = Ontology.OntologyParser().parse_ontology('generic.ont')
 
    (iso_ids, iso_labels, iso_data_cpu) = get_data(
-      #(2500 + (250 * 100)), ontology=clust_ontology
-      (500 + (50 * 100)), ontology=clust_ontology
+      (2500 + (250 * 100)), ontology=clust_ontology
    )
 
    (iso_sim_mapping, sim_matrix_ndx) = (dict(), 0)
@@ -365,9 +365,9 @@ if (__name__ == '__main__'):
    #
    ############################################################################
 
-   configurations = ((100, 10, 100), (500, 50, 100))
-                     #(1000, 50, 100), (1000, 100, 100),
-                     #(2500, 125, 100), (2500, 250, 100))
+   configurations = ((100, 10, 100), (500, 50, 100),
+                     (1000, 50, 100), (1000, 100, 100),
+                     (2500, 125, 100), (2500, 250, 100))
 
    for test_conf in configurations:
       for test_num in range(3):

@@ -4,6 +4,7 @@ import re
 
 import copy
 import CPLOP
+import Clusterer
 
 USING_PY3 = True
 if (sys.version.find('3.3') == -1):
@@ -30,8 +31,9 @@ class Ontology(object):
 
       for ndx_A in range(len(self.root.data)):
          for ndx_B in range(ndx_A + 1, len(self.root.data)):
-            clust_separation += self.root.data[ndx_A].compare_to(self.root.data[ndx_B])
-            count += 1
+            if (type(self.root.data[ndx_A]) is Clusterer.Cluster):
+               clust_separation += self.root.data[ndx_A].compare_to(self.root.data[ndx_B])
+               count += 1
 
       if (count > 0):
          return (clust_separation / count)
