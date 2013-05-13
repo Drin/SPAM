@@ -79,7 +79,7 @@ DATA_QUERY = '''
 '''
 
 DATA_QUERY = '''
-   SELECT i.name_prefix, i.name_suffix, h1.pHeight, h2.pHeight
+   SELECT i.name_prefix, i.name_suffix, h1.pHeight, h2.pHeight, h1.position
    FROM test_histograms h1
         JOIN isolate_selection i ON (
            h1.pyroID = i.pyro_id_1 AND
@@ -89,7 +89,7 @@ DATA_QUERY = '''
            h1.position = h2.position AND
            h2.pyroID = i.pyro_id_2
         )
-   ORDER BY i.name_prefix, i.name_suffix, h1.position
+   ORDER BY i.test_isolate_id
    LIMIT %d OFFSET %d
 '''
 
@@ -135,14 +135,14 @@ INSERT_ISOLATES = '''
 class connection(object):
    CPLOP_CONNECTION = None
 
-   def __init__(self, host='localhost', port=8906, db='CPLOP'):
+   def __init__(self, host='localhost', port=3306, db='CPLOP'):
       if (self.CPLOP_CONNECTION is None):
          if (USING_PY3):
             self.CPLOP_CONNECTION = pymysql.connect(host=host, port=port, db=db,
-                                                    user='drin', passwd='')
+                                                    user='', passwd='')
          else:
             self.CPLOP_CONNECTION = MySQLdb.connect(host=host, port=port, db=db,
-                                                    user='drin', passwd='')
+                                                    user='', passwd='')
 
    def get_distinct_values(self, table_name, col_name):
       cplop_cursor = self.CPLOP_CONNECTION.cursor()
@@ -177,7 +177,7 @@ class connection(object):
          cplop_cursor.execute(ID_QUERY % (
             where_clause,
             db_seed,
-            min(page_size, data_size - (page_ndx * page_size)),
+            min(page_size, data_size - (page_ndx * page_size) - 1),
             page_ndx * page_size
          ))
 
@@ -220,13 +220,18 @@ class connection(object):
                isolate_ndx += 1
                ids.append(isolate_id)
 
+            if (peak_ndx != data_tuple[4]):
+               print("peak mismatch!!!!")
+
             if (peak_ndx < LEN_23_5):
                offset_23_5 = isolate_ndx * ISOLATE_LEN + peak_ndx
-               data[offset_23_5] = data_tuple[NDX_23_5 + DATA_QUERY_OFF]
+               if (offset_23_5 < len(data)):
+                  data[offset_23_5] = data_tuple[NDX_23_5 + DATA_QUERY_OFF]
 
             if (LEN_23_5 + peak_ndx < ISOLATE_LEN):
                offset_16_23 = isolate_ndx * ISOLATE_LEN + LEN_23_5 + peak_ndx
-               data[offset_16_23] = data_tuple[NDX_16_23 + DATA_QUERY_OFF]
+               if (offset_16_23 < len(data)):
+                  data[offset_16_23] = data_tuple[NDX_16_23 + DATA_QUERY_OFF]
 
             peak_ndx += 1
 
@@ -343,6 +348,7 @@ class connection(object):
             cplop_cursor.execute(INSERT_ISOLATES % (', '.join(isolate_inserts)))
             del strain_inserts[:]
             del isolate_inserts[:]
+            print("inserting clusters")
             self.CPLOP_CONNECTION.commit()
 
       else:
@@ -353,6 +359,8 @@ class connection(object):
          if (len(isolate_inserts) > 0):
             cplop_cursor.execute(INSERT_ISOLATES % (', '.join(isolate_inserts)))
             del isolate_inserts[:]
+
+         print("inserting clusters")
          self.CPLOP_CONNECTION.commit()
 
       cplop_cursor.close()
