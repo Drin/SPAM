@@ -38,6 +38,7 @@ class Ontology(object):
       if (count > 0):
          return (clust_separation / count)
 
+      print("count should not be 0!")
       return -2
 
    def add_term(self, table_name, new_term):
@@ -72,7 +73,7 @@ class OntologyTerm(object):
       self.options = dict()
       self.col_name = col_name
 
-      if (data is not None):
+      if (data is not None and len(data) > 0):
          self.data.append(data)
       self.new_data = (data is not None)
 
@@ -101,18 +102,18 @@ class OntologyTerm(object):
          else:
             self.children[child[0]] = copy.deepcopy(new_term)
 
-   def add_data(self, cluster):
+   def add_data(self, cluster, count=0):
       for label in cluster.labels:
          child_node = self.children.get(label, 'nomatch')
 
          if (child_node is None):
-            child_node = OntologyTerm(data=cluster)
+            self.children[label] = OntologyTerm(data=cluster)
             break
 
          elif (child_node == 'nomatch'): continue
 
          else:
-            child_node.add_data(cluster)
+            child_node.add_data(cluster, count=count+1)
             break
 
       else:

@@ -98,14 +98,14 @@ INSERT_ISOLATES = '''
 class connection(object):
    CPLOP_CONNECTION = None
 
-   def __init__(self, host='localhost', port=3306, db='CPLOP'):
+   def __init__(self, host='localhost', port=8906, db='CPLOP'):
       if (self.CPLOP_CONNECTION is None):
          if (USING_PY3):
             self.CPLOP_CONNECTION = pymysql.connect(host=host, port=port, db=db,
-                                                    user='amontana', passwd='')
+                                                    user='drin', passwd='')
          else:
             self.CPLOP_CONNECTION = MySQLdb.connect(host=host, port=port, db=db,
-                                                    user='amontana', passwd='')
+                                                    user='drin', passwd='')
 
    def get_distinct_values(self, table_name, col_name):
       cplop_cursor = self.CPLOP_CONNECTION.cursor()
@@ -115,7 +115,7 @@ class connection(object):
       cplop_cursor.execute(SCHEMA_QUERY % (col_name, table_name, col_name))
 
       for data_tuple in cplop_cursor.fetchall():
-         ont_partitions.append(data_tuple[0])
+         ont_partitions.append(data_tuple[0].strip())
 
       cplop_cursor.close()
       return ont_partitions
@@ -231,7 +231,7 @@ class connection(object):
                   print("meta data mismatch for isolate %d" % isolate_id)
                   continue
 
-            iso_labels.append([data_tuple[attr] for attr in range(1, len(data_tuple))])
+            iso_labels.append([data_tuple[attr].strip() for attr in range(1, len(data_tuple))])
 
       cplop_cursor.close()
       return iso_labels

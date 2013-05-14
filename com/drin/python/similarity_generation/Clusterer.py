@@ -35,7 +35,7 @@ class Clusterer(object):
 
       else:
          if (self.incremental and self.agglom_clusters is not None):
-            self.agglom_clusters.append(clusters)
+            self.agglom_clusters.extend(clusters)
          else:
             self.agglom_clusters = clusters
 
@@ -53,7 +53,8 @@ class Clusterer(object):
          if (term[1].new_data):
             self.cluster_ontology(term[1], threshold)
 
-         clusters.append(term[1].data)
+         if (len(term[1].data) > 0):
+            clusters.extend(term[1].data)
          #self.cluster_dataset(clusters, threshold)
 
       self.cluster_dataset(clusters, threshold)
@@ -79,6 +80,7 @@ class Clusterer(object):
             clust_B = clusters[ndx_B]
 
             if (type(clust_A) is not Cluster or type(clust_B) is not Cluster):
+               print("skipping non cluster comparisons")
                continue
 
             clust_sim = clust_A.compare_to(clust_B)
@@ -90,7 +92,7 @@ class Clusterer(object):
 
    def combine_clusters(self, clusters, close_clusters):
       clusters[close_clusters[0]].incorporate(clusters[close_clusters[1]])
-      del clusters[close_clusters[1]]
+      clusters.pop(close_clusters[1])
 
 #############################################################################
 #
