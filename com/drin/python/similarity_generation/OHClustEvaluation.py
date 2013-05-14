@@ -19,7 +19,7 @@ except:
    print("Could not load pyCUDA")
    sys.exit(1)
 
-DEFAULT_DEVICE = 3
+DEFAULT_DEVICE = 0
 NUM_THREADS = 16
 NUM_BLOCKS = 32
 
@@ -256,7 +256,7 @@ def get_data(dataset_size, ontology=None):
 
    return (iso_ids, iso_labels, iso_data)
 
-def output_similarity_matrix(sim_matrix):
+def output_similarity_matrix(sim_matrix, num_isolates, isolate_ids):
    sim_ndx = 0
    for iso_A_ndx in range(num_isolates):
       iso_A = isolate_ids[iso_A_ndx]
@@ -286,7 +286,7 @@ def main(iso_ids, iso_labels, iso_data_cpu, iso_sim_mapping, sim_matrix_ndx,
    #
    ############################################################################
 
-   threshold = 0.75
+   threshold = 0.80
    Clusterer.Cluster._sim_matrix_ = sim_matrix_cpu
    Clusterer.Cluster._iso_mapping_ = iso_sim_mapping
    Clusterer.Cluster._threshold_ = threshold
@@ -315,6 +315,21 @@ def main(iso_ids, iso_labels, iso_data_cpu, iso_sim_mapping, sim_matrix_ndx,
       start_ndx = end_ndx + 1
       end_ndx += min(up_size, num_isolates - end_ndx)
 
+   print("%d clusters:" % len(clusters))
+   if ('DEBUG' in os.environ):
+      for cluster in clust_ontology.root.data:
+         print("cluster [%d]:" % len(cluster))
+         if (type(cluster) is not Clusterer.Cluster):
+            print("non cluster: %s" % cluster)
+         for element in cluster.elements:
+            print("\t%s" % (iso_ids[element]))
+
+      for tmp_ndx in range(10):
+         print(sim_matrix_cpu[tmp_ndx])
+
+      if ('VERBOSE' in os.environ):
+         output_similarity_matrix(sim_matrix_cpu, len(iso_ids), iso_ids)
+
    conn.insert_new_run(clust_ontology.get_cluster_separation(),
                        time.time() - total_t, cluster_algorithm=algorith_name)
 
@@ -323,24 +338,13 @@ def main(iso_ids, iso_labels, iso_data_cpu, iso_sim_mapping, sim_matrix_ndx,
    conn.insert_run_perf(test_run_id, perf_info)
    conn.insert_clusters(test_run_id, iso_ids, clust_ontology.root.data, threshold)
 
-   if ('DEBUG' in os.environ):
-      for tmp_ndx in range(10):
-         print(sim_matrix_cpu[tmp_ndx])
-
-      if ('VERBOSE' in os.environ):
-         output_similarity_matrix(sim_matrix)
-         for cluster in clust_ontology.root.data:
-            print("cluster:")
-            for element in cluster.elements:
-               print("\t%s" % (iso_ids[element]))
-
 if (__name__ == '__main__'):
    (clust_ontology, algorith_name) = (None, 'agglomerative')
    clust_ontology = Ontology.OntologyParser().parse_ontology('generic.ont')
 
    (iso_ids, iso_labels, iso_data_cpu) = get_data(
       #(2500 + (125 * 100)), ontology=clust_ontology
-      (100 + (10 * 100)), ontology=clust_ontology
+      (100 + (10 * 1)), ontology=clust_ontology
    )
 
    (iso_sim_mapping, sim_matrix_ndx) = (dict(), 0)
@@ -375,7 +379,7 @@ if (__name__ == '__main__'):
                      (1000, 50, 100), (1000, 100, 100),
                      (2500, 125, 100))#, (2500, 250, 100))
    '''
-   configurations = ((100, 10, 100),)
+   configurations = ((100, 10, 1),)
 
    for test_conf in configurations:
       for test_num in range(3):
