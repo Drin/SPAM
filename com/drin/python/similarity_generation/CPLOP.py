@@ -183,7 +183,8 @@ class connection(object):
             if (isolate_id is None or tmp_isolate_id != isolate_id):
                isolate_ndx += 1
                (isolate_id, peak_ndx) = (tmp_isolate_id, 0)
-               ids[isolate_ndx] = isolate_id
+               if (isolate_ndx < len(ids)):
+                  ids[isolate_ndx] = isolate_id
 
             if (peak_ndx != data_tuple[3]):
                print("peak mismatch! on %d, should be %d" % (data_tuple[3],
