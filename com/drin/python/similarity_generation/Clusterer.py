@@ -20,11 +20,9 @@ except:
 #
 #############################################################################
 class Clusterer(object):
-   def __init__(self, threshold, ontology=None, incremental=False):
+   def __init__(self, threshold, ontology=None):
       self.ontology = ontology
       self.threshold = threshold
-      self.incremental = incremental
-      self.agglom_clusters = None
 
    def cluster_data(self, clusters):
       if (self.ontology is not None):
@@ -34,13 +32,7 @@ class Clusterer(object):
          self.cluster_ontology(self.ontology.root, self.threshold)
 
       else:
-         if (self.incremental and self.agglom_clusters is not None):
-            self.agglom_clusters.extend(clusters)
-         else:
-            self.agglom_clusters = clusters
-
-         self.cluster_dataset(self.agglom_clusters, self.threshold)
-         clusters = self.agglom_clusters
+         self.cluster_dataset(clusters, self.threshold)
 
    def cluster_ontology(self, ontology_term, threshold):
       if (ontology_term is None or ontology_term.new_data is False):

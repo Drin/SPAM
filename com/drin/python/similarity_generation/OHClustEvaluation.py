@@ -273,7 +273,8 @@ def output_similarity_matrix(sim_matrix, num_isolates, isolate_ids):
 #
 #############################################################################
 def main(iso_ids, iso_labels, iso_data_cpu, iso_sim_mapping, sim_matrix_ndx,
-         clust_ontology=None, init_size=100, up_size=100, num_up=1):
+         incremental=False, clust_ontology=None,
+         init_size=100, up_size=100, num_up=1):
    algorith_name = 'agglomerative'
    if (clust_ontology is not None):
       algorith_name = 'OHClust!'
@@ -294,18 +295,29 @@ def main(iso_ids, iso_labels, iso_data_cpu, iso_sim_mapping, sim_matrix_ndx,
    conn = CPLOP.connection()
 
    (start_ndx, end_ndx, curr_up) = (0, init_size, -1)
-   (clusters, OHClusterer, perf_info, total_t) = (None, None, [], time.time())
+   (persist_clusters, tmp_clusters, OHClusterer) = ([], None, None)
+   (total_t, perf_info, backup_clusters) = (time.time(), [], [])
 
    while (curr_up < num_up and end_ndx < num_isolates and start_ndx < end_ndx):
-      clusters = []
+      tmp_clusters = []
       for iso_ndx in range(start_ndx, end_ndx):
-         clusters.append(Clusterer.Cluster(data_point=iso_ndx,
-                                           labels=iso_labels[iso_ndx]))
+         tmp_clusters.append(Clusterer.Cluster(data_point=iso_ndx,
+                                               labels=iso_labels[iso_ndx]))
 
       OHClusterer = Clusterer.Clusterer(threshold, ontology=clust_ontology)
-
       cluster_t = time.time()
-      OHClusterer.cluster_data(clusters)
+
+      if (clust_ontology is not None):
+         persist_clusters = tmp_clusters
+
+      elif (incremental):
+         persist_clusters.extend(tmp_clusters)
+
+      else:
+         backup_clusters.extend(copy.deepcopy(tmp_clusters))
+         persist_clusters.extend(copy.deepcopy(backup_clusters))
+
+      OHClusterer.cluster_data(persist_clusters)
       finish_t = time.time()
 
       perf_info.append((curr_up + 1, end_ndx, finish_t - cluster_t))
@@ -315,14 +327,13 @@ def main(iso_ids, iso_labels, iso_data_cpu, iso_sim_mapping, sim_matrix_ndx,
       start_ndx = end_ndx + 1
       end_ndx += min(up_size, num_isolates - end_ndx)
 
-   print("%d clusters:" % len(clusters))
+   print("%d clusters:" % len(persist_clusters))
    if ('DEBUG' in os.environ):
-      for cluster in clust_ontology.root.data:
-         print("cluster [%d]:" % len(cluster))
-         if (type(cluster) is not Clusterer.Cluster):
-            print("non cluster: %s" % cluster)
-         for element in cluster.elements:
-            print("\t%s" % (iso_ids[element]))
+      if (clust_ontology is not None):
+         for cluster in persist_clusters:
+            print("cluster [%d]:" % len(cluster))
+            for element in cluster.elements:
+               print("\t%s" % (iso_ids[element]))
 
       for tmp_ndx in range(10):
          print(sim_matrix_cpu[tmp_ndx])
@@ -330,21 +341,38 @@ def main(iso_ids, iso_labels, iso_data_cpu, iso_sim_mapping, sim_matrix_ndx,
       if ('VERBOSE' in os.environ):
          output_similarity_matrix(sim_matrix_cpu, len(iso_ids), iso_ids)
 
-   conn.insert_new_run(clust_ontology.get_cluster_separation(),
-                       time.time() - total_t, cluster_algorithm=algorith_name)
+   clust_sep = -2
+   if (clust_ontology is not None):
+      clust_sep = clust_ontology.get_cluster_separation()
+      persist_clusters = clust_ontology.root.data
+   else:
+      (clust_sep, count) = (0, 0)
+
+      for ndx_A in range(len(persist_clusters)):
+         for ndx_B in range(ndx_A + 1, len(persist_clusters)):
+            if (type(persist_clusters[ndx_A]) is Clusterer.Cluster):
+               count += 1
+               clust_sep += persist_clusters[ndx_A].compare_to(
+                            persist_clusters[ndx_B])
+
+      if (count > 0):
+         clust_sep = (clust_sep / count)
+
+   conn.insert_new_run(clust_sep, time.time() - total_t,
+                       cluster_algorithm=algorith_name)
 
    test_run_id = conn.get_run_id()
    print("inserting data for run id %d" % test_run_id)
    conn.insert_run_perf(test_run_id, perf_info)
-   conn.insert_clusters(test_run_id, iso_ids, clust_ontology.root.data, threshold)
+   conn.insert_clusters(test_run_id, iso_ids, persist_clusters, threshold)
 
 if (__name__ == '__main__'):
    (clust_ontology, algorith_name) = (None, 'agglomerative')
    clust_ontology = Ontology.OntologyParser().parse_ontology('generic.ont')
 
    (iso_ids, iso_labels, iso_data_cpu) = get_data(
-      #(2500 + (125 * 100)), ontology=clust_ontology
-      (100 + (10 * 1)), ontology=clust_ontology
+      (2500 + (125 * 100)), ontology=clust_ontology
+      #(100 + (10 * 1)), ontology=clust_ontology
    )
 
    (iso_sim_mapping, sim_matrix_ndx) = (dict(), 0)
@@ -374,12 +402,12 @@ if (__name__ == '__main__'):
    #
    ############################################################################
 
-   '''
    configurations = ((100, 10, 100), (500, 50, 100),
                      (1000, 50, 100), (1000, 100, 100),
                      (2500, 125, 100))#, (2500, 250, 100))
    '''
    configurations = ((100, 10, 1),)
+   '''
 
    for test_conf in configurations:
       for test_num in range(3):
@@ -391,7 +419,7 @@ if (__name__ == '__main__'):
               num_up=test_conf[2])
 
 
-   for test_conf_ndx in range(6):
+   for test_conf_ndx in range(len(configurations)):
       test_conf = configurations[test_conf_ndx]
 
       for test_num in range(3):
