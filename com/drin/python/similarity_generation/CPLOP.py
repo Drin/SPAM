@@ -98,14 +98,14 @@ INSERT_ISOLATES = '''
 class connection(object):
    CPLOP_CONNECTION = None
 
-   def __init__(self, host='localhost', port=8906, db='CPLOP'):
+   def __init__(self, host='localhost', port=3306, db='CPLOP'):
       if (self.CPLOP_CONNECTION is None):
          if (USING_PY3):
             self.CPLOP_CONNECTION = pymysql.connect(host=host, port=port, db=db,
-                                                    user='drin', passwd='')
+                                                    user='amontana', passwd='')
          else:
             self.CPLOP_CONNECTION = MySQLdb.connect(host=host, port=port, db=db,
-                                                    user='drin', passwd='')
+                                                    user='amontana', passwd='')
 
    def get_distinct_values(self, table_name, col_name):
       cplop_cursor = self.CPLOP_CONNECTION.cursor()
@@ -290,7 +290,7 @@ class connection(object):
 
          strain_inserts.append("(%d, %d, %.04f, %.04f, %.04f, %.04f)" % (
             test_run_id, clust_id, threshold, cluster.diameter,
-            cluster.get_intra_similarity(), float(0.0)
+            cluster.average_similarity, float(0.0)
          ))
 
          for iso_ndx in cluster.elements:

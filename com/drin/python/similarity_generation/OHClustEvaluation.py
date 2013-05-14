@@ -339,7 +339,8 @@ if (__name__ == '__main__'):
    clust_ontology = Ontology.OntologyParser().parse_ontology('generic.ont')
 
    (iso_ids, iso_labels, iso_data_cpu) = get_data(
-      (2500 + (125 * 100)), ontology=clust_ontology
+      #(2500 + (125 * 100)), ontology=clust_ontology
+      (100 + (10 * 100)), ontology=clust_ontology
    )
 
    (iso_sim_mapping, sim_matrix_ndx) = (dict(), 0)
@@ -369,9 +370,12 @@ if (__name__ == '__main__'):
    #
    ############################################################################
 
+   '''
    configurations = ((100, 10, 100), (500, 50, 100),
                      (1000, 50, 100), (1000, 100, 100),
                      (2500, 125, 100))#, (2500, 250, 100))
+   '''
+   configurations = ((100, 10, 100),)
 
    for test_conf in configurations:
       for test_num in range(3):

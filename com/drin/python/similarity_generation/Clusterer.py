@@ -20,9 +20,11 @@ except:
 #
 #############################################################################
 class Clusterer(object):
-   def __init__(self, threshold, ontology=None):
+   def __init__(self, threshold, ontology=None, incremental=False):
       self.ontology = ontology
       self.threshold = threshold
+      self.incremental = incremental
+      self.agglom_clusters = None
 
    def cluster_data(self, clusters):
       if (self.ontology is not None):
@@ -32,7 +34,13 @@ class Clusterer(object):
          self.cluster_ontology(self.ontology.root, self.threshold)
 
       else:
-         self.cluster_dataset(clusters, self.threshold)
+         if (self.incremental and self.agglom_clusters is not None):
+            self.agglom_clusters.append(clusters)
+         else:
+            self.agglom_clusters = clusters
+
+         self.cluster_dataset(self.agglom_clusters, self.threshold)
+         clusters = self.agglom_clusters
 
    def cluster_ontology(self, ontology_term, threshold):
       if (ontology_term is None or ontology_term.new_data is False):
@@ -99,6 +107,10 @@ class Cluster(object):
       self.elements = numpy.zeros(shape=(0), dtype=numpy.uint32, order='C')
       self.elements = numpy.append(self.elements, data_point)
 
+      self.diameter = -2
+      self.average_similarity = -2
+      self.percent_similar = -1
+
    def get_similarity(self, ndx_A, ndx_B):
       sim_ndx = -1
 
@@ -117,13 +129,13 @@ class Cluster(object):
       (self.percent_similar, self.average_similarity) = (0, 0)
 
       for iso_ndx_A in range(len(self.elements)):
-         for iso_ndx_B in range(iso_ndx_A + 1, len(other_cluster.elements)):
+         for iso_ndx_B in range(iso_ndx_A + 1, len(self.elements)):
             clust_sim = self.get_similarity(iso_ndx_A, iso_ndx_B)
 
             count += 1
             self.average_similarity += clust_sim
             self.diameter = min(self.diameter, clust_sim)
-            if (clust_sim > _threshold_):
+            if (clust_sim > Cluster._threshold_):
                self.percent_similar += 1
 
       if (count > 0):
@@ -141,9 +153,10 @@ class Cluster(object):
       (clust_sim, count) = (0, 0)
 
       for iso_ndx_A in self.elements:
-         for iso_ndx_B in other_cluster.elements:
-            count += 1
-            clust_sim += self.get_similarity(iso_ndx_A, iso_ndx_B)
+         if (type(other_cluster) is Cluster):
+            for iso_ndx_B in other_cluster.elements:
+               count += 1
+               clust_sim += self.get_similarity(iso_ndx_A, iso_ndx_B)
 
       if (count > 0):
          return (clust_sim / count)
