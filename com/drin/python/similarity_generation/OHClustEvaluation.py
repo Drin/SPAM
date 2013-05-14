@@ -228,14 +228,18 @@ def cluster_comparator(num_isolates, iso_data_gpu, clust_A, clust_B,
 def get_data(dataset_size, ontology=None):
    conn = CPLOP.connection()
 
+   print("getting ids")
    start_t = time.time()
-   data_ids = conn.get_pyro_ids(ont=ontology, data_size=dataset_size)
+   #data_ids = conn.get_pyro_ids(ont=ontology, data_size=dataset_size)
 
+   print("getting data")
    pyro_t = time.time()
    (iso_ids, iso_data) = conn.get_isolate_data(
-      pyro_ids=data_ids, data_size=(dataset_size)
+      #pyro_ids=data_ids, data_size=(dataset_size)
+      data_size=(dataset_size)
    )
 
+   print("getting meta-data")
    meta_t = time.time()
    iso_labels = conn.get_meta_data(
       ont=ontology, ids=iso_ids, data_size=dataset_size
@@ -328,14 +332,14 @@ def main(iso_ids, iso_labels, iso_data_cpu, iso_sim_mapping, sim_matrix_ndx,
          for cluster in clust_ontology.root.data:
             print("cluster:")
             for element in cluster.elements:
-               print("\t%s-%s" % (iso_ids[element]))
+               print("\t%s" % (iso_ids[element]))
 
 if (__name__ == '__main__'):
    (clust_ontology, algorith_name) = (None, 'agglomerative')
    clust_ontology = Ontology.OntologyParser().parse_ontology('generic.ont')
 
    (iso_ids, iso_labels, iso_data_cpu) = get_data(
-      (2500 + (250 * 100)), ontology=clust_ontology
+      (2500 + (125 * 100)), ontology=clust_ontology
    )
 
    (iso_sim_mapping, sim_matrix_ndx) = (dict(), 0)
@@ -367,7 +371,7 @@ if (__name__ == '__main__'):
 
    configurations = ((100, 10, 100), (500, 50, 100),
                      (1000, 50, 100), (1000, 100, 100),
-                     (2500, 125, 100), (2500, 250, 100))
+                     (2500, 125, 100))#, (2500, 250, 100))
 
    for test_conf in configurations:
       for test_num in range(3):

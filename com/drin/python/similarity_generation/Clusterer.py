@@ -102,10 +102,10 @@ class Cluster(object):
    def get_similarity(self, ndx_A, ndx_B):
       sim_ndx = -1
 
-      if (iso_ndx_B > iso_ndx_A):
-         sim_ndx = Cluster._iso_mapping_[iso_ndx_A][iso_ndx_B]
-      elif (iso_ndx_A > iso_ndx_B):
-         sim_ndx = Cluster._iso_mapping_[iso_ndx_B][iso_ndx_A]
+      if (ndx_B > ndx_A):
+         sim_ndx = Cluster._iso_mapping_[ndx_A][ndx_B]
+      elif (ndx_A > ndx_B):
+         sim_ndx = Cluster._iso_mapping_[ndx_B][ndx_A]
 
       if (sim_ndx != -1):
          return Cluster._sim_matrix_[sim_ndx]
