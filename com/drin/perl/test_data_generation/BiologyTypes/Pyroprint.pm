@@ -4,7 +4,8 @@ use strict;
 use warnings;
 
 my @PYROPRINT_ATTRS = qw{pyroID name_prefix name_suffix appliedRegion wellID
-                         pyroPrintedDate is_generated};
+                         pyroPrintedDate dsName forPrimer revPrimer seqPrimer
+                         is_generated};
 
 sub new {
    my ($class, $params) = (@_);
@@ -34,7 +35,11 @@ sub similar_protocol {
    my ($self, $other_pyro) = (@_);
 
    return (join(q{}, @{$self->{dispensations}}) eq
-           join(q{}, @{$other_pyro->{dispensations}}));
+           join(q{}, @{$other_pyro->{dispensations}}) &&
+           $self->{dsName} eq $other_pyro->{dsName} &&
+           $self->{forPrimer} eq $other_pyro->{forPrimer} &&
+           $self->{revPrimer} eq $other_pyro->{revPrimer} &&
+           $self->{seqPrimer} eq $other_pyro->{seqPrimer});
 }
 
 sub duplicate {
@@ -57,6 +62,10 @@ sub duplicate {
    $clone->{appliedRegion} = $self->{appliedRegion};
    $clone->{wellID} = $self->{wellID};
    $clone->{pyroPrintedDate} = $self->{pyroPrintedDate};
+   $clone->{dsName} = $self->{dsName};
+   $clone->{forPrimer} = $self->{forPrimer};
+   $clone->{revPrimer} = $self->{revPrimer};
+   $clone->{seqPrimer} = $self->{seqPrimer};
    $clone->{is_generated} = 1;
 
    return bless($clone);
@@ -108,6 +117,10 @@ sub bulk_insert_str {
    $str .= "'$self->{appliedRegion}', ";
    $str .= "'$self->{wellID}', ";
    $str .= "'$self->{pyroPrintedDate}', ";
+   $str .= "'$self->{dsName}', ";
+   $str .= "'$self->{forPrimer}', ";
+   $str .= "'$self->{revPrimer}', ";
+   $str .= "'$self->{seqPrimer}', ";
    $str .= "$self->{is_generated}";
 
    return "($str)";

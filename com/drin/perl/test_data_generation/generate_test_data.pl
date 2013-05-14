@@ -6,12 +6,12 @@ use DBI;
 use BiologyTypes::Isolate;
 use BiologyTypes::Pyroprint;
 
-use constant DB_USER => q{drin};
+use constant DB_USER => q{};
 use constant DB_PASS => q{};
 
 use constant CROSSOVER_PROB => 0.8;
 
-my $db_handle = DBI->connect(q{dbi:mysql:CPLOP:localhost:8906}, DB_USER, DB_PASS)
+my $db_handle = DBI->connect(q{dbi:mysql:CPLOP:localhost}, DB_USER, DB_PASS)
              or die ("Unable to connect to database");
 
 #my $RAND_ISOLATE_QUERY = $db_handle->prepare("CALL getRandomIsolates(?)");
@@ -58,8 +58,8 @@ sub get_isolate_info {
 
    my $query_handle = $db_handle->prepare(q{
       SELECT name_prefix, name_suffix, pyroID, appliedRegion, wellID,
-             pyroPrintedDate, sampleID, commonName, userName, hostID,
-             nucleotide, pHeight
+             pyroPrintedDate, dsName, forPrimer, revPrimer, seqPrimer,
+             sampleID, commonName, userName, hostID, nucleotide, pHeight
       FROM test_isolates JOIN
            test_pyroprints using (name_prefix, name_suffix) JOIN
            test_histograms using (pyroID)}.
@@ -241,7 +241,7 @@ sub main {
 }
 
 main({
-   size => 750,
-   num_updates  => 1000,
+   size => 1000,
+   num_updates  => 500,
    start_time   => time(),
 });
