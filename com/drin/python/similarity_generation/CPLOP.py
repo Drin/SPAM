@@ -253,8 +253,8 @@ class connection(object):
       cplop_cursor = self.CPLOP_CONNECTION.cursor()
 
       run_time_str = '%02d:%02d:%02d' % (
-         run_time / 3600000, (run_time % 3600000) / 60000,
-         ((run_time % 3600000) % 60000) / 1000
+         run_time / 3600, (run_time % 3600) / 60,
+         ((run_time % 3600) % 60)
       )
 
       cplop_cursor.execute(INSERT_TEST_RUN % (
