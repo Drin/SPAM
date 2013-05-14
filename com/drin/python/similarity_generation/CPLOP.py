@@ -20,7 +20,7 @@ LEN_16_23 = 95
 ISOLATE_LEN = 188
 
 ID_QUERY_OFF = 1
-DATA_QUERY_OFF = 2
+DATA_QUERY_OFF = 1
 
 DEFAULT_PAGE_SIZE = 2000
 DEFAULT_DATA_SIZE = 2000
@@ -32,54 +32,17 @@ SCHEMA_QUERY = '''
 '''
 
 ID_QUERY = '''
-   SELECT distinct test_isolate_id, p1.pyroID, p2.pyroID
-   FROM test_isolates t
-        JOIN test_pyroprints p1 on (
-           t.name_prefix = p1.name_prefix AND
-           t.name_suffix = p1.name_suffix AND
-           p1.appliedRegion = '23-5'
-        )
-        JOIN test_pyroprints p2 on (
-           t.name_prefix = p2.name_prefix AND
-           t.name_suffix = p2.name_suffix AND
-           p2.appliedRegion = '16-23'
-        )
-   %s
-   ORDER BY RAND(%d)
-   LIMIT %d OFFSET %d
-'''
-
-#This ID_QUERY is an override of the previous one due to the creation of a
-#table purely for this query.
-ID_QUERY = '''
-   SELECT test_isolate_id, pyro_id_1, pyro_id_2
-   FROM isolate_selection
-   %s
-   ORDER BY RAND(%d)
-   LIMIT %d OFFSET %d
+   SELECT *
+   FROM (SELECT test_isolate_id, pyro_id_1, pyro_id_2
+         FROM isolate_selection
+         %s
+         LIMIT %d OFFSET %d
+        ) ids
+   ORDER BY test_isolate_id
 '''
 
 DATA_QUERY = '''
-   SELECT p1.name_prefix, p1.name_suffix, h1.pHeight, h2.pHeight
-   FROM test_histograms h1
-        JOIN test_pyroprints p1 ON (
-           h1.pyroID = p1.pyroID AND
-           h1.position < 95 AND
-           p1.pyroID IN (%s)
-        )
-        JOIN test_histograms h2 USING (position)
-        JOIN test_pyroprints p2 on (
-           p1.name_prefix = p2.name_prefix AND
-           p1.name_suffix = p2.name_suffix AND
-           h2.pyroID = p2.pyroID AND
-           p2.pyroID IN (%s)
-        )
-   ORDER BY p1.name_prefix, p1.name_suffix, h1.position
-   LIMIT %d OFFSET %d
-'''
-
-DATA_QUERY = '''
-   SELECT i.name_prefix, i.name_suffix, h1.pHeight, h2.pHeight, h1.position
+   SELECT i.test_isolate_id, h1.pHeight, h2.pHeight, h1.position
    FROM test_histograms h1
         JOIN isolate_selection i ON (
            h1.pyroID = i.pyro_id_1 AND
@@ -94,10 +57,10 @@ DATA_QUERY = '''
 '''
 
 META_QUERY = '''
-   SELECT name_prefix, name_suffix %s
+   SELECT test_isolate_id %s
    FROM test_isolates join test_pyroprints using (name_prefix, name_suffix)
-   WHERE name_prefix in (%s) AND name_suffix in (%s)
-   ORDER BY name_prefix, name_suffix
+   WHERE test_isolate_id in (%s)
+   ORDER BY test_isolate_id
    LIMIT %d OFFSET %d
 '''
 
@@ -127,7 +90,7 @@ INSERT_STRAIN = '''
 
 INSERT_ISOLATES = '''
    INSERT INTO test_isolate_strains (
-      test_run_id, cluster_id, cluster_threshold, name_prefix, name_suffix
+      test_run_id, cluster_id, cluster_threshold, test_isolate_id
    )
    VALUES %s
 '''
@@ -172,7 +135,9 @@ class connection(object):
             ))
          where_clause = 'where ' + (' and '.join(clauses))
 
+      cplop_cursor.execute("CALL prepMigration(%d)" % data_size)
 
+      '''
       for page_ndx in range(math.ceil(data_size/page_size)):
          cplop_cursor.execute(ID_QUERY % (
             where_clause,
@@ -191,9 +156,10 @@ class connection(object):
 
       cplop_cursor.close()
       return (pyros_1, pyros_2) 
+      '''
 
    # data_size is in isolates
-   def get_isolate_data(self, pyro_ids, data_size=DEFAULT_DATA_SIZE,
+   def get_isolate_data(self, pyro_ids=None, data_size=DEFAULT_DATA_SIZE,
                         page_size=DEFAULT_PAGE_SIZE):
       cplop_cursor = self.CPLOP_CONNECTION.cursor()
       data = numpy.zeros(shape=(data_size * ISOLATE_LEN),
@@ -201,7 +167,8 @@ class connection(object):
 
       peak_data_size = (data_size * max(LEN_23_5, LEN_16_23))
 
-      (ids, isolate_id, peak_ndx, isolate_ndx) = ([], None, 0, -1)
+      ids = numpy.zeros(shape=(data_size), dtype=numpy.uint32, order='C')
+      (isolate_id, peak_ndx, isolate_ndx) = (None, 0, -1)
       for page_ndx in range(math.ceil(peak_data_size/page_size)):
          cplop_cursor.execute(DATA_QUERY % (
             #','.join([str(val) for val in pyro_ids[NDX_23_5]]),
@@ -211,17 +178,16 @@ class connection(object):
          ))
 
          for data_tuple in cplop_cursor.fetchall():
-            tmp_isolate_id = (data_tuple[0], data_tuple[1])
+            tmp_isolate_id = data_tuple[0]
 
-            if (isolate_id is None or
-                tmp_isolate_id[0] != isolate_id[0] or
-                tmp_isolate_id[1] != isolate_id[1]):
-               (isolate_id, peak_ndx) = (tmp_isolate_id, 0)
+            if (isolate_id is None or tmp_isolate_id != isolate_id):
                isolate_ndx += 1
-               ids.append(isolate_id)
+               (isolate_id, peak_ndx) = (tmp_isolate_id, 0)
+               ids[isolate_ndx] = isolate_id
 
-            if (peak_ndx != data_tuple[4]):
-               print("peak mismatch!!!!")
+            if (peak_ndx != data_tuple[3]):
+               print("peak mismatch! on %d, should be %d" % (data_tuple[3],
+                     peak_ndx))
 
             if (peak_ndx < LEN_23_5):
                offset_23_5 = isolate_ndx * ISOLATE_LEN + peak_ndx
@@ -240,40 +206,31 @@ class connection(object):
 
    def get_meta_data(self, ids, ont=None, data_size=DEFAULT_DATA_SIZE,
                      page_size=DEFAULT_PAGE_SIZE):
-      cplop_cursor = self.CPLOP_CONNECTION.cursor()
-      (table_cols, id_prefixes, id_suffixes) = ([], set(), [])
+      (cplop_cursor, table_cols) = (self.CPLOP_CONNECTION.cursor(), [])
 
       for table_col in ont.table_columns.items():
          table_cols.append(', '.join(table_col[1]))
-
-      for val in ids:
-         id_prefixes.add("'%s'" % val[0])
-         id_suffixes.append(str(val[1]))
 
       (iso_labels, isolate_id, isolate_ndx) = ([], None, -1)
       for page_ndx in range(math.ceil(data_size/page_size)):
          cplop_cursor.execute(META_QUERY % (
             ', %s' % (', '.join(table_cols)),
-            ','.join(id_prefixes),
-            ','.join(id_suffixes),
+            ', '.join([str(pyro_id) for pyro_id in ids]),
             min(page_size, data_size - (page_ndx * page_size)),
             (page_ndx * page_size)
          ))
 
          for data_tuple in cplop_cursor.fetchall():
-            tmp_isolate_id = (data_tuple[0], str(data_tuple[1]))
+            tmp_isolate_id = data_tuple[0]
 
-            if (isolate_id is None or
-                (tmp_isolate_id[0] != isolate_id[0] and
-                 tmp_isolate_id[1] != isolate_id[1])):
+            if (isolate_id is None or tmp_isolate_id != isolate_id):
                isolate_id = tmp_isolate_id
                isolate_ndx += 1
-               if (ids[isolate_ndx][0] != isolate_id[0] and
-                   ids[isolate_ndx][1] != isolate_id[1]):
-                  print("meta data mismatch for isolate %s-%s" % (isolate_id))
+               if (ids[isolate_ndx] != isolate_id):
+                  print("meta data mismatch for isolate %d" % isolate_id)
                   continue
 
-            iso_labels.append([data_tuple[attr] for attr in range(2, len(data_tuple))])
+            iso_labels.append([data_tuple[attr] for attr in range(1, len(data_tuple))])
 
       cplop_cursor.close()
       return iso_labels
@@ -336,9 +293,8 @@ class connection(object):
          ))
 
          for iso_ndx in cluster.elements:
-            isolate_inserts.append("(%d, %d, %.04f, '%s', %d)" % (
-               test_run_id, clust_id, threshold, ids[iso_ndx][0],
-               ids[iso_ndx][1]
+            isolate_inserts.append("(%d, %d, %.04f, %d)" % (
+               test_run_id, clust_id, threshold, ids[iso_ndx]
             ))
 
          clust_id += 1
