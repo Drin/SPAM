@@ -205,6 +205,47 @@ class connection(object):
       cplop_cursor.close()
       return (ids, data)
 
+   def get_fast_isolate_data(self, pyro_ids=None, data_size=DEFAULT_DATA_SIZE,
+                             page_size=DEFAULT_PAGE_SIZE):
+      cplop_cursor = self.CPLOP_CONNECTION.cursor()
+
+      peak_data_size = (data_size * max(LEN_23_5, LEN_16_23))
+      ids = numpy.zeros(shape=(data_size), dtype=numpy.uint32, order='C')
+      data = [numpy.zeros(shape=(ISOLATE_LEN), dtype=numpy.float32, order='C')
+              for i in range(data_size)]
+
+      (isolate_id, peak_ndx, isolate_ndx) = (None, 0, -1)
+      for page_ndx in range(math.ceil(peak_data_size/page_size)):
+         cplop_cursor.execute(DATA_QUERY % (
+            min(page_size, peak_data_size - (page_ndx * page_size)),
+            (page_ndx * page_size)
+         ))
+
+         for data_tuple in cplop_cursor.fetchall():
+            tmp_isolate_id = data_tuple[0]
+
+            if (isolate_id is None or tmp_isolate_id != isolate_id):
+               isolate_ndx += 1
+               (isolate_id, peak_ndx) = (tmp_isolate_id, 0)
+               if (isolate_ndx < len(ids)):
+                  ids[isolate_ndx] = isolate_id
+
+            if (peak_ndx != data_tuple[3]):
+               print("peak mismatch! on %d, should be %d" % (data_tuple[3],
+                     peak_ndx))
+
+            if (peak_ndx < LEN_23_5):
+               data[isolate_ndx][peak_ndx] = data_tuple[NDX_23_5 + DATA_QUERY_OFF]
+
+            if (peak_ndx < LEN_16_23 and
+                LEN_23_5 + peak_ndx < len(data[isolate_ndx]):
+               data[isolate_ndx][LEN_23_5 + peak_ndx] = data_tuple[NDX_16_23 + DATA_QUERY_OFF]
+
+            peak_ndx += 1
+
+      cplop_cursor.close()
+      return (ids, data)
+
    def get_meta_data(self, ids, ont=None, data_size=DEFAULT_DATA_SIZE,
                      page_size=DEFAULT_PAGE_SIZE):
       (cplop_cursor, table_cols) = (self.CPLOP_CONNECTION.cursor(), [])

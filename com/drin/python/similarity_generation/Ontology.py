@@ -15,23 +15,17 @@ else:
 
 class Ontology(object):
    def __init__(self):
-      self.size = 0
       self.root = None
       self.table_columns = dict()
       self.column_parts = dict()
-
-   def get_size(self):
-      return self.size
-
-   def get_sizeof(self):
-      return self.root.get_sizeof() + sys.getsizeof(self)
 
    def get_cluster_separation(self):
       (clust_separation, count) = (0, 0)
 
       for ndx_A in range(len(self.root.data)):
          for ndx_B in range(ndx_A + 1, len(self.root.data)):
-            if (type(self.root.data[ndx_A]) is Clusterer.Cluster):
+            if (type(self.root.data[ndx_A]) is Clusterer.Cluster or
+                type(self.root.data[ndx_A]) is Clusterer.FastCluster):
                clust_separation += self.root.data[ndx_A].compare_to(self.root.data[ndx_B])
                count += 1
 
@@ -57,11 +51,11 @@ class Ontology(object):
          self.root = new_term
 
    def add_data(self, cluster):
+      data_added = False
       if (self.root is not None):
-         self.root.add_data(cluster)
-         self.size += 1
-         return True
-      return False
+         data_added = self.root.add_data(cluster)
+
+      return data_added
 
    def __str__(self):
       return 'root:\n' + self.root.print_ontology('\t')
@@ -75,25 +69,16 @@ class OntologyTerm(object):
 
       if (data is not None and len(data) > 0):
          self.data.append(data)
-      self.new_data = (data is not None)
+      self.new_data = (len(self.data) > 0)
 
       if (partitions is not None):
          for partition in partitions:
-            if (partition.strip() == ''):
-               continue
+            if (partition.strip() == ''): continue
             self.children[partition.strip()] = None
 
       if (options is not None):
          for option in options:
             self.options[option] = True
-
-   def get_sizeof(self):
-      my_size = sys.getsizeof(self)
-      for child in self.children.items():
-         if (child[1] is not None):
-            my_size += child[1].get_sizeof()
-
-      return my_size
 
    def add_term(self, new_term):
       for child in self.children.items():
@@ -102,22 +87,25 @@ class OntologyTerm(object):
          else:
             self.children[child[0]] = copy.deepcopy(new_term)
 
-   def add_data(self, cluster, count=0):
+   def add_data(self, cluster):
+      if (type(cluster) is not Clusterer.Cluster or
+          type(cluster) is not Clusterer.FastCluster):
+         self.new_data = False
+         return
+
       for label in cluster.labels:
          child_node = self.children.get(label, 'nomatch')
 
-         if (child_node is None):
+         if (child_node == 'nomatch'):
+            continue
+         elif (child_node is None):
             self.children[label] = OntologyTerm(data=cluster)
-            break
-
-         elif (child_node == 'nomatch'): continue
-
          else:
-            child_node.add_data(cluster, count=count+1)
-            break
-
+            child_node.add_data(cluster)
+         break
       else:
-         self.data.append(cluster)
+         if (len(cluster) > 0):
+            self.data.append(cluster)
 
       self.new_data = True
 
