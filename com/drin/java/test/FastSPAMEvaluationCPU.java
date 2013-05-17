@@ -1,7 +1,5 @@
 package com.drin.java.test;
 
-import static jcuda.driver.JCudaDriver.*;
-
 import com.drin.java.database.SpecialCPLOPConnection;
 import com.drin.java.database.SpecialCPLOPConnection.IsolateDataContainer;
 
@@ -9,10 +7,6 @@ import com.drin.java.ontology.Ontology;
 
 import com.drin.java.analysis.clustering.Clusterer;
 import com.drin.java.analysis.clustering.OHClusterer;
-
-import java.io.*;
-import jcuda.*;
-import jcuda.driver.*;
 
 import java.util.List;
 import java.util.ArrayList;
