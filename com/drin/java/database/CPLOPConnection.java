@@ -1,7 +1,6 @@
 package com.drin.java.database;
 
 import com.drin.java.ontology.FastOntology;
-import com.drin.java.ontology.Ontology;
 
 import java.util.List;
 import java.util.Map;
@@ -12,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 
+import java.sql.Timestamp;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -23,8 +23,8 @@ import java.sql.SQLException;
 public class CPLOPConnection {
    private static final String DB_DRIVER = "com.mysql.jdbc.Driver";
    private static final String DB_URL = "jdbc:mysql://localhost/CPLOP?autoReconnect=true";
-   private static final String DB_USER = "";
-   private static final String DB_PASS = "";
+   private static final String DB_USER = "amontana";
+   private static final String DB_PASS = "4ldr1n*(";
    private static final short DEFAULT_PAGE_SIZE = 10000,
                               ISOLATE_LEN       = 188;
    private static final byte LEN_23S           = 93,
@@ -131,12 +131,6 @@ public class CPLOPConnection {
                }
 
                if (peak_ndx != results.getInt(4)) {
-                  System.err.printf("%s, %s, %s, %s, %d\n",
-                                    String.valueOf(results.getObject(1)),
-                                    String.valueOf(results.getObject(2)),
-                                    String.valueOf(results.getObject(3)),
-                                    String.valueOf(results.getObject(4)),
-                                    peak_ndx);
                   System.err.printf("peak mismatch! on %d, should be %d\n",
                                     results.getInt(4), peak_ndx);
                   System.exit(0);
@@ -165,55 +159,34 @@ public class CPLOPConnection {
       return new IsolateDataContainer(iso_ids, iso_data);
    }
 
-   public String[][] getIsolateMetaData(int[] ids, Ontology ont, short dataSize) throws SQLException {
-      String metaColumns = "";
-      byte numColumns = 0;
-
-      for (Map.Entry<String, Set<String>> ont_entry : ont.getTableColumns().entrySet()) {
-         for (String col_name : ont_entry.getValue()) {
-            metaColumns += "," + col_name;
-            numColumns++;
-         }
-      }
-
-      return getIsolateMetaData(ids, metaColumns, numColumns, dataSize, DEFAULT_PAGE_SIZE);
-   }
-
-   public String[][] getIsolateMetaData(int[] ids, FastOntology ont, short dataSize) throws SQLException {
-      String metaColumns = "";
-      byte numColumns = 0;
-
-      for (Map.Entry<String, Set<String>> ont_entry : ont.getTableColumns().entrySet()) {
-         for (String col_name : ont_entry.getValue()) {
-            metaColumns += "," + col_name;
-            numColumns++;
-         }
-      }
-
-      return getIsolateMetaData(ids, metaColumns, numColumns, dataSize, DEFAULT_PAGE_SIZE);
-   }
-
-   public String[][] getIsolateMetaData(int[] ids, String metaColumns, byte numColumns, short dataSize, short pageSize) {
+   public String[][] getIsolateMetaData(int[] ids, FastOntology ont, short dataSize) {
       Statement statement = null;
       ResultSet results = null;
-      String metaIDs = "";
-      String metaLabels[][] = new String[ids.length][];
-      int tmp_id = -1, isolateID = -1;
-      short isolateNdx = -1;
 
-      for (int id_ndx = 0; id_ndx < ids.length; id_ndx++) {
-         metaIDs += "," + ids[id_ndx];
+      String metaLabels[][] = new String[ids.length][];
+      String metaIDs = "", metaColumns = "";
+      int tmp_id = -1, isolateID = -1;
+      short isolateNdx = -1, pageSize = DEFAULT_PAGE_SIZE;
+      byte colOffset = 1, numColumns = 0;
+
+      if (ont == null) { return null; }
+
+      for (Map.Entry<String, Set<String>> ont_entry : ont.getTableColumns().entrySet()) {
+         for (String col_name : ont_entry.getValue()) {
+            metaColumns += "," + col_name;
+            numColumns++;
+         }
       }
 
+      for (short id_ndx = 0; id_ndx < ids.length; id_ndx++) { metaIDs += "," + ids[id_ndx]; }
+
       try {
-         for (int pageNdx = 0; pageNdx < Math.ceil((float) dataSize / pageSize); pageNdx++) {
-            /*
+         for (short pageNdx = 0; pageNdx < Math.ceil((float) dataSize / pageSize); pageNdx++) {
             System.out.println(String.format(META_QUERY,
                metaColumns, metaIDs.substring(1),
                Math.min(pageSize, dataSize - (pageNdx * pageSize)),
                pageNdx * pageSize
             ));
-            */
             statement = mConn.createStatement();
             results = statement.executeQuery(String.format(META_QUERY,
                metaColumns, metaIDs.substring(1),
@@ -227,6 +200,7 @@ public class CPLOPConnection {
                if (isolateID == -1 || tmp_id != isolateID) {
                   isolateID = tmp_id;
                   isolateNdx++;
+
                   if (ids[isolateNdx] != isolateID) {
                      System.err.printf("meta data mismatch for isolate %d\n",
                                        isolateID);
@@ -235,15 +209,10 @@ public class CPLOPConnection {
                }
 
                metaLabels[isolateNdx] = new String[numColumns];
-               for (byte colNdx = 2; colNdx <= numColumns; colNdx++) {
-                  if (colNdx >= metaLabels[isolateNdx].length) {
-                     String[] newArr = new String[metaLabels[isolateNdx].length * 2];
-                     for (byte metaNdx = 0; metaNdx < metaLabels[isolateNdx].length; metaNdx++) {
-                        newArr[metaNdx] = metaLabels[isolateNdx][metaNdx];
-                     }
-                  }
 
-                  metaLabels[isolateNdx][colNdx - 2] = String.valueOf(results.getObject(colNdx));
+               for (byte colNdx = 0; colNdx < numColumns; colNdx++) {
+                  metaLabels[isolateNdx][colNdx] =
+                     String.valueOf(results.getObject(colNdx + 2)).trim();
                }
             }
          }
@@ -255,6 +224,112 @@ public class CPLOPConnection {
       return metaLabels;
    }
 
+   public void insertRunPerf(String insertValues) throws SQLException {
+      PreparedStatement insertSQL = null;
+
+      try {
+         insertSQL = mConn.prepareStatement(String.format(
+            "INSERT INTO test_run_performance(test_run_id, update_id, " +
+                                             "update_size, run_time) " +
+            "VALUES %s", insertValues
+         ));
+         insertSQL.executeUpdate();
+      }
+      catch (SQLException sqlEx) { throw sqlEx; }
+      finally { if (insertSQL != null) { insertSQL.close(); } }
+   }
+
+   public void insertIsolateAndStrainData(String strainValues, String isolateValues) throws SQLException {
+      PreparedStatement strainSQL = null, isolateSQL = null;
+
+      String strainInsert = "INSERT INTO test_run_strain_link (test_run_id, cluster_id, " +
+                                                              "cluster_threshold, strain_diameter, " +
+                                                              "average_isolate_similarity, " +
+                                                              "percent_similar_isolates) " +
+                            "VALUES ";
+      String isolateInsert = "INSERT INTO test_isolate_strains(test_run_id, cluster_id, " +
+                                                               "cluster_threshold, test_isolate_id) " +
+                             "VALUES ";
+
+      try {
+         strainSQL = mConn.prepareStatement(String.format(
+            strainInsert, strainValues
+         ));
+         strainSQL.executeUpdate();
+
+         isolateSQL = mConn.prepareStatement(String.format(
+            isolateInsert, isolateValues
+         ));
+         isolateSQL.executeUpdate();
+      }
+      catch (SQLException sqlEx) { throw sqlEx; }
+      finally {
+         if (strainSQL != null) { strainSQL.close(); }
+         if (isolateSQL != null) { isolateSQL.close(); }
+      }
+   }
+
+   private String getElapsedTime(long clusterTime) {
+      long hours = clusterTime / 3600000;
+      long minutes = (clusterTime % 3600000) / 60000;
+      long seconds = ((clusterTime % 3600000) % 60000) / 1000;
+
+      return String.format("%02d:%02d:%02d", hours, minutes, seconds);
+   }
+
+   public void insertTestRun(long runTime, String algorith, float interStrainSim,
+                             byte use_transform) throws SQLException {
+      Timestamp runDate = new Timestamp(new Date().getTime());
+      PreparedStatement insertSQL = null;
+
+      String insertQuery = String.format(
+         "INSERT INTO test_runs (run_date, run_time, cluster_algorithm, " +
+                                "average_strain_similarity, use_transform) " +
+         "VALUES (?, '%s', '%s', %.04f, %d)",
+         getElapsedTime(runTime), algorith, interStrainSim, use_transform
+      );
+
+      try {
+         insertSQL = mConn.prepareStatement(insertQuery);
+         insertSQL.setTimestamp(1, runDate);
+         insertSQL.executeUpdate();
+      }
+      catch (SQLException sqlEx) { throw sqlEx; }
+      finally { if (insertSQL != null) { insertSQL.close(); } }
+   }
+
+   public int getLastRunId() throws SQLException {
+      Statement stmt = null;
+      ResultSet results = null;
+      int newRunId = -1;
+
+      String query = String.format("SELECT last_insert_id()");
+
+      try {
+         stmt = mConn.createStatement();
+         results = stmt.executeQuery(query);
+         int numRows = 0;
+
+         while (results.next()) {
+            newRunId = results.getInt(1);
+            numRows++;
+         }
+
+         if (numRows > 1) {
+            System.err.printf("Retrieving last insert id " +
+                              "returned multiple rows\n");
+         }
+      }
+      catch (SQLException sqlEx) { throw sqlEx; }
+      finally
+      {
+         if (results != null) { results.close(); }
+         if (stmt != null) { stmt.close(); }
+      }
+
+      return newRunId;
+   }
+
    public class IsolateDataContainer {
       public int[] isoIDs;
       public float[] isoData;
@@ -264,254 +339,6 @@ public class CPLOPConnection {
          isoIDs = ids;
          isoData = data;
       }
-   }
-
-   /*
-    * non ontology legacy methods
-    */
-   public List<Map<String, Object>> getDataByIsoID(String isoIds) throws SQLException
-   {
-      String searchID = "isoID";
-      return getData(searchID, isoIds);
-   }
-
-   public List<Map<String, Object>> getDataByPyroID(String pyroIds) throws SQLException
-   {
-      String searchID = "pyroID";
-      return getData(searchID, pyroIds);
-   }
-
-   /*
-    * Legacy methods
-   public List<Map<String, Object>> getDataByIsoID(Ontology ont, String isoIds)
-   throws SQLException
-   {
-      String searchID = "isoID";
-      return getData(ont, searchID, isoIds);
-   }
-
-   public List<Map<String, Object>> getDataByPyroID(Ontology ont, String pyroIds)
-   throws SQLException
-   {
-      String searchID = "pyroID";
-      return getData(ont, searchID, pyroIds);
-   }
-    */
-
-   public List<Map<String, Object>> getDataByExperimentName(String experiments) throws SQLException
-   {
-      List<Map<String, Object>> rtn = new ArrayList<Map<String, Object>>();
-      Statement statement = null;
-      ResultSet results = null;
-
-      String query = String.format(
-       "SELECT pyroID, isoID, appliedRegion, wellID, pHeight, nucleotide " +
-       "FROM Experiments e join ExperimentPyroPrintLink ep using (ExperimentID) " +
-             "join Pyroprints p on (PyroprintID = pyroID) join Histograms using (pyroID) " +
-       "WHERE e.name in (%s) and pyroID in (Select distinct pyroID from Histograms)" + 
-       "ORDER BY isoID, pyroID, position asc", experiments);
-
-      try {
-         statement = mConn.createStatement();
-         results = statement.executeQuery(query);
-
-         while (results.next()) {
-            Map<String, Object> tuple = new HashMap<String, Object>();
-
-            tuple.put("pyroprint", results.getString(1)); 
-            tuple.put("isolate", results.getString(2)); 
-            tuple.put("region", results.getString(3)); 
-            tuple.put("well", results.getString(4));
-            tuple.put("pHeight", results.getString(5));
-            tuple.put("nucleotide", results.getString(6));
-
-            rtn.add(tuple);
-         }
-      }
-      catch (SQLException sqlEx) { throw sqlEx; }
-      finally
-      {
-         if (results != null) { results.close(); }
-         if (statement != null) { statement.close(); }
-      }
-
-      return rtn;
-   }
-
-   public List<Map<String, Object>> getExperimentDataSet() throws SQLException {
-      List<Map<String, Object>> experimentMap = new ArrayList<Map<String, Object>>();
-      Statement statement = null;
-      ResultSet results = null;
-
-      String query = "SELECT Name, count(*) as NumIsolates " +
-                     "FROM Experiments e join ExperimentPyroPrintLink ep using (ExperimentID) join " +
-                           "Pyroprints p on (PyroprintID = pyroID) " +
-                     "GROUP BY Name";
-
-      try {
-         statement = mConn.createStatement();
-         results = statement.executeQuery(query);
-
-         while (results.next()) {
-            Map<String, Object> tuple = new HashMap<String, Object>();
-
-            tuple.put("name", results.getString(1));
-            tuple.put("isolate count", new Integer(results.getInt(2)));
-
-            experimentMap.add(tuple);
-         }
-      }
-
-      catch (SQLException sqlEx) {
-         throw sqlEx;
-      }
-
-      finally {
-         if (results != null) {
-            results.close();
-         }
-
-         if (statement != null) {
-            statement.close();
-         }
-      }
-
-      return experimentMap;
-   }
-
-   private List<Map<String, Object>> getData(String searchID, String searchSet) throws SQLException {
-      List<Map<String, Object>> rtn = new ArrayList<Map<String, Object>>();
-      Statement statement = null;
-      ResultSet results = null;
-
-      String query = String.format(
-       "SELECT pyroID, isoID, appliedRegion, wellID, pHeight, nucleotide " +
-       "FROM Pyroprints join Isolates using (isoID) join Histograms using (pyroID) " +
-       "WHERE %s in (%s) and pyroID in (Select distinct pyroID from Histograms)" + 
-       "ORDER BY isoID, pyroID, position asc",
-       searchID, searchSet);
-
-      //System.err.println("query:\n" + query);
-      try {
-         statement = mConn.createStatement();
-         results = statement.executeQuery(query);
-
-         while (results.next()) {
-            Map<String, Object> tuple = new HashMap<String, Object>();
-            tuple.put("pyroprint", results.getString(1)); 
-            tuple.put("isolate", results.getString(2)); 
-            tuple.put("region", results.getString(3)); 
-            tuple.put("well", results.getString(4));
-            tuple.put("pHeight", results.getString(5));
-            tuple.put("nucleotide", results.getString(6));
-
-            rtn.add(tuple);
-         }
-      }
-      catch (SQLException sqlEx) { throw sqlEx; }
-      finally
-      {
-         if (results != null) { results.close(); }
-         if (statement != null) { statement.close(); }
-      }
-
-      return rtn;
-   }
-
-   public List<Map<String, Object>> getIsolateDataSetWithBothRegions() throws SQLException {
-      List<Map<String, Object>> isolateMap = new ArrayList<Map<String, Object>>();
-      Statement statement = null;
-      ResultSet results = null;
-
-      String query = "SELECT i.isoID, i.commonName, i.hostID, i.sampleID, " +
-                     "i.dateStored, i.pyroprintDate " +
-                     "FROM Isolates i join " +
-                           "Pyroprints p1 using (isoID) join " +
-                           "Pyroprints p2 using (isoID) " +
-                     "WHERE p1.appliedRegion != p2.appliedRegion and " +
-                           "p1.pyroID != p2.pyroID and " +
-                           "p1.pyroID in (SELECT DISTINCT pyroID FROM Histograms) and " +
-                           "p2.pyroID in (SELECT DISTINCT pyroID FROM Histograms) " +
-                     "GROUP BY i.isoID";
-
-      try {
-         statement = mConn.createStatement();
-         results = statement.executeQuery(query);
-
-         while (results.next()) {
-            Map<String, Object> tuple = new HashMap<String, Object>();
-
-            tuple.put("id", results.getString(1));
-            tuple.put("name", results.getString(2));
-            tuple.put("host", results.getString(3));
-            tuple.put("sample", new Integer(results.getInt(4)));
-            tuple.put("stored", results.getString(5));
-            tuple.put("pyroprinted", results.getString(6));
-
-            isolateMap.add(tuple);
-         }
-      }
-
-      catch (SQLException sqlEx) {
-         throw sqlEx;
-      }
-
-      finally {
-         if (results != null) {
-            results.close();
-         }
-
-         if (statement != null) {
-            statement.close();
-         }
-      }
-
-      return isolateMap;
-   }
-
-   public List<Map<String, Object>> getPyroprintDataSet() throws SQLException {
-      List<Map<String, Object>> rtn = new ArrayList<Map<String, Object>>();
-      Statement statement = null;
-      ResultSet results = null;
-
-      String query = String.format("SELECT pyroID, isoID, appliedRegion, " +
-                                   "dsName, forPrimer, revPrimer, seqPrimer, " +
-                                   "wellID " +
-                                   "FROM Pyroprints");
-      try {
-         statement = mConn.createStatement();
-         results = statement.executeQuery(query);
-
-         while (results.next()) {
-            Map<String, Object> tuple = new HashMap<String, Object>();
-            tuple.put("pyroprint", new Integer(results.getInt(1))); 
-            tuple.put("isolate", results.getString(2));
-            tuple.put("region", results.getString(3)); 
-            tuple.put("dispensation", results.getString(4)); 
-            tuple.put("forwardPrimer", results.getString(5)); 
-            tuple.put("reversePrimer", results.getString(6)); 
-            tuple.put("sequencePrimer", results.getString(7)); 
-            tuple.put("well", results.getString(8));
-
-            rtn.add(tuple);
-         }
-      }
-
-      catch (SQLException sqlEx) {
-         throw sqlEx;
-      }
-
-      finally {
-         if (results != null) {
-            results.close();
-         }
-
-         if (statement != null) {
-            statement.close();
-         }
-      }
-
-      return rtn;
    }
 
    /**

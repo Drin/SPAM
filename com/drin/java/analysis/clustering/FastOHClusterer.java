@@ -24,13 +24,19 @@ public class FastOHClusterer extends FastHierarchicalClusterer {
       mOntology = ontology;
    }
 
+   @Override
+   public List<FastCluster> getClusters() { return mResultClusters; }
+
+   @Override
    public void clusterData(List<FastCluster> clusters) {
       if (mOntology == null) {
          super.clusterData(clusters);
          return;
       }
 
-      for (FastCluster fastClust : clusters) { mOntology.addData(fastClust); }
+      for (FastCluster fastClust : clusters) {
+         mOntology.addData(fastClust);
+      }
 
       if (mOntology.getRoot().hasNewData()) {
          ontologicalCluster(mOntology.getRoot(), mAlphaThresh);
