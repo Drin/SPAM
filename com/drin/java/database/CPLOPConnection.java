@@ -256,7 +256,6 @@ public class CPLOPConnection {
 
    /*
     * Legacy methods
-    */
    public List<Map<String, Object>> getDataByIsoID(Ontology ont, String isoIds)
    throws SQLException
    {
@@ -270,6 +269,7 @@ public class CPLOPConnection {
       String searchID = "pyroID";
       return getData(ont, searchID, pyroIds);
    }
+    */
 
    public List<Map<String, Object>> getDataByExperimentName(String experiments) throws SQLException
    {
