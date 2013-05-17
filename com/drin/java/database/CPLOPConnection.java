@@ -22,8 +22,8 @@ import java.sql.SQLException;
 public class CPLOPConnection {
    private static final String DB_DRIVER = "com.mysql.jdbc.Driver";
    private static final String DB_URL = "jdbc:mysql://localhost/CPLOP?autoReconnect=true";
-   private static final String DB_USER = "amontana";
-   private static final String DB_PASS = "4ldr1n*(";
+   private static final String DB_USER = "";
+   private static final String DB_PASS = "";
    private static final int DEFAULT_PAGE_SIZE = 10000,
                             ISOLATE_LEN       = 188,
                             LEN_23S           = 93,
@@ -237,6 +237,200 @@ public class CPLOPConnection {
          isoIDs = ids;
          isoData = data;
       }
+   }
+
+   /*
+    * Legacy methods
+    */
+   public List<Map<String, Object>> getDataByIsoID(Ontology ont, String isoIds)
+   throws SQLException
+   {
+      String searchID = "isoID";
+      return getData(ont, searchID, isoIds);
+   }
+
+   public List<Map<String, Object>> getDataByPyroID(Ontology ont, String pyroIds)
+   throws SQLException
+   {
+      String searchID = "pyroID";
+      return getData(ont, searchID, pyroIds);
+   }
+
+   public List<Map<String, Object>> getDataByExperimentName(String experiments) throws SQLException
+   {
+      List<Map<String, Object>> rtn = new ArrayList<Map<String, Object>>();
+      Statement statement = null;
+      ResultSet results = null;
+
+      String query = String.format(
+       "SELECT pyroID, isoID, appliedRegion, wellID, pHeight, nucleotide " +
+       "FROM Experiments e join ExperimentPyroPrintLink ep using (ExperimentID) " +
+             "join Pyroprints p on (PyroprintID = pyroID) join Histograms using (pyroID) " +
+       "WHERE e.name in (%s) and pyroID in (Select distinct pyroID from Histograms)" + 
+       "ORDER BY isoID, pyroID, position asc", experiments);
+
+      try {
+         statement = mConn.createStatement();
+         results = statement.executeQuery(query);
+
+         while (results.next()) {
+            Map<String, Object> tuple = new HashMap<String, Object>();
+
+            tuple.put("pyroprint", results.getString(1)); 
+            tuple.put("isolate", results.getString(2)); 
+            tuple.put("region", results.getString(3)); 
+            tuple.put("well", results.getString(4));
+            tuple.put("pHeight", results.getString(5));
+            tuple.put("nucleotide", results.getString(6));
+
+            rtn.add(tuple);
+         }
+      }
+      catch (SQLException sqlEx) { throw sqlEx; }
+      finally
+      {
+         if (results != null) { results.close(); }
+         if (statement != null) { statement.close(); }
+      }
+
+      return rtn;
+   }
+
+   public List<Map<String, Object>> getExperimentDataSet() throws SQLException {
+      List<Map<String, Object>> experimentMap = new ArrayList<Map<String, Object>>();
+      Statement statement = null;
+      ResultSet results = null;
+
+      String query = "SELECT Name, count(*) as NumIsolates " +
+                     "FROM Experiments e join ExperimentPyroPrintLink ep using (ExperimentID) join " +
+                           "Pyroprints p on (PyroprintID = pyroID) " +
+                     "GROUP BY Name";
+
+      try {
+         statement = mConn.createStatement();
+         results = statement.executeQuery(query);
+
+         while (results.next()) {
+            Map<String, Object> tuple = new HashMap<String, Object>();
+
+            tuple.put("name", results.getString(1));
+            tuple.put("isolate count", new Integer(results.getInt(2)));
+
+            experimentMap.add(tuple);
+         }
+      }
+
+      catch (SQLException sqlEx) {
+         throw sqlEx;
+      }
+
+      finally {
+         if (results != null) {
+            results.close();
+         }
+
+         if (statement != null) {
+            statement.close();
+         }
+      }
+
+      return experimentMap;
+   }
+
+   public List<Map<String, Object>> getIsolateDataSetWithBothRegions() throws SQLException {
+      List<Map<String, Object>> isolateMap = new ArrayList<Map<String, Object>>();
+      Statement statement = null;
+      ResultSet results = null;
+
+      String query = "SELECT i.isoID, i.commonName, i.hostID, i.sampleID, " +
+                     "i.dateStored, i.pyroprintDate " +
+                     "FROM Isolates i join " +
+                           "Pyroprints p1 using (isoID) join " +
+                           "Pyroprints p2 using (isoID) " +
+                     "WHERE p1.appliedRegion != p2.appliedRegion and " +
+                           "p1.pyroID != p2.pyroID and " +
+                           "p1.pyroID in (SELECT DISTINCT pyroID FROM Histograms) and " +
+                           "p2.pyroID in (SELECT DISTINCT pyroID FROM Histograms) " +
+                     "GROUP BY i.isoID";
+
+      try {
+         statement = mConn.createStatement();
+         results = statement.executeQuery(query);
+
+         while (results.next()) {
+            Map<String, Object> tuple = new HashMap<String, Object>();
+
+            tuple.put("id", results.getString(1));
+            tuple.put("name", results.getString(2));
+            tuple.put("host", results.getString(3));
+            tuple.put("sample", new Integer(results.getInt(4)));
+            tuple.put("stored", results.getString(5));
+            tuple.put("pyroprinted", results.getString(6));
+
+            isolateMap.add(tuple);
+         }
+      }
+
+      catch (SQLException sqlEx) {
+         throw sqlEx;
+      }
+
+      finally {
+         if (results != null) {
+            results.close();
+         }
+
+         if (statement != null) {
+            statement.close();
+         }
+      }
+
+      return isolateMap;
+   }
+
+   public List<Map<String, Object>> getPyroprintDataSet() throws SQLException {
+      List<Map<String, Object>> rtn = new ArrayList<Map<String, Object>>();
+      Statement statement = null;
+      ResultSet results = null;
+
+      String query = String.format("SELECT pyroID, isoID, appliedRegion, " +
+                                   "dsName, forPrimer, revPrimer, seqPrimer, " +
+                                   "wellID " +
+                                   "FROM Pyroprints");
+      try {
+         statement = mConn.createStatement();
+         results = statement.executeQuery(query);
+
+         while (results.next()) {
+            Map<String, Object> tuple = new HashMap<String, Object>();
+            tuple.put("pyroprint", new Integer(results.getInt(1))); 
+            tuple.put("isolate", results.getString(2));
+            tuple.put("region", results.getString(3)); 
+            tuple.put("dispensation", results.getString(4)); 
+            tuple.put("forwardPrimer", results.getString(5)); 
+            tuple.put("reversePrimer", results.getString(6)); 
+            tuple.put("sequencePrimer", results.getString(7)); 
+            tuple.put("well", results.getString(8));
+
+            rtn.add(tuple);
+         }
+      }
+
+      catch (SQLException sqlEx) {
+         throw sqlEx;
+      }
+
+      finally {
+         if (results != null) {
+            results.close();
+         }
+
+         if (statement != null) {
+            statement.close();
+         }
+      }
+
+      return rtn;
    }
 
    /**
