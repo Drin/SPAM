@@ -1,7 +1,7 @@
 package com.drin.java.test;
 
-import com.drin.java.database.SpecialCPLOPConnection;
-import com.drin.java.database.SpecialCPLOPConnection.IsolateDataContainer;
+import com.drin.java.database.CPLOPConnection;
+import com.drin.java.database.CPLOPConnection.IsolateDataContainer;
 
 import com.drin.java.ontology.Ontology;
 
@@ -18,7 +18,7 @@ import java.util.HashMap;
 import java.io.File;
 
 public class FastSPAMEvaluationCPU {
-   private SpecialCPLOPConnection mConn;
+   private CPLOPConnection mConn;
    private Clusterer mClusterer;
    private Ontology mOntology;
    private Random mRand;
@@ -41,7 +41,7 @@ public class FastSPAMEvaluationCPU {
       mClusterer = new OHClusterer(ontology, threshList);
 
       try {
-         mConn = new SpecialCPLOPConnection();
+         mConn = new CPLOPConnection();
       }
       catch (Exception err) {
          err.printStackTrace();

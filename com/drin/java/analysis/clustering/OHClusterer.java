@@ -7,93 +7,109 @@ import com.drin.java.ontology.OntologyTerm;
 
 import com.drin.java.clustering.Cluster;
 
-import com.drin.java.util.Logger;
-
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 
-import javax.swing.JTextArea;
-
 public class OHClusterer extends AgglomerativeClusterer {
    private static final int ALPHA_THRESH_NDX = 0, BETA_THRESH_NDX = 1;
-   protected List<Cluster> mBoundaryClusters;
    protected Ontology mOntology;
 
-   public OHClusterer(List<Cluster> coreClusters, List<Cluster> boundaryClusters,
-                      Ontology ontology, List<Double> thresholds) {
-      super(coreClusters, thresholds);
-      mBoundaryClusters = boundaryClusters;
+   public OHClusterer(Ontology ontology, List<Double> thresholds) {
+      super(thresholds);
+
       mOntology = ontology;
+      mName = "OHClust!";
    }
 
-   private void printOntology() {
-      System.out.printf("cluster tree:\n%s\n", mOntology.printClusters());
-   }
-   
-   //TODO Canvas is a hack in order to indicate progress
    @Override
-   public void clusterData(JTextArea canvas) {
-      if (mOntology == null) { super.clusterData(canvas); }
-      else {
-         mResultClusters = new HashMap<Double, List<Cluster>>();
-         List<Cluster> resultClusters = ontologicalCluster(mOntology.getRoot(),
-                                                           mThresholds.get(ALPHA_THRESH_NDX),
-                                                           canvas);
+   public void clusterData(List<Cluster> clusters) {
+      if (mOntology == null) {
+         super.clusterData(clusters);
+         return;
+      }
+
+      incorporateClusters(clusters);
+
+      if (mOntology.getRoot().hasNewData()) {
+         ontologicalCluster(mOntology.getRoot(), mThresholds.get(ALPHA_THRESH_NDX));
+      }
+
+      List<Cluster> resultClusters = null;
+      if (mOntology.getRoot().getClusters() != null) {
+         resultClusters = new ArrayList<Cluster>(mOntology.getRoot().getClusters());
 
          mResultClusters.put(mThresholds.get(ALPHA_THRESH_NDX),
-                             new ArrayList<Cluster>(resultClusters));
+                             new ArrayList<Cluster>(mOntology.getRoot().getClusters()));
+      }
+      else {
+         System.err.println("No clusters formed!?");
+         System.exit(1);
+      }
 
-         for (int threshNdx = BETA_THRESH_NDX; threshNdx < mThresholds.size(); threshNdx++) {
-            super.clusterDataSet(resultClusters, mThresholds.get(threshNdx), canvas);
+      for (int threshNdx = BETA_THRESH_NDX; threshNdx < mThresholds.size(); threshNdx++) {
+         super.clusterDataSet(resultClusters, mThresholds.get(threshNdx));
 
-            mResultClusters.put(mThresholds.get(threshNdx), new ArrayList<Cluster>(resultClusters));
-         }
+         mResultClusters.put(mThresholds.get(threshNdx), new ArrayList<Cluster>(resultClusters));
       }
    }
 
-   private List<Cluster> ontologicalCluster(OntologyTerm root, double threshold, JTextArea canvas) {
+   private void ontologicalCluster(OntologyTerm root, double threshold) {
       List<Cluster> clusters = new ArrayList<Cluster>();
+      boolean unclusteredData = false;
 
-      if (root == null) { return clusters; }
+      if (root == null || !root.hasNewData()) { return; }
+      else if (!root.getPartitions().isEmpty()) {
 
-      else if (root.getPartitions() != null) {
          for (Map.Entry<String, OntologyTerm> partition : root.getPartitions().entrySet()) {
-            clusters.addAll(ontologicalCluster(partition.getValue(), threshold, canvas));
-      
-            if (root.isTimeSensitive()) {
-               Logger.debug("Clustering time sensitive clusters...");
+            if (partition.getValue() == null) { continue; }
 
-               clusterDataSet(clusters, threshold, canvas);
+            if (partition.getValue().hasNewData()) {
+               ontologicalCluster(partition.getValue(), threshold);
+               unclusteredData = true;
+            }
+
+            if (partition.getValue().getClusters() == null) { continue; }
+
+            clusters.addAll(partition.getValue().getClusters());
+            if (unclusteredData && root.isTimeSensitive()) {
+               clusterDataSet(clusters, threshold);
                root.setClusters(clusters);
-
-               printOntology();
             }
          }
       
-         if (!root.isTimeSensitive()) {
-            Logger.debug("Clustering non time sensitive clusters...");
-
-            clusterDataSet(clusters, threshold, canvas);
+         if (unclusteredData && !root.isTimeSensitive()) {
+            clusterDataSet(clusters, threshold);
             root.setClusters(clusters);
-
-            printOntology();
-
-            return clusters;
          }
       }
 
       else if (root.getData() != null) {
-         Logger.debug("percolating leaf cluster sets");
-
          clusters.addAll(root.getData());
-         clusterDataSet(clusters, threshold, canvas);
+         clusterDataSet(clusters, threshold);
          root.setClusters(clusters);
-
-         printOntology();
       }
+   }
 
-      return clusters;
+   private void incorporateClusters(List<Cluster> clusters) {
+      Map<String, Double> clustSimMap = null;
+      Cluster clust_A = null, clust_B = null;
+
+      //determine clusters that are close
+      for (int clustNdx_A = 0; clustNdx_A < clusters.size(); clustNdx_A++) {
+         clustSimMap = new HashMap<String, Double>(clusters.size() - clustNdx_A);
+         clust_A = clusters.get(clustNdx_A);
+
+         for (int clustNdx_B = clustNdx_A + 1; clustNdx_B < clusters.size(); clustNdx_B++) {
+            clust_B = clusters.get(clustNdx_B);
+
+            double clustComparison = clust_A.compareTo(clust_B);
+            clustSimMap.put(clust_B.getName(), new Double(clustComparison));
+         }
+
+         mSimMap.put(clust_A.getName(), clustSimMap);
+         mOntology.addData(clust_A);
+      }
    }
 }
