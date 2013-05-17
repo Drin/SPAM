@@ -8,6 +8,9 @@ import com.drin.java.ontology.Ontology;
 import com.drin.java.analysis.clustering.Clusterer;
 import com.drin.java.analysis.clustering.OHClusterer;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
@@ -18,6 +21,7 @@ import java.util.HashMap;
 import java.io.File;
 
 public class FastSPAMEvaluationCPU {
+   private final ExecutorService mThreadPool;
    private CPLOPConnection mConn;
    private Clusterer mClusterer;
    private Ontology mOntology;
@@ -31,6 +35,7 @@ public class FastSPAMEvaluationCPU {
    private static int REGION_OFFSETS[] = new int[] {0, LEN_23S};
 
    public FastSPAMEvaluationCPU(Ontology ontology) {
+      mThreadPool = Executors.newFixedThreadPool(64);
       mRand = new Random();
       mConn = null;
       mOntology = ontology;
@@ -81,30 +86,8 @@ public class FastSPAMEvaluationCPU {
 
          //populate the packed similarity matrix
          float simMatrix[] = runner.calculateSimMatrix(container.isoIDs, container.isoData);
-
-         //do whatevers
-         int valsOnLine = container.isoIDs.length, valNdx = 0;
-         for (simNdx = 0; simNdx < simMatrix.length; simNdx++) {
-            if (valNdx++ == valsOnLine) {
-               System.out.printf("\n");
-               valsOnLine--;
-               valNdx = 0;
-
-               for (int fillNdx = 0; fillNdx < container.isoIDs.length - valsOnLine; fillNdx++) {
-                  System.out.print("\t,");
-               }
-
-               break;
-            }
-
-            System.out.printf("\t%.04f,", simMatrix[simNdx]);
-         }
-
-         System.out.println("");
       }
-      catch (Exception ex) {
-         ex.printStackTrace();
-      }
+      catch (Exception ex) { ex.printStackTrace(); }
 
       System.out.printf("took about %d ms\n", System.currentTimeMillis() - start);
    }
@@ -117,58 +100,64 @@ public class FastSPAMEvaluationCPU {
          dataContainer = mConn.getIsolateData(dataSize);
          dataContainer.isoMeta = mConn.getIsolateMetaData(dataContainer.isoIDs, ont, dataSize);
       }
-      catch (java.sql.SQLException sqlErr) {
-         sqlErr.printStackTrace();
-      }
-      catch (Exception err) {
-         err.printStackTrace();
-      }
+      catch (java.sql.SQLException sqlErr) { sqlErr.printStackTrace(); }
+      catch (Exception err) { err.printStackTrace(); }
 
       return dataContainer;
    }
 
    public float[] calculateSimMatrix(int[] isoIDs, float[] isoData) {
-      int simMatrixSize = (isoIDs.length * (isoIDs.length - 1)) / 2, simNdx = 0;
-      float simMatrix[]  = new float[simMatrixSize];
-      float pearsonSum = 0.0f;
-      float peakHeightA = 0.0f, peakHeightB = 0.0f;
-      float sumA = 0.0f, sumB = 0.0f, sumAB = 0.0f,
-            sumASquared = 0.0f, sumBSquared = 0.0f;
+      private int simMatrixSize = (isoIDs.length * (isoIDs.length - 1)) / 2, simNdx = 0;
+      private float simMatrix[]  = new float[simMatrixSize];
 
-      for (int isoNdxA = 0; isoNdxA < isoIDs.length; isoNdxA++) {
-         for (int isoNdxB = isoNdxA + 1; isoNdxB < isoIDs.length; isoNdxB++) {
-            pearsonSum = 0.0f;
+      try {
+         for (int isoNdxA = 0; isoNdxA < isoIDs.length; isoNdxA++) {
+            for (int isoNdxB = isoNdxA + 1; isoNdxB < isoIDs.length; isoNdxB++) {
+               new PearsonCalculator() implements Runnable {
+                  private float pearsonSum = 0.0f;
+                  private float peakHeightA = 0.0f, peakHeightB = 0.0f;
+                  private float sumA = 0.0f, sumB = 0.0f, sumAB = 0.0f,
+                                sumASquared = 0.0f, sumBSquared = 0.0f;
 
-            for (int regNdx = 0; regNdx < REGION_LENS.length; regNdx++) {
-               sumA = 0.0f;
-               sumB = 0.0f;
-               sumAB = 0.0f;
-               sumASquared = 0.0f;
-               sumBSquared = 0.0f;
+                  public void run() {
+                     pearsonSum = 0.0f;
 
-               for (int peakNdx = 0; peakNdx < REGION_LENS[regNdx]; peakNdx++) {
+                     for (int regNdx = 0; regNdx < 2; regNdx++) {
+                        sumA = 0.0f;
+                        sumB = 0.0f;
+                        sumAB = 0.0f;
+                        sumASquared = 0.0f;
+                        sumBSquared = 0.0f;
 
-                  peakHeightA = isoData[isoNdxA * ISOLATE_LEN + peakNdx +
-                                        REGION_OFFSETS[regNdx]];
+                        for (int peakNdx = 0; peakNdx < REGION_LENS[regNdx]; peakNdx++) {
 
-                  peakHeightB = isoData[isoNdxB * ISOLATE_LEN + peakNdx +
-                                        REGION_OFFSETS[regNdx]];
+                           peakHeightA = isoData[isoNdxA * ISOLATE_LEN + peakNdx +
+                                                 REGION_OFFSETS[regNdx]];
 
-                  sumA += peakHeightA;
-                  sumB += peakHeightB;
-                  sumASquared += peakHeightA * peakHeightA;
-                  sumBSquared += peakHeightB * peakHeightB;
-                  sumAB += peakHeightA * peakHeightB;
+                           peakHeightB = isoData[isoNdxB * ISOLATE_LEN + peakNdx +
+                                                 REGION_OFFSETS[regNdx]];
 
+                           sumA += peakHeightA;
+                           sumB += peakHeightB;
+                           sumASquared += peakHeightA * peakHeightA;
+                           sumBSquared += peakHeightB * peakHeightB;
+                           sumAB += peakHeightA * peakHeightB;
+
+                        }
+
+                        pearsonSum += (REGION_LENS[regNdx] * sumAB - sumA * sumB) /
+                            Math.sqrt((REGION_LENS[regNdx] * sumASquared - sumA * sumA) * 
+                                      (REGION_LENS[regNdx] * sumBSquared - sumB * sumB));
+                     }
+
+                     simMatrix[simNdx++] = pearsonSum / 2;
+                  }
                }
-
-               pearsonSum += (REGION_LENS[regNdx] * sumAB - sumA * sumB) /
-                   Math.sqrt((REGION_LENS[regNdx] * sumASquared - sumA * sumA) * 
-                             (REGION_LENS[regNdx] * sumBSquared - sumB * sumB));
             }
-
-            simMatrix[simNdx++] = pearsonSum / 2;
          }
+      }
+      catch (IOException ioErr) {
+         ioErr.printStackTrace();
       }
 
       return simMatrix;
