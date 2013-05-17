@@ -28,7 +28,7 @@ public class HCluster extends Cluster {
 
    public void computeStatistics() {
       double minSim = Double.MAX_VALUE, total = 0;
-      int numComparisons = 0;
+      int numComparisons = 0, numSimilarComparisons = 0;
 
       for (Clusterable<?> elem_A : mElements) {
          for (Clusterable<?> elem_B : mElements) {
@@ -40,11 +40,13 @@ public class HCluster extends Cluster {
             numComparisons++;
 
             if (comparison < minSim) { minSim = comparison; }
+            if (comparison > 0.99) { numSimilarComparisons++; }
          }
       }
 
       mDiameter = minSim;
       mMean = numComparisons > 0 ? total / numComparisons : 0;
+      mPercentSimilar = ((double) numSimilarComparisons) / numComparisons;
    }
 
    public Cluster join(Cluster otherClust) {

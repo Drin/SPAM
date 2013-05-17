@@ -24,6 +24,8 @@ public class AnalysisWorker extends SwingWorker<AnalysisWorker.TaskResult, Integ
       mClusterer = clusterer;
       mCanvas = resultCanvas;
       mOutFile = null;
+
+      System.out.println("worker constructed");
    }
 
    public void setOutputFile(String outFileName) { mOutFile = outFileName; }
@@ -34,6 +36,7 @@ public class AnalysisWorker extends SwingWorker<AnalysisWorker.TaskResult, Integ
 
       mClusterer.setProgressCanvas(mCanvas);
       mClusterer.clusterData(mClusters);
+      System.out.println("clustering finished");
       return new TaskResult(System.currentTimeMillis() - startTime,
                             mClusterer.getClusters());
    }
@@ -44,6 +47,7 @@ public class AnalysisWorker extends SwingWorker<AnalysisWorker.TaskResult, Integ
 
       try {
          result = get();
+         System.out.println("worker finished!");
       }
       catch(InterruptedException interrErr) {
          Logger.error(-1, "Analysis worker interrupted while waiting for " +
@@ -56,7 +60,9 @@ public class AnalysisWorker extends SwingWorker<AnalysisWorker.TaskResult, Integ
       }
 
       if (result != null) {
-         ClusterWriter writer = new ClusterWriter(result.mClusterData);
+         ClusterWriter writer = new ClusterWriter(mClusterer, result.mClusterData, result.mElapsedTime);
+         System.out.println("persisting results!");
+         writer.persistResults();
          String elapsedTime = String.format("Elapsed Time: %d\n\n",
                                             result.mElapsedTime);
 
@@ -66,6 +72,9 @@ public class AnalysisWorker extends SwingWorker<AnalysisWorker.TaskResult, Integ
          }
 
          mCanvas.setText(elapsedTime + writer.getClustInfo());
+      }
+      else {
+         System.out.println("result is null!?!?");
       }
 
       Logger.debug("Analysis Worker finished!");

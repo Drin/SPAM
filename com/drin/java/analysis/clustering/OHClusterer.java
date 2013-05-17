@@ -30,7 +30,9 @@ public class OHClusterer extends AgglomerativeClusterer {
          return;
       }
 
-      incorporateClusters(clusters);
+      for (Cluster clust : clusters) {
+         mOntology.addData(clust);
+      }
 
       if (mOntology.getRoot().hasNewData()) {
          ontologicalCluster(mOntology.getRoot(), mThresholds.get(ALPHA_THRESH_NDX));
@@ -78,7 +80,7 @@ public class OHClusterer extends AgglomerativeClusterer {
                root.setClusters(clusters);
             }
          }
-      
+
          if (unclusteredData && !root.isTimeSensitive()) {
             clusterDataSet(clusters, threshold);
             root.setClusters(clusters);
@@ -89,27 +91,6 @@ public class OHClusterer extends AgglomerativeClusterer {
          clusters.addAll(root.getData());
          clusterDataSet(clusters, threshold);
          root.setClusters(clusters);
-      }
-   }
-
-   private void incorporateClusters(List<Cluster> clusters) {
-      Map<String, Double> clustSimMap = null;
-      Cluster clust_A = null, clust_B = null;
-
-      //determine clusters that are close
-      for (int clustNdx_A = 0; clustNdx_A < clusters.size(); clustNdx_A++) {
-         clustSimMap = new HashMap<String, Double>(clusters.size() - clustNdx_A);
-         clust_A = clusters.get(clustNdx_A);
-
-         for (int clustNdx_B = clustNdx_A + 1; clustNdx_B < clusters.size(); clustNdx_B++) {
-            clust_B = clusters.get(clustNdx_B);
-
-            double clustComparison = clust_A.compareTo(clust_B);
-            clustSimMap.put(clust_B.getName(), new Double(clustComparison));
-         }
-
-         mSimMap.put(clust_A.getName(), clustSimMap);
-         mOntology.addData(clust_A);
       }
    }
 }

@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 
+import java.sql.Timestamp;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -21,8 +22,8 @@ import java.sql.SQLException;
 
 public class CPLOPConnection {
    private static final String DB_DRIVER = "com.mysql.jdbc.Driver";
-   private static final String DB_URL = "jdbc:mysql://localhost/CPLOP?autoReconnect=true";
-   private static final String DB_USER = "";
+   private static final String DB_URL = "jdbc:mysql://localhost:8906/CPLOP?autoReconnect=true";
+   private static final String DB_USER = "drin";
    private static final String DB_PASS = "";
    private static final short DEFAULT_PAGE_SIZE = 10000,
                               ISOLATE_LEN       = 188;
@@ -488,6 +489,73 @@ public class CPLOPConnection {
       }
 
       return rtn;
+   }
+
+   public void executeInsert(String insertQuery) throws SQLException {
+      PreparedStatement insertSQL = null;
+
+      try {
+         System.out.printf("preparing insert:\n'%s'\n", insertQuery);
+         insertSQL = mConn.prepareStatement(insertQuery);
+         insertSQL.executeUpdate();
+      }
+      catch (SQLException sqlEx) { throw sqlEx; }
+      finally
+      {
+         if (insertSQL != null) { insertSQL.close(); }
+      }
+   }
+
+   public int getTestRunId() throws SQLException {
+      Statement stmt = null;
+      ResultSet results = null;
+      int newRunId = -1;
+
+      String query = String.format(
+          "SELECT last_insert_id()"
+      );
+
+      try {
+         stmt = mConn.createStatement();
+         results = stmt.executeQuery(query);
+         int numRows = 0;
+
+         while (results.next()) {
+            newRunId = results.getInt(1);
+            numRows++;
+         }
+
+         if (numRows > 1) {
+            System.err.printf("Retrieving last insert id " +
+                              "returned multiple rows\n");
+         }
+      }
+      catch (SQLException sqlEx) { throw sqlEx; }
+      finally
+      {
+         if (results != null) { results.close(); }
+         if (stmt != null) { stmt.close(); }
+      }
+
+      return newRunId;
+   }
+
+   public void insertNewRun(String insertQuery) throws SQLException {
+      Timestamp runDate = new Timestamp(new Date().getTime());
+      PreparedStatement insertSQL = null;
+
+      System.out.printf("%s\n", insertQuery);
+
+      try {
+         insertSQL = mConn.prepareStatement(insertQuery);
+         insertSQL.setTimestamp(1, runDate);
+         insertSQL.executeUpdate();
+      }
+      catch (SQLException sqlEx) { throw sqlEx; }
+      finally
+      {
+         if (insertSQL != null) { insertSQL.close(); }
+      }
    }
 
    /**

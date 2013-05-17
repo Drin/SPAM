@@ -23,7 +23,7 @@ public abstract class Cluster implements Labelable {
    protected DataMetric<Cluster> mMetric;
    protected Dendogram mDendogram;
    protected Set<Clusterable<?>> mElements;
-   protected double mDiameter, mMean;
+   protected double mDiameter, mMean, mPercentSimilar;
 
    public Cluster(DataMetric<Cluster> metric) { this(CLUST_ID++, metric); }
 
@@ -40,6 +40,7 @@ public abstract class Cluster implements Labelable {
       mMean = -2;
    }
 
+   public double getPercentSimilar() { return mPercentSimilar; }
    public int getId() { return mId; }
    public static void resetClusterIDs() { Cluster.CLUST_ID = 1; }
    public String getName() { return mName; }

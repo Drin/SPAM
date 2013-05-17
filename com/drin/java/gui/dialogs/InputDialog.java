@@ -3,6 +3,7 @@ package com.drin.java.gui.dialogs;
 import com.drin.java.biology.Isolate;
 import com.drin.java.biology.ITSRegion;
 import com.drin.java.biology.Pyroprint;
+import com.drin.java.output.ClusterWriter;
 
 import com.drin.java.clustering.Clusterable;
 import com.drin.java.clustering.Cluster;
@@ -380,11 +381,20 @@ public class InputDialog extends JDialog {
          clusterer = new AgglomerativeClusterer(thresholds);
       }
 
+      long startCluster = System.currentTimeMillis();
+      clusterer.clusterData(clusters);
+
+      long finishCluster = System.currentTimeMillis() - startCluster;
+
+      ClusterWriter writer = new ClusterWriter(clusterer, clusterer.getClusters(), finishCluster);
+      writer.persistResults();
+      /*
       AnalysisWorker worker = new AnalysisWorker(clusterer, clusters,
        MainWindow.getMainFrame().getOutputCanvas());
+       */
 
-      worker.setOutputFile(mOutFile.getText());
-      worker.execute();
+      //worker.setOutputFile(mOutFile.getText());
+      //worker.execute();
 
       System.out.println("Time to prepare clusterer: " + (System.currentTimeMillis() - startTime));
 
@@ -547,8 +557,7 @@ public class InputDialog extends JDialog {
                                           new IsolateAverageMetric()));
          }
 
-         isoMap.get(isoID).getData().add(new ITSRegion(regName, alphaThresh, betaThresh,
-                                         new ITSRegionAverageMetric(alphaThresh, betaThresh)));
+         isoMap.get(isoID).getData().add(new ITSRegion(regName, new ITSRegionAverageMetric()));
 
          //maintain pyroprint information based on isoID as we iterate over
          //tuples.
