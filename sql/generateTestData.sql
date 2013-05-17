@@ -5,7 +5,7 @@
 
 DELIMITER $$
 
--- DROP PROCEDURE IF EXISTS prepareTestTables$$
+DROP PROCEDURE IF EXISTS prepareTestTables$$
 CREATE PROCEDURE prepareTestTables()
 BEGIN
    INSERT IGNORE INTO test_isolates(name_prefix, name_suffix, sampleID, commonName, userName, hostID)
@@ -30,7 +30,7 @@ BEGIN
    WHERE pyroID IN (SELECT DISTINCT pyroID FROM test_pyroprints);
 END$$
 
--- DROP PROCEDURE IF EXISTS randomizeIsolates$$
+DROP PROCEDURE IF EXISTS randomizeIsolates$$
 CREATE PROCEDURE randomizeIsolates(IN randSeed INT)
 BEGIN
    DROP TEMPORARY TABLE IF EXISTS test_isolates_random;

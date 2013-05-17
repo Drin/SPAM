@@ -27,10 +27,10 @@ import java.sql.SQLException;
  */
 public class CPLOPConnection {
    private static final String DB_DRIVER = "com.mysql.jdbc.Driver";
-   private static final String DB_URL = "jdbc:mysql://localhost/CPLOP?autoReconnect=true";
-   private static final String DB_INFO_URL = "jdbc:mysql://localhost/information_schema?autoReconnect=true";
-   private static final String DB_USER = "amontana";
-   private static final String DB_PASS = "4ldr1n*(";
+   private static final String DB_URL = "jdbc:mysql://localhost:8906/CPLOP?autoReconnect=true";
+   private static final String DB_INFO_URL = "jdbc:mysql://localhost:8906/information_schema?autoReconnect=true";
+   private static final String DB_USER = "drin";
+   private static final String DB_PASS = "";
 
    private Connection conn, schemaConn;
    private static CPLOPConnection mCPLOPConnection = null;
@@ -793,7 +793,7 @@ public class CPLOPConnection {
                "(SELECT random_id, test_isolate_id " +
                " FROM test_isolates_random " +
                " %s) rand_table USING (test_isolate_id) " +
-          "WHERE %s " + 
+          "WHERE %s " +
           "ORDER BY random_id, pyroID, position asc ",
           placeHolder, placeHolder, pagination, placeHolder
       );
@@ -809,8 +809,8 @@ public class CPLOPConnection {
             Map<String, Object> tuple = new HashMap<String, Object>();
             tuple.put("isolate", String.format("%s-%s", results.getString(1),
                                                results.getString(2)));
-            tuple.put("pyroprint", results.getString(3)); 
-            tuple.put("region", results.getString(4)); 
+            tuple.put("pyroprint", results.getString(3));
+            tuple.put("region", results.getString(4));
             tuple.put("well", results.getString(5));
             tuple.put("pHeight", results.getString(6));
             tuple.put("nucleotide", results.getString(7));

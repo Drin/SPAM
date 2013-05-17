@@ -1,6 +1,6 @@
--- DROP TABLE IF EXISTS test_histograms;
--- DROP TABLE IF EXISTS test_pyroprints;
--- DROP TABLE IF EXISTS test_isolates;
+DROP TABLE IF EXISTS test_histograms;
+DROP TABLE IF EXISTS test_pyroprints;
+DROP TABLE IF EXISTS test_isolates;
 
 CREATE TABLE IF NOT EXISTS test_isolates(
    test_isolate_id INT PRIMARY KEY AUTO_INCREMENT,

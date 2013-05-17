@@ -115,13 +115,13 @@ BEGIN
    DECLARE pyro_1_sum, pyro_2_sum, pyro_product FLOAT DEFAULT 0;
    DECLARE pyro_1_squared_sum, pyro_2_squared_sum FLOAT DEFAULT 0;
    DECLARE nucleotide_1, nucleotide_2 VARCHAR(1) DEFAULT NULL;
-   DECLARE peak_height_1, peak_height_2 DEC(5, 4) DEFAULT 0;
+   DECLARE peak_height_1, peak_height_2 FLOAT DEFAULT 0;
 
    DECLARE COMPARE_CURSOR CURSOR FOR
       SELECT h1.nucleotide, h1.pHeight, h2.nucleotide, h2.pHeight
       FROM test_histograms h1 join test_histograms h2 on (
               h1.pyroID = pyro_id_1 AND h2.pyroID = pyro_id_2 AND
-              h1.position = h2.position AND h1.position <= pyro_len AND
+              h1.position = h2.position AND h1.position < pyro_len AND
               h2.position < pyro_len
            )
       ORDER BY h1.pyroID, h1.position, h2.pyroID, h2.position;
@@ -133,17 +133,15 @@ BEGIN
       FETCH COMPARE_CURSOR INTO nucleotide_1, peak_height_1,
                                 nucleotide_2, peak_height_2;
 
-      IF nucleotide_1 = nucleotide_2 THEN
-         SET peak_count = peak_count + 1;
+      SET peak_count = peak_count + 1;
 
-         SET pyro_1_sum = pyro_1_sum + peak_height_1;
-         SET pyro_2_sum = pyro_2_sum + peak_height_2;
+      SET pyro_1_sum = pyro_1_sum + peak_height_1;
+      SET pyro_2_sum = pyro_2_sum + peak_height_2;
 
-         SET pyro_1_squared_sum = pyro_1_squared_sum + (peak_height_1 * peak_height_1);
-         SET pyro_2_squared_sum = pyro_2_squared_sum + (peak_height_2 * peak_height_2);
+      SET pyro_1_squared_sum = pyro_1_squared_sum + (peak_height_1 * peak_height_1);
+      SET pyro_2_squared_sum = pyro_2_squared_sum + (peak_height_2 * peak_height_2);
 
-         SET pyro_product = pyro_product + (peak_height_1 * peak_height_2);
-      END IF;
+      SET pyro_product = pyro_product + (peak_height_1 * peak_height_2);
 
       IF done THEN
          LEAVE PYRO_COMPARE_LOOP;

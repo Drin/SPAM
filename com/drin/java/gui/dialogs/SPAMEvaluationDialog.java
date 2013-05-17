@@ -22,6 +22,7 @@ import com.drin.java.analysis.clustering.OHClusterer;
 import com.drin.java.gui.MainWindow;
 import com.drin.java.gui.listeners.DataQueryButtonListener;
 import com.drin.java.gui.components.AnalysisWorker;
+import com.drin.java.gui.components.AnalysisWorker.TaskResult;
 import com.drin.java.database.CPLOPConnection;
 
 import com.drin.java.util.Configuration;
@@ -55,7 +56,7 @@ import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Set;
 
-public class InputDialog extends JDialog {
+public class SPAMEvaluationDialog extends JDialog {
    /*
     * CONSTANTS
     */
@@ -87,7 +88,7 @@ public class InputDialog extends JDialog {
    private CPLOPConnection mConn;
    private long startTime;
 
-   public InputDialog(Frame owner, String title) {
+   public SPAMEvaluationDialog(Frame owner, String title) {
       super(owner, title);
 
       this.setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
@@ -128,12 +129,12 @@ public class InputDialog extends JDialog {
       mDataSetType = new JComboBox<String>(DATA_TYPE_VALUES);
    }
 
-   public InputDialog() {
+   public SPAMEvaluationDialog() {
       this(null, DEFAULT_TITLE);
    }
 
    public static void main(String[] args) {
-      InputDialog dialog = new InputDialog();
+      SPAMEvaluationDialog dialog = new SPAMEvaluationDialog();
 
       dialog.init();
       dialog.setVisible(true);
@@ -215,9 +216,9 @@ public class InputDialog extends JDialog {
                File curDir = new File(mRecentDir);
                chooser.setCurrentDirectory(curDir);
             }
-            
+
             int returnVal = chooser.showOpenDialog(chooser);
-            
+
             if (returnVal == JFileChooser.APPROVE_OPTION) {
                File dataFile = chooser.getSelectedFile();
                infile.setText(dataFile.getAbsolutePath());
@@ -378,7 +379,12 @@ public class InputDialog extends JDialog {
       if (mConf != null && mConf.getAttr(Configuration.ONT_KEY) != null) {
          ontology = Ontology.createOntology(new File(mConf.getAttr(Configuration.ONT_KEY)));
       }
-      
+
+      int use_transform = 0;
+      if (Boolean.parseBoolean(mConf.getAttr(Configuration.TRANSFORM_KEY))) {
+         use_transform = 1;
+      }
+
       ClusterAverageMetric clustMetric = new ClusterAverageMetric();
 
       startTime = System.currentTimeMillis();
@@ -400,6 +406,8 @@ public class InputDialog extends JDialog {
          clusters.add(new HCluster(clustMetric, entity));
       }
 
+      int initialSize = clusters.size();
+
       clusterer = new OHClusterer(ontology, thresholds);
       clusterer.setProgressCanvas(MainWindow.getMainFrame().getOutputCanvas());
 
@@ -407,12 +415,135 @@ public class InputDialog extends JDialog {
        MainWindow.getMainFrame().getOutputCanvas());
 
       worker.setOutputFile(mOutFile.getText());
-      worker.execute();
 
-      Logger.debug(String.format("Time to prepare clusterer: %d ms",
+      worker.execute();
+      TaskResult result = null;
+      try {
+         result = worker.get();
+      }
+      catch(Exception err) {
+         err.printStackTrace();
+      }
+
+      /*
+       * store results
+       */
+      try {
+         mConn.insertNewRun(String.format(
+            "INSERT INTO test_runs(run_date, run_time, cluster_algorithm," +
+                                  "average_strain_similarity, use_transform) " +
+            "VALUES (?, '%s', '%s', %.04f, %d)",
+            getElapsedTime(result.mElapsedTime), clusterer.getName(),
+            clusterer.getInterClusterSimilarity(), use_transform
+         ));
+
+         int runID = mConn.getTestRunId();
+
+         String performanceInsert = String.format(
+               "INSERT INTO test_run_performance(" +
+               "test_run_id, update_id, update_size, run_time) " +
+               "VALUES (%d, %d, %d, %d)",
+               runID, 0, initialSize, result.mElapsedTime
+         );
+         mConn.executeInsert(performanceInsert);
+
+         if (runID != -1) {
+            for (String sqlQuery : getSQLInserts(runID, result.mClusterData)) {
+               if (sqlQuery != null) {
+                  System.out.printf("%s\n", sqlQuery);
+
+                  try { mConn.executeInsert(sqlQuery); }
+                  catch(java.sql.SQLException sqlErr) {
+                     sqlErr.printStackTrace();
+                  }
+               }
+            }
+         }
+      }
+      catch (java.sql.SQLException sqlErr) {
+         sqlErr.printStackTrace();
+      }
+
+      Logger.debug(String.format("Time to do all that stuff: %d ms",
                    (System.currentTimeMillis() - startTime)));
 
       return true;
+   }
+
+   private String[] getSQLInserts(int clusterRun, Map<Double, List<Cluster>> clusters) {
+      String[] sqlInserts = new String[100];
+      int isoId = -1, delimNdx = -1, clustNum = 0, isolateNum = 0, limit = 1000, sqlNdx = 0;
+      String strainInsert = "INSERT INTO test_run_strain_link(" +
+                             "test_run_id, cluster_id, cluster_threshold, " +
+                             "strain_diameter, average_isolate_similarity, " +
+                             "percent_similar_isolates) VALUES ";
+      String isolateInsert = "INSERT INTO test_isolate_strains(" +
+                              "test_run_id, cluster_id, cluster_threshold, " +
+                              "name_prefix, name_suffix) VALUES ";
+      String run_strain_link = strainInsert, isolate_strain = isolateInsert, elementName, isoDesignation;
+
+      for (Map.Entry<Double, List<Cluster>> clusterData : clusters.entrySet()) {
+         for (Cluster cluster : clusterData.getValue()) {
+
+            if (sqlNdx >= sqlInserts.length - 2) {
+               String[] newArr = new String[sqlInserts.length * 2];
+               for (int ndx = 0; ndx < sqlInserts.length; ndx++) {
+                  newArr[ndx] = sqlInserts[ndx];
+               }
+            }
+
+            if (clustNum > 0 && clustNum++ % limit == 0) {
+               sqlInserts[sqlNdx++] = run_strain_link.substring(0, run_strain_link.length() - 2);
+               System.out.printf("sqlInsert: \n\t%s\n", sqlInserts[sqlNdx - 1]);
+
+               run_strain_link = strainInsert;
+            }
+
+            run_strain_link += String.format(
+               "(%d, %d, %.04f, %.04f, %.04f, %.04f), ",
+               clusterRun, cluster.getId(), clusterData.getKey().doubleValue(),
+               cluster.getDiameter(), cluster.getPercentSimilar(), cluster.getMean()
+            );
+
+            for (Clusterable<?> element : cluster.getElements()) {
+               elementName = element.getName();
+               delimNdx = elementName.indexOf("-");
+               isoDesignation = elementName.substring(0, delimNdx);
+               isoId = Integer.parseInt(elementName.substring(delimNdx + 1, elementName.length()));
+
+               if (isolateNum > 0 && isolateNum++ % limit == 0) {
+                  sqlInserts[sqlNdx++] = isolate_strain.substring(0, isolate_strain.length() - 2);
+                  System.out.printf("sqlInsert: \n\t%s\n", sqlInserts[sqlNdx - 1]);
+
+                  isolate_strain = isolateInsert;
+               }
+
+               isolate_strain += String.format(
+                  "(%d, %d, %.04f, '%s', %d), ",
+                  clusterRun, cluster.getId(), clusterData.getKey().doubleValue(),
+                  isoDesignation, isoId
+               );
+            }
+         }
+      }
+
+      if (!run_strain_link.equals(strainInsert)) {
+         sqlInserts[sqlNdx++] = run_strain_link.substring(0, run_strain_link.length() - 2);
+      }
+
+      if (!isolate_strain.equals(isolateInsert)) {
+         sqlInserts[sqlNdx++] = isolate_strain.substring(0, isolate_strain.length() - 2);
+      }
+
+      return sqlInserts;
+   }
+
+   private String getElapsedTime(long clusterTime) {
+      long hours = clusterTime / 3600000;
+      long minutes = (clusterTime % 3600000) / 60000;
+      long seconds = ((clusterTime % 3600000) % 60000) / 1000;
+
+      return String.format("%02d:%02d:%02d", hours, minutes, seconds);
    }
 
    @SuppressWarnings({ "unchecked", "rawtypes" })
