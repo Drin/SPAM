@@ -21,9 +21,9 @@ import java.sql.SQLException;
 
 public class CPLOPConnection {
    private static final String DB_DRIVER = "com.mysql.jdbc.Driver";
-   private static final String DB_URL = "jdbc:mysql://localhost/CPLOP?autoReconnect=true";
-   private static final String DB_USER = "";
-   private static final String DB_PASS = "";
+   private static final String DB_URL = "jdbc:mysql://cslvm96.csc.calpoly.edu/CPLOP?autoReconnect=true";
+   private static final String DB_USER = "amontana";
+   private static final String DB_PASS = "ILoveData#";
    private static final int DEFAULT_PAGE_SIZE = 10000,
                             ISOLATE_LEN       = 188,
                             LEN_23S           = 93,
