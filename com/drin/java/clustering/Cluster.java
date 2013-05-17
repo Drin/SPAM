@@ -10,6 +10,7 @@ import com.drin.java.metrics.DataMetric;
 
 import com.drin.java.util.Logger;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
 
@@ -28,7 +29,7 @@ public abstract class Cluster implements Labelable {
    public Cluster(int clustId, DataMetric<Cluster> metric) {
       mName = String.format("%d", clustId);
       mMetric = metric;
-      
+
       mDendogram = null;
       mLabel = new OntologyLabel();
       mElements = new HashSet<Clusterable<?>>();
@@ -56,6 +57,8 @@ public abstract class Cluster implements Labelable {
     */
    public void addLabel(String label, String value) { mLabel.addLabel(label, value); }
    public boolean hasLabel(String label) { return mLabel.hasLabel(label); }
+   public String getLabelValue(String label) { return mLabel.getLabelValue(label); }
+   public Map<String, String> getLabels() { return mLabel.getLabels(); }
 
    @Override
    public boolean equals(Object otherObj) {

@@ -40,12 +40,18 @@ public class Isolate extends Clusterable<ITSRegion> implements Labelable {
       mComparisonCache = new HashMap<String, Double>();
    }
 
-   public void addLabel(String labelName) {
-      mLabel.addLabel(labelName);
+   public void addLabel(String labelName, String labelVal) {
+      mLabel.addLabel(labelName, labelVal);
    }
 
    public boolean hasLabel(String labelName) {
       return mLabel.hasLabel(labelName);
+   }
+   public String getLabelValue(String label) {
+      return mLabel.getLabelValue(label);
+   }
+   public Map<String, String> getLabels() {
+      return mLabel.getLabels();
    }
 
    @Override
