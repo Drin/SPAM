@@ -1,5 +1,6 @@
 package com.drin.java.database;
 
+import com.drin.java.ontology.FastOntology;
 import com.drin.java.ontology.Ontology;
 
 import java.util.List;
@@ -165,16 +166,7 @@ public class CPLOPConnection {
    }
 
    public String[][] getIsolateMetaData(int[] ids, Ontology ont, short dataSize) throws SQLException {
-      return getIsolateMetaData(ids, ont, dataSize, DEFAULT_PAGE_SIZE);
-   }
-
-   public String[][] getIsolateMetaData(int[] ids, Ontology ont, short dataSize, short pageSize) {
-      Statement statement = null;
-      ResultSet results = null;
-      String metaColumns = "", metaIDs = "";
-      String metaLabels[][] = new String[ids.length][];
-      int tmp_id = -1, isolateID = -1;
-      short isolateNdx = -1;
+      String metaColumns = "";
       byte numColumns = 0;
 
       for (Map.Entry<String, Set<String>> ont_entry : ont.getTableColumns().entrySet()) {
@@ -184,12 +176,44 @@ public class CPLOPConnection {
          }
       }
 
+      return getIsolateMetaData(ids, metaColumns, numColumns, dataSize, DEFAULT_PAGE_SIZE);
+   }
+
+   public String[][] getIsolateMetaData(int[] ids, FastOntology ont, short dataSize) throws SQLException {
+      String metaColumns = "";
+      byte numColumns = 0;
+
+      for (Map.Entry<String, Set<String>> ont_entry : ont.getTableColumns().entrySet()) {
+         for (String col_name : ont_entry.getValue()) {
+            metaColumns += "," + col_name;
+            numColumns++;
+         }
+      }
+
+      return getIsolateMetaData(ids, metaColumns, numColumns, dataSize, DEFAULT_PAGE_SIZE);
+   }
+
+   public String[][] getIsolateMetaData(int[] ids, String metaColumns, byte numColumns, short dataSize, short pageSize) {
+      Statement statement = null;
+      ResultSet results = null;
+      String metaIDs = "";
+      String metaLabels[][] = new String[ids.length][];
+      int tmp_id = -1, isolateID = -1;
+      short isolateNdx = -1;
+
       for (int id_ndx = 0; id_ndx < ids.length; id_ndx++) {
          metaIDs += "," + ids[id_ndx];
       }
 
       try {
          for (int pageNdx = 0; pageNdx < Math.ceil((float) dataSize / pageSize); pageNdx++) {
+            /*
+            System.out.println(String.format(META_QUERY,
+               metaColumns, metaIDs.substring(1),
+               Math.min(pageSize, dataSize - (pageNdx * pageSize)),
+               pageNdx * pageSize
+            ));
+            */
             statement = mConn.createStatement();
             results = statement.executeQuery(String.format(META_QUERY,
                metaColumns, metaIDs.substring(1),

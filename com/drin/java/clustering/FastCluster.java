@@ -12,20 +12,25 @@ public class FastCluster {
 
    private static final ExecutorService mThreadPool = Executors.newFixedThreadPool(64);
    private short[] mElements;
+   private short mTail, mSize;
 
    public FastCluster(short iso_id) {
       mElements = new short[2];
       mElements[0] = iso_id;
+      mTail = 1;
+      mSize = 1;
    }
 
    public short getID() { return mElements[0]; }
-   public short size() { return (short) mElements.length; }
+   public short size() { return mSize; }
+
    //TODO
    public float getDiameter() { return 0.0f; }
    public float getMean() { return 0.0f; }
 
    public float compareTo(FastCluster other) {
       final short[] elemsA = mElements, elemsB = other.mElements;
+      final short lastA = mSize, lastB = other.mSize;
       Float comparison = null;
 
       try {
@@ -33,8 +38,8 @@ public class FastCluster {
             public Float call() {
                float clustSim = 0;
 
-               for (short elemNdxA = 0; elemNdxA < elemsA.length; elemNdxA++) {
-                  for (short elemNdxB = 0; elemNdxB < elemsB.length; elemNdxB++) {
+               for (short elemNdxA = 0; elemNdxA < lastA; elemNdxA++) {
+                  for (short elemNdxB = 0; elemNdxB < lastB; elemNdxB++) {
                      if (elemsA[elemNdxA] > elemsB[elemNdxB]) {
                         clustSim += mSimMatrix[mSimMapping[elemsB[elemNdxB]][
                            elemsA[elemNdxA] % (mNumIsolates - elemsA[elemNdxA])]
@@ -59,6 +64,27 @@ public class FastCluster {
       }
 
       return 0;
+   }
+
+   public void incorporate(FastCluster other) {
+      if (mElements.length < mSize + other.mSize) {
+         short[] newArr = new short[(mElements.length * 2) + other.mSize];
+
+         for (short newNdx = 0; newNdx < mSize; newNdx++) {
+            newArr[newNdx] = mElements[newNdx];
+         }
+
+         mElements = newArr;
+      }
+
+      for (short otherNdx = 0; otherNdx < other.mSize; otherNdx++) {
+         mElements[mTail++] = other.mElements[otherNdx];
+         mSize++;
+      }
+   }
+
+   public static void shutdownThreadPool() {
+      mThreadPool.shutdown();
    }
 
    @Override

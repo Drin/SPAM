@@ -3,11 +3,12 @@ package com.drin.java.test;
 import com.drin.java.database.CPLOPConnection;
 import com.drin.java.database.CPLOPConnection.IsolateDataContainer;
 
-import com.drin.java.ontology.Ontology;
+import com.drin.java.ontology.FastOntology;
+import com.drin.java.ontology.FastOntologyTerm;
 
 import com.drin.java.clustering.FastCluster;
-import com.drin.java.analysis.clustering.Clusterer;
-import com.drin.java.analysis.clustering.OHClusterer;
+import com.drin.java.analysis.clustering.FastHierarchicalClusterer;
+import com.drin.java.analysis.clustering.FastOHClusterer;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
@@ -36,7 +37,7 @@ public class FastSPAMEvaluationCPU {
    private static byte REGION_LENS[] = new byte[] {LEN_23S, LEN_16S};
    private static byte REGION_OFFSETS[] = new byte[] {0, LEN_23S};
 
-   public FastSPAMEvaluationCPU(Ontology ontology) {
+   public FastSPAMEvaluationCPU(FastOntology ontology) {
       mThreadPool = Executors.newFixedThreadPool(64);
       mConn = null;
       /*
@@ -56,25 +57,27 @@ public class FastSPAMEvaluationCPU {
 
    public static void main(String[] args) {
       FastSPAMEvaluationCPU runner = new FastSPAMEvaluationCPU(null);
-      Ontology clust_ont = Ontology.createOntology(
+      FastOntology clust_ont = FastOntology.createFastOntology(
          new File("ontologies/specific.ont")
       );
 
-      System.out.println(clust_ont);
-
-      short initSize = 1000, upSize = 100, numUps = 100;
+      short initSize = 100, upSize = 100, numUps = 10;
       int[][] simMapping;
 
       long start = System.currentTimeMillis();
 
+      System.out.printf("initial: %d\nupdate size: %d\nnum ups: %d\n",
+         initSize, upSize, numUps
+      );
+
       try {
+         //Get Data
          IsolateDataContainer container = runner.getIsolateData(clust_ont, initSize, upSize, numUps);
+         FastOntology.mIsoMeta = container.isoMeta;
+         FastOntologyTerm.mIsoLabels = container.isoMeta;
 
-         List<FastCluster> clusters = new ArrayList<FastCluster>(container.isoIDs.length);
-
-         for (short isoNdx = 0; isoNdx < container.isoIDs.length; isoNdx++) {
-            clusters.add(new FastCluster(isoNdx));
-         }
+         //initialize cluster list
+         List<FastCluster> clusters = new ArrayList<FastCluster>(initSize);
 
          //create a lookup table for isolate IDs to a spot in the packed similarity matrix
          simMapping = new int[container.isoIDs.length][];
@@ -103,13 +106,37 @@ public class FastSPAMEvaluationCPU {
          FastCluster.mSimMatrix = simMatrix;
          FastCluster.mSimMapping = simMapping;
 
+         //FastHierarchicalClusterer clusterer = new FastHierarchicalClusterer((short) container.isoIDs.length, 0.85f);
+         FastHierarchicalClusterer clusterer = new FastOHClusterer(clust_ont, (short) container.isoIDs.length, 0.85f, 0.80f);
+
+         List<FastCluster> tmpClusters = null;
+         short isoStart = 0, isoEnd = initSize;
+         long startCluster = System.currentTimeMillis(), finishCluster;
+
+         for (byte currUp = (byte) (-1);  currUp < numUps; currUp++) {
+
+            for (short isoNdx = isoStart; isoNdx < Math.min(isoEnd, container.isoIDs.length); isoNdx++) {
+               clusters.add(new FastCluster(isoNdx));
+            }
+
+            tmpClusters = new ArrayList<FastCluster>(clusters);
+
+            clusterer.clusterData(tmpClusters);
+
+            finishCluster = System.currentTimeMillis() - start;
+
+            System.out.printf("%d ms\n", finishCluster);
+            System.out.printf("%d data size\n", clusters.size());
+         }
       }
       catch (Exception ex) { ex.printStackTrace(); }
 
       System.out.printf("took about %d ms\n", System.currentTimeMillis() - start);
+      FastCluster.shutdownThreadPool();
+      System.out.println(clust_ont);
    }
 
-   public IsolateDataContainer getIsolateData(Ontology ont, short initSize, short upSize, short numUps) {
+   public IsolateDataContainer getIsolateData(FastOntology ont, short initSize, short upSize, short numUps) {
       short dataSize = (short) (initSize + (upSize * numUps));
       IsolateDataContainer dataContainer = null;
 
