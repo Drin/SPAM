@@ -20,7 +20,7 @@ runSpam:
 	$(ENGINE) $(SPAM_MAIN)
 	@echo "finished running."
 
-spamGUI: SpamGUI.java
+gui: InputDialog.java
 	@echo "-------------------------------"
 	find $(PACKAGE_PATH) -name $^ | xargs $(CC) $(JFLAGS) $(CLASSES)
 	@echo "-------------------------------"
@@ -39,7 +39,7 @@ docSpam:
 ############ Drivers ############
 #################################
 
-SpamGUI.java:
+InputDialog.java:
 
 FastSPAMEvaluationCPU.java:
 
