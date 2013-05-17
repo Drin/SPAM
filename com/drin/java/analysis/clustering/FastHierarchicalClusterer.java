@@ -17,6 +17,7 @@ public class FastHierarchicalClusterer {
    }
 
    public List<FastCluster> getClusters() { return mResultClusters; }
+   public float getThreshold() { return mThresh; }
 
    public void persistentClusterData(List<FastCluster> clusters) {
       mResultClusters.addAll(clusters);
@@ -57,7 +58,7 @@ public class FastHierarchicalClusterer {
       } while (closeA != -1 && closeB != -1 && clusters.size() > 1);
    }
 
-   public float getInterClusterSimilarity() {
+   public float getInterStrainSim() {
       float totalClusterSimilarity = 0;
       short similarityCount = 0;
 

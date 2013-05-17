@@ -15,7 +15,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 
 public class FastOntology {
-   public static String[][] mIsoMeta;
    private FastOntologyTerm mRoot;
    private Map<String, Set<String>> mTableColumns, mColumnPartitions;
 
@@ -72,23 +71,14 @@ public class FastOntology {
       Map<String, FastOntologyTerm> partitionMap = root.getPartitions();
 
       for (Map.Entry<String, FastOntologyTerm> partition : partitionMap.entrySet()) {
+
          if (partition.getValue() == null) {
             partition.setValue(new FastOntologyTerm(newTerm));
          }
 
-         else { FastOntology.addFastTerm(partition.getValue(), newTerm); }
-      }
-   }
-
-   private static void addTerm(FastOntologyTerm root, FastOntologyTerm newTerm) {
-      Map<String, FastOntologyTerm> partitionMap = root.getPartitions();
-
-      for (Map.Entry<String, FastOntologyTerm> partition : partitionMap.entrySet()) {
-         if (partition.getValue() == null) {
-            partition.setValue(new FastOntologyTerm(newTerm));
+         else {
+            FastOntology.addFastTerm(partition.getValue(), newTerm);
          }
-
-         else { FastOntology.addTerm(partition.getValue(), newTerm); }
       }
    }
 
@@ -99,11 +89,6 @@ public class FastOntology {
          if (term.getData() != null) {
             for (FastCluster element : term.getData()) {
                ontologyStr += String.format("%s%s,", prefix + "   ", element.getID());
-               for (int metaNdx = 0; metaNdx < mIsoMeta[element.getID()].length; metaNdx++) {
-                  ontologyStr += String.format("%s, ", mIsoMeta[element.getID()][metaNdx]);
-               }
-
-               ontologyStr += "\n";
             }
 
             ontologyStr += "\n";
@@ -145,42 +130,6 @@ public class FastOntology {
       }
 
       return ontologyStr;
-   }
-
-   public static Ontology constructOntology(String ontologyStr) {
-      Ontology ont = new Ontology();
-      OntologyParser parser = new OntologyParser();
-      Scanner termScanner = new Scanner(ontologyStr);
-      termScanner.useDelimiter("\n");
-
-      while (termScanner.hasNextLine()) {
-         String term = termScanner.nextLine();
-   
-         if (parser.matchString(term)) { ont.addTerm(parser.getTerm()); }
-      }
-
-      termScanner.close();
-
-      return ont;
-   }
-
-   public static Ontology createOntology(String ontologyStr) {
-      if (ontologyStr == null) { return null; }
-
-      Ontology ont = new Ontology();
-      OntologyParser parser = new OntologyParser();
-      Scanner termScanner = new Scanner(ontologyStr);
-      termScanner.useDelimiter("\n");
-
-      while (termScanner.hasNextLine()) {
-         String term = termScanner.nextLine();
-   
-         if (parser.matchString(term)) { ont.addTerm(parser.getTerm()); }
-      }
-      
-      termScanner.close();
-
-      return ont;
    }
 
    public static FastOntology createFastOntology(File ontologyFile) {

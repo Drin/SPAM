@@ -1,6 +1,6 @@
 package com.drin.java.ontology;
 
-import com.drin.java.ontology.OntologyTerm;
+import com.drin.java.ontology.FastOntologyTerm;
 import com.drin.java.database.CPLOPConnection;
 
 import java.util.List;
@@ -53,8 +53,6 @@ public class OntologyParser {
 
       String searchStr = args[0];
 
-      System.out.println(searchStr);
-
       if (parser.matchString(searchStr)) {
          parser.printOntology();
       }
@@ -78,7 +76,7 @@ public class OntologyParser {
       return mRegexMatch.matches();
    }
 
-   public OntologyTerm getTerm() {
+   public FastOntologyTerm getFastTerm() {
       String tableName = getTermTableName(), colName = getTermColName();
       List<String> partitions = getTermValues();
 
@@ -92,7 +90,7 @@ public class OntologyParser {
          }
       }
 
-      return new OntologyTerm(tableName, colName, getTermOptions(), partitions);
+      return new FastOntologyTerm(tableName, colName, getTermOptions(), partitions);
    }
 
    public String getTermTableName() {

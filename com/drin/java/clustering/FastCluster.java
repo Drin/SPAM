@@ -14,19 +14,57 @@ public class FastCluster {
    private short[] mElements;
    private short mTail, mSize;
 
+   private float mDiameter, mMean, mPerSim;
+
    public FastCluster(short iso_id) {
       mElements = new short[2];
       mElements[0] = iso_id;
       mTail = 1;
       mSize = 1;
+
+      mDiameter = mMean = mPerSim = -1.0f;
    }
 
    public short getID() { return mElements[0]; }
    public short size() { return mSize; }
+   public short[] getElements() { return mElements; }
 
-   //TODO
-   public float getDiameter() { return 0.0f; }
-   public float getMean() { return 0.0f; }
+   private void computeStatistics () {
+      float total_sim = 0, diameter = Float.MAX_VALUE;
+      short num_sim = 0, count = 0;
+      float clustSim = 0.0f;
+
+      for (short ndxA = 0; ndxA < mSize; ndxA++) {
+         for (short ndxB = (short) (ndxA + 1); ndxB < mSize; ndxB++) {
+            clustSim = mSimMatrix[mSimMapping[mElements[ndxA]][
+               mElements[ndxB] % (mNumIsolates - mElements[ndxA])]
+            ];
+
+            total_sim += clustSim;
+            diameter = Math.min(diameter, clustSim);
+            if (clustSim > 0.75) { num_sim++; }
+            count++;
+         }
+      }
+
+      mMean = total_sim/count;
+      mDiameter = diameter;
+      mPerSim = num_sim/count;
+   }
+
+   public float getDiameter() {
+      if (mDiameter == -1) { computeStatistics(); }
+      return mDiameter;
+   }
+   public float getMean() {
+      if (mMean == -1) { computeStatistics(); }
+      return mMean;
+   }
+
+   public float getPercentSimilar() {
+      if (mPerSim == -1) { computeStatistics(); }
+      return mPerSim;
+   }
 
    public float compareTo(FastCluster other) {
       final short[] elemsA = mElements, elemsB = other.mElements;

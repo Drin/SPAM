@@ -101,28 +101,15 @@ public class FastOntologyTerm {
    public boolean addData(FastCluster element) {
       boolean dataAdded = false;
 
-      if (mPartitions != null && (element instanceof Labelable)) {
-         String elementLabel = ((Labelable) element).getLabelValue(mColName);
+      if (mPartitions != null && mIsoLabels != null && element.getID() < mIsoLabels.length) {
+         for (int labelNdx = 0; labelNdx < mIsoLabels[element.getID()].length; labelNdx++) {
+            String isoLabel = mIsoLabels[element.getID()][labelNdx];
 
-         if (elementLabel != null && mPartitions.containsKey(elementLabel)) {
-            if (mPartitions.get(elementLabel) == null) {
-               mPartitions.put(elementLabel, new FastOntologyTerm(element));
-               dataAdded = true;
-            }
-
-            else { dataAdded = mPartitions.get(elementLabel).addData(element); }
-         }
-
-         else if (mIsoLabels != null && element.getID() < mIsoLabels.length) {
-            for (int labelNdx = 0; labelNdx < mIsoLabels[element.getID()].length; labelNdx++) {
-               String isoLabel = mIsoLabels[element.getID()][labelNdx];
-
-               if (mPartitions.containsKey(isoLabel)) {
-                  if (mPartitions.get(isoLabel) == null) {
-                     mPartitions.put(isoLabel, new FastOntologyTerm(element));
-                  }
-                  else { dataAdded = mPartitions.get(isoLabel).addData(element); }
+            if (mPartitions.containsKey(isoLabel)) {
+               if (mPartitions.get(isoLabel) == null) {
+                  mPartitions.put(isoLabel, new FastOntologyTerm(element));
                }
+               else { dataAdded = mPartitions.get(isoLabel).addData(element); }
             }
          }
       }
