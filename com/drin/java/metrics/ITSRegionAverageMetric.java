@@ -16,11 +16,11 @@ public class ITSRegionAverageMetric extends DataMetric<ITSRegion> {
    private int mPairCount;
    private double mAlpha, mBeta;
 
-   public ITSRegionAverageMetric(double alpha, double beta) {
+   public ITSRegionAverageMetric() {
       this.reset();
 
-      mAlpha = alpha;
-      mBeta = beta;
+      mAlpha = 0.995;
+      mBeta = 0.99;
 
       mTransform = Configuration.getBoolean(TRANSFORM_KEY);
    }
