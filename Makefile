@@ -3,6 +3,7 @@ PACKAGE_PRFX=com.drin.java
 JAVADOC=documentation
 
 SPAM_MAIN=com.drin.java.test.FastSPAMEvaluationCPU
+SPAM_GUI_MAIN=com.drin.java.gui.dialogs.InputDialog
 
 CC = javac
 ENGINE = java
