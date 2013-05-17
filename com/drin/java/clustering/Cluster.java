@@ -16,6 +16,7 @@ import java.util.HashSet;
 
 public abstract class Cluster implements Labelable {
    private static int CLUST_ID = 1;
+   private int mId;
    private String mName;
 
    protected OntologyLabel mLabel;
@@ -27,6 +28,7 @@ public abstract class Cluster implements Labelable {
    public Cluster(DataMetric<Cluster> metric) { this(CLUST_ID++, metric); }
 
    public Cluster(int clustId, DataMetric<Cluster> metric) {
+      mId = clustId;
       mName = String.format("%d", clustId);
       mMetric = metric;
 
@@ -38,6 +40,7 @@ public abstract class Cluster implements Labelable {
       mMean = -2;
    }
 
+   public int getId() { return mId; }
    public static void resetClusterIDs() { Cluster.CLUST_ID = 1; }
    public String getName() { return mName; }
    public int size() { return mElements.size(); }
