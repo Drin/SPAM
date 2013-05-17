@@ -12,7 +12,6 @@ import com.drin.java.metrics.DataMetric;
 import com.drin.java.metrics.ClusterAverageMetric;
 import com.drin.java.metrics.IsolateAverageMetric;
 import com.drin.java.metrics.ITSRegionAverageMetric;
-import com.drin.java.metrics.ITSRegionMedianMetric;
 import com.drin.java.metrics.PyroprintUnstablePearsonMetric;
 
 import com.drin.java.ontology.Ontology;
@@ -25,7 +24,6 @@ import com.drin.java.gui.components.AnalysisWorker;
 import com.drin.java.gui.components.AnalysisWorker.TaskResult;
 import com.drin.java.database.CPLOPConnection;
 
-import com.drin.java.util.Configuration;
 import com.drin.java.util.Logger;
 
 import java.awt.Component;
@@ -63,28 +61,24 @@ public class SPAMEvaluationDialog extends JDialog {
    private final static String DEFAULT_TITLE = "Parameter Input Dialog";
    private final int DIALOG_HEIGHT = 400, DIALOG_WIDTH = 550;
 
-   private final static String DEFAULT_REGION_A = "16-23",
-                               DEFAULT_REGION_B = "23-5";
+   private final static String DEFAULT_REGION_A = "23-5",
+                               DEFAULT_REGION_B = "16-23";
 
    private final static String ONT_DIR    = "ontologies",
                                USER_DIR   = System.getProperty("user.dir"),
                                FILE_SEP   = System.getProperty("file.separator");
 
    private final String[] ITS_REGIONS = new String[] { DEFAULT_REGION_A, DEFAULT_REGION_B };
-   private final String[] DATA_TYPE_VALUES = new String[] {"Isolates",
-                                                           "Pyroprints",
-                                                           "Experiments"};
    /*
     * GUI Components
     */
    private Container mPane = null;
-   private JComboBox<String> mDataSetType, mRegion_A, mRegion_B;
+   private JComboBox<String> mRegion_A, mRegion_B;
    private JTextField mDataSet, mOutFile, mOntology,
                       mAlpha_A, mAlpha_B, mBeta_A, mBeta_B,
                       mPyroLen_A, mPyroLen_B;
    private String mRecentDir;
 
-   private Configuration mConf;
    private CPLOPConnection mConn;
    private long startTime;
 
@@ -101,7 +95,6 @@ public class SPAMEvaluationDialog extends JDialog {
 
       setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 
-      mConf = Configuration.loadConfig();
       mConn = CPLOPConnection.getConnection();
 
       mDataSet = new JTextField(20);
@@ -115,18 +108,16 @@ public class SPAMEvaluationDialog extends JDialog {
       mRegion_B = new JComboBox<String>(ITS_REGIONS);
       mRegion_B.setSelectedIndex(1);
 
-      mAlpha_A = new JTextField(mConf.getRegionAttr(DEFAULT_REGION_A, Configuration.ALPHA_KEY), 20);
-      mAlpha_B = new JTextField(mConf.getRegionAttr(DEFAULT_REGION_B, Configuration.ALPHA_KEY), 20);
+      mAlpha_A = new JTextField("99.5", 20);
+      mAlpha_B = new JTextField("99.5", 20);
 
-      mBeta_A  = new JTextField(mConf.getRegionAttr(DEFAULT_REGION_A, Configuration.BETA_KEY), 20);
-      mBeta_B  = new JTextField(mConf.getRegionAttr(DEFAULT_REGION_B, Configuration.BETA_KEY), 20);
+      mBeta_A  = new JTextField("99.0", 20);
+      mBeta_B  = new JTextField("99.0", 20);
 
-      mPyroLen_A = new JTextField(mConf.getRegionAttr(DEFAULT_REGION_A, Configuration.LENGTH_KEY), 10);
-      mPyroLen_B = new JTextField(mConf.getRegionAttr(DEFAULT_REGION_B, Configuration.LENGTH_KEY), 10);
+      mPyroLen_A = new JTextField(93, 10);
+      mPyroLen_B = new JTextField(95, 10);
 
       mRecentDir = "";
-
-      mDataSetType = new JComboBox<String>(DATA_TYPE_VALUES);
    }
 
    public SPAMEvaluationDialog() {
@@ -144,7 +135,7 @@ public class SPAMEvaluationDialog extends JDialog {
       mPane.add(headerSection(mOutFile, mOntology));
 
       JLabel dataSetLabel = new JLabel("Select Data Set:");
-      JPanel dataSetField = prepareDataSetField(mDataSetType, mDataSet);
+      JPanel dataSetField = prepareDataSetField(mDataSet);
 
       JLabel thresholdSetLabel = new JLabel("Input Region Thresholds:");
       JPanel thresholdField_A = inputField(mRegion_A, mPyroLen_A, mAlpha_A, mBeta_A);
@@ -248,31 +239,24 @@ public class SPAMEvaluationDialog extends JDialog {
       return panel;
    }
 
-   private JPanel prepareDataSetField(JComboBox<String> dataTypeOptions, JTextField dataField) {
+   private JPanel prepareDataSetField(JTextField dataField) {
       JPanel dataSetField = new JPanel();
+      JComboBox<String> options = new JComboBox<String>(new String[] { "Isolates"});
 
       dataSetField.setLayout(new FlowLayout(FlowLayout.LEADING));
 
-      dataSetField.add(dataTypeOptions);
+      dataSetField.add(options);
       dataSetField.add(dataField);
-      dataSetField.add(prepareDataQueryButton(dataField, dataTypeOptions));
+      dataSetField.add(prepareDataQueryButton(dataField));
 
       return dataSetField;
    }
 
-   private JButton prepareDataQueryButton(JTextField dataSetField, JComboBox<String> dataTypeOptions) {
-      final JButton dataQueryButton = new JButton("Choose " + dataTypeOptions.getSelectedItem());
-
-      dataTypeOptions.addItemListener(new ItemListener() {
-         public void itemStateChanged(ItemEvent e) {
-            String selectedItem = String.valueOf(e.getItem());
-
-            dataQueryButton.setText("Choose " + selectedItem);
-         }
-      });
+   private JButton prepareDataQueryButton(JTextField dataSetField) {
+      final JButton dataQueryButton = new JButton("Choose Isolates");
 
       dataQueryButton.addActionListener(
-       new DataQueryButtonListener(dataSetField, dataTypeOptions, mConn));
+       new DataQueryButtonListener(dataSetField, mConn));
 
       return dataQueryButton;
    }
@@ -328,16 +312,8 @@ public class SPAMEvaluationDialog extends JDialog {
       String dataSet = mDataSet.getText();
 
       try {
-         String selection = String.valueOf(mDataSetType.getSelectedItem());
-
-         //Isolates : 0
-         //Pyroprints : 1
-         //Experiments : 2
-
-         dataList = selection.equals(DATA_TYPE_VALUES[0]) ? mConn.getDataByIsoID(ont, dataSet) :
-                    selection.equals(DATA_TYPE_VALUES[1]) ? mConn.getDataByPyroID(ont, dataSet) :
-                    selection.equals(DATA_TYPE_VALUES[2]) ? mConn.getDataByExperimentName(dataSet) :
-                                                            null;
+         String selection = "Isolates";
+         dataList = mConn.getDataByIsoID(ont, dataSet);
       }
       catch (java.sql.SQLException sqlErr) {
          System.out.println("SQLException:\nExiting...");
@@ -350,56 +326,26 @@ public class SPAMEvaluationDialog extends JDialog {
       return dataList;
    }
 
-   private void updateConfig() {
-      String region_A  = String.valueOf(mRegion_A.getSelectedItem());
-      String region_B  = String.valueOf(mRegion_B.getSelectedItem());
-
-      mConf.setRegionAttr(region_A, Configuration.LENGTH_KEY, mPyroLen_A.getText());
-      mConf.setRegionAttr(region_A, Configuration.ALPHA_KEY, mAlpha_A.getText());
-      mConf.setRegionAttr(region_A, Configuration.BETA_KEY, mBeta_A.getText());
-
-      mConf.setRegionAttr(region_B, Configuration.LENGTH_KEY, mPyroLen_B.getText());
-      mConf.setRegionAttr(region_B, Configuration.ALPHA_KEY, mAlpha_B.getText());
-      mConf.setRegionAttr(region_B, Configuration.BETA_KEY, mBeta_B.getText());
-
-      if (!mOntology.getText().equals("")) {
-         mConf.setAttr(Configuration.ONT_KEY, mOntology.getText());
-      }
-      else {
-         mConf.setAttr(Configuration.ONT_KEY, null);
-      }
-   }
-
    private boolean doWork() {
       List<Cluster> clusters = new ArrayList<Cluster>();
       Clusterer clusterer = null;
       Ontology ontology = null;
-      updateConfig();
-
-      if (mConf != null && mConf.getAttr(Configuration.ONT_KEY) != null) {
-         ontology = Ontology.createOntology(new File(mConf.getAttr(Configuration.ONT_KEY)));
-      }
-
       int use_transform = 0;
-      if (Boolean.parseBoolean(mConf.getAttr(Configuration.TRANSFORM_KEY))) {
-         use_transform = 1;
-      }
-
       ClusterAverageMetric clustMetric = new ClusterAverageMetric();
+
+      if (!mOntology.getText().equals("")) {
+         ontology = Ontology.createOntology(new File(mOntology.getText()));
+      }
 
       startTime = System.currentTimeMillis();
 
       List<Double> thresholds = new ArrayList<Double>();
-      thresholds.add(new Double(mConf.getRegionAttr("16-23", Configuration.ALPHA_KEY)));
-      thresholds.add(new Double(mConf.getRegionAttr("16-23", Configuration.BETA_KEY)));
+      thresholds.add(0.995);
+      thresholds.add(0.99);
 
       List<Clusterable<?>> dataList = null;
-      String selection = String.valueOf(mDataSetType.getSelectedItem());
 
-      dataList = selection.equals(DATA_TYPE_VALUES[0]) ? constructEntities(queryData(ontology), ontology) :
-                 selection.equals(DATA_TYPE_VALUES[1]) ? constructPyroprints(queryData(ontology), ontology) :
-                 selection.equals(DATA_TYPE_VALUES[2]) ? constructPyroprints(queryData(ontology), ontology) :
-                                                         null;
+      dataList = constructEntities(queryData(ontology), ontology);
 
       Cluster.resetClusterIDs();
       for (Clusterable<?> entity : dataList) {
@@ -428,6 +374,7 @@ public class SPAMEvaluationDialog extends JDialog {
       /*
        * store results
        */
+      /*
       try {
          mConn.insertNewRun(String.format(
             "INSERT INTO test_runs(run_date, run_time, cluster_algorithm," +
@@ -466,6 +413,7 @@ public class SPAMEvaluationDialog extends JDialog {
 
       Logger.debug(String.format("Time to do all that stuff: %d ms",
                    (System.currentTimeMillis() - startTime)));
+      */
 
       return true;
    }
@@ -547,81 +495,13 @@ public class SPAMEvaluationDialog extends JDialog {
    }
 
    @SuppressWarnings({ "unchecked", "rawtypes" })
-   private List<Clusterable<?>> constructPyroprints(List<Map<String, Object>> dataList, Ontology ont) {
-      long constructStart = System.currentTimeMillis();
-      List<Clusterable<?>> entityList = new ArrayList<Clusterable<?>>();
-
-      DataMetric<Pyroprint> pyroMetric = null;
-
-      try {
-         pyroMetric = (DataMetric) Class.forName(mConf.getMetric(Configuration.PYROPRINT_KEY)).newInstance();
-      }
-      catch(Exception err) {
-         err.printStackTrace();
-         return null;
-      }
-
-      Pyroprint tmpPyro = null;
-      for (Map<String, Object> dataMap : dataList) {
-         String wellID = String.valueOf(dataMap.get("well"));
-         String regName = String.valueOf(dataMap.get("region"));
-
-         Integer pyroID = new Integer(String.valueOf(dataMap.get("pyroprint")));
-
-         String nucleotide = String.valueOf(dataMap.get("nucleotide"));
-         double peakHeight = Double.parseDouble(String.valueOf(dataMap.get("pHeight")));
-
-         String pyroName = String.format("%d (%s)", pyroID.intValue(), wellID);
-
-         if (tmpPyro == null || !tmpPyro.getName().equals(pyroName)) {
-            if (tmpPyro != null) {
-               entityList.add(tmpPyro);
-            }
-
-            tmpPyro = new Pyroprint(pyroID.intValue(), wellID, pyroMetric);
-
-            if (ont != null) {
-               for (Map.Entry<String, Set<String>> tableCols : ont.getTableColumns().entrySet()) {
-                  for (String colName : tableCols.getValue()) {
-                     if (colName.replace(" ", "").equals("")) { continue; }
-
-                     tmpPyro.addLabel(colName, String.valueOf(dataMap.get(colName)).trim());
-                  }
-               }
-            }
-         }
-
-         if (tmpPyro.getName().equals(pyroName) && tmpPyro.getDispLen() <
-             Integer.parseInt(mConf.getRegionAttr(regName, Configuration.LENGTH_KEY))) {
-               tmpPyro.addDispensation(nucleotide, peakHeight);
-         }
-
-      }
-
-      Logger.debug(String.format("Time to construct Pyroprints: %d ms",
-                   (System.currentTimeMillis() - constructStart)));
-
-      return entityList;
-   }
-
-   @SuppressWarnings({ "unchecked", "rawtypes" })
    private List<Clusterable<?>> constructEntities(List<Map<String, Object>> dataList, Ontology ont) {
       long constructStart = System.currentTimeMillis();
       List<Clusterable<?>> entityList = new ArrayList<Clusterable<?>>();
 
-      DataMetric<Isolate> isoMetric = null;
-      DataMetric<ITSRegion> regionMetric = null;
-      DataMetric<Pyroprint> pyroMetric = null;
-
-      try {
-         isoMetric = (DataMetric) Class.forName(mConf.getMetric(Configuration.ISOLATE_KEY)).newInstance();
-         regionMetric = (DataMetric) Class.forName(mConf.getMetric(Configuration.ITSREGION_KEY)).newInstance();
-         pyroMetric = (DataMetric) Class.forName(mConf.getMetric(Configuration.PYROPRINT_KEY)).newInstance();
-      }
-      catch(Exception err) {
-         err.printStackTrace();
-         return null;
-      }
+      DataMetric<Isolate> isoMetric = new IsolateAverageMetric();
+      DataMetric<ITSRegion> regionMetric = new ITSRegionAverageMetric();
+      DataMetric<Pyroprint> pyroMetric = new PyroprintUnstablePearsonMetric();
 
       Isolate tmpIso = null;
       Pyroprint tmpPyro = null;
@@ -661,9 +541,11 @@ public class SPAMEvaluationDialog extends JDialog {
             tmpIso.getRegion(regName).add(tmpPyro);
          }
 
-         if (tmpPyro.getName().equals(pyroName) && tmpPyro.getDispLen() <
-             Integer.parseInt(mConf.getRegionAttr(regName, Configuration.LENGTH_KEY))) {
-               tmpPyro.addDispensation(nucleotide, peakHeight);
+         if (tmpPyro.getName().equals(pyroName) && regName.equals("16-23") && tmpPyro.getDispLen() < 95) {
+            tmpPyro.addDispensation(nucleotide, peakHeight);
+         }
+         else if (tmpPyro.getName().equals(pyroName) && regName.equals("23-5") && tmpPyro.getDispLen() < 93) {
+            tmpPyro.addDispensation(nucleotide, peakHeight);
          }
       }
 

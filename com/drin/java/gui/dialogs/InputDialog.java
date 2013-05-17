@@ -262,7 +262,7 @@ public class InputDialog extends JDialog {
       });
 
       dataQueryButton.addActionListener(
-       new DataQueryButtonListener(dataSetField, dataTypeOptions, mConn));
+       new DataQueryButtonListener(dataSetField, mConn));
 
       return dataQueryButton;
    }
