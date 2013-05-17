@@ -240,6 +240,21 @@ public class CPLOPConnection {
    }
 
    /*
+    * non ontology legacy methods
+    */
+   public List<Map<String, Object>> getDataByIsoID(String isoIds) throws SQLException
+   {
+      String searchID = "isoID";
+      return getData(searchID, isoIds);
+   }
+
+   public List<Map<String, Object>> getDataByPyroID(String pyroIds) throws SQLException
+   {
+      String searchID = "pyroID";
+      return getData(searchID, pyroIds);
+   }
+
+   /*
     * Legacy methods
     */
    public List<Map<String, Object>> getDataByIsoID(Ontology ont, String isoIds)
@@ -335,6 +350,45 @@ public class CPLOPConnection {
       }
 
       return experimentMap;
+   }
+
+   private List<Map<String, Object>> getData(String searchID, String searchSet) throws SQLException {
+      List<Map<String, Object>> rtn = new ArrayList<Map<String, Object>>();
+      Statement statement = null;
+      ResultSet results = null;
+
+      String query = String.format(
+       "SELECT pyroID, isoID, appliedRegion, wellID, pHeight, nucleotide " +
+       "FROM Pyroprints join Isolates using (isoID) join Histograms using (pyroID) " +
+       "WHERE %s in (%s) and pyroID in (Select distinct pyroID from Histograms)" + 
+       "ORDER BY isoID, pyroID, position asc",
+       searchID, searchSet);
+
+      //System.err.println("query:\n" + query);
+      try {
+         statement = mConn.createStatement();
+         results = statement.executeQuery(query);
+
+         while (results.next()) {
+            Map<String, Object> tuple = new HashMap<String, Object>();
+            tuple.put("pyroprint", results.getString(1)); 
+            tuple.put("isolate", results.getString(2)); 
+            tuple.put("region", results.getString(3)); 
+            tuple.put("well", results.getString(4));
+            tuple.put("pHeight", results.getString(5));
+            tuple.put("nucleotide", results.getString(6));
+
+            rtn.add(tuple);
+         }
+      }
+      catch (SQLException sqlEx) { throw sqlEx; }
+      finally
+      {
+         if (results != null) { results.close(); }
+         if (statement != null) { statement.close(); }
+      }
+
+      return rtn;
    }
 
    public List<Map<String, Object>> getIsolateDataSetWithBothRegions() throws SQLException {
