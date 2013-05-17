@@ -54,6 +54,8 @@ public class FastSPAMEvaluationCPU {
          new File("ontologies/specific.ont")
       );
 
+      System.out.println(clust_ont);
+
       int initSize = 10000, upSize = 100, numUps = 100;
       Map<Integer, Map<Integer, Integer>> simMapping;
 
@@ -165,7 +167,7 @@ public class FastSPAMEvaluationCPU {
                              (REGION_LENS[regNdx] * sumBSquared - sumB * sumB));
             }
 
-            simMatrix[simNdx++] = pearsonSum;
+            simMatrix[simNdx++] = pearsonSum / 2;
          }
       }
 
