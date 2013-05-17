@@ -102,10 +102,10 @@ class connection(object):
       if (self.CPLOP_CONNECTION is None):
          if (USING_PY3):
             self.CPLOP_CONNECTION = pymysql.connect(host=host, port=port, db=db,
-                                                    user='', passwd='')
+                                                    user='amontana', passwd='4ldr1n*(')
          else:
             self.CPLOP_CONNECTION = MySQLdb.connect(host=host, port=port, db=db,
-                                                    user='', passwd='')
+                                                    user='amontana', passwd='4ldr1n*(')
 
    def get_distinct_values(self, table_name, col_name):
       cplop_cursor = self.CPLOP_CONNECTION.cursor()
@@ -238,7 +238,7 @@ class connection(object):
                data[isolate_ndx][peak_ndx] = data_tuple[NDX_23_5 + DATA_QUERY_OFF]
 
             if (peak_ndx < LEN_16_23 and
-                LEN_23_5 + peak_ndx < len(data[isolate_ndx]):
+                LEN_23_5 + peak_ndx < len(data[isolate_ndx])):
                data[isolate_ndx][LEN_23_5 + peak_ndx] = data_tuple[NDX_16_23 + DATA_QUERY_OFF]
 
             peak_ndx += 1

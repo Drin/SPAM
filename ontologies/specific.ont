@@ -1,2 +1,2 @@
-Isolates.userName(): Cal Poly, Mira Samara, Luke Westaby, Dax Britton, Maxxon Blow, Mitch Lienemann, Jon N., Olivia Anderson, Jason Kent, Collin Sabatini, Winnie Tang, Emily Neal, Joshua Dillard;
-Isolates.commonName(): Cow, Pigeon, Dog, Ground Squirrel, SLO Creek Water, Sheep, Pennington Creek Water, SLO Creek Water, Human;
+test_isolates.userName(): Cal Poly, Mira Samara, Luke Westaby, Dax Britton, Maxxon Blow, Mitch Lienemann, Jon N., Olivia Anderson, Jason Kent, Collin Sabatini, Winnie Tang, Emily Neal, Joshua Dillard;
+test_isolates.commonName(): Cow, Pigeon, Dog, Ground Squirrel, SLO Creek Water, Sheep, Pennington Creek Water, SLO Creek Water, Human;
