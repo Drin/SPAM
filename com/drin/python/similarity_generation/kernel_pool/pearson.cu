@@ -6,8 +6,8 @@
 #define LEN_23S 93
 #define LEN_16S 95
 
-__constant__ uint8_t region_lens[LEN_23S, LEN_16S]
-__constant__ uint8_t region_offsets[0, LEN_23S]
+__constant__ uint8_t region_lens[2] = {LEN_23S, LEN_16S};
+__constant__ uint8_t region_offsets[2] = {0, LEN_23S};
 
 __global__ void cluster_pearson(uint32_t num_isolates_A, uint32_t *iso_list_A,
                                 uint32_t num_isolates_B, uint32_t *iso_list_B,
@@ -37,11 +37,11 @@ __global__ void cluster_pearson(uint32_t num_isolates_A, uint32_t *iso_list_A,
 
       // Compute the sums for the current region (first 23-5 then 16-23)
       for (uint8_t ndx = 0; ndx < region_lens[reg_ndx]; ndx++) {
-         peak_height_A = isolates[iso_A_ndx * ISOLATE_LEN + ndx +
-                                  region_offsets[reg_ndx]];
+         peak_height_A = iso_list_A[iso_A_ndx * ISOLATE_LEN + ndx +
+                                    region_offsets[reg_ndx]];
 
-         peak_height_B = isolates[iso_B_ndx * ISOLATE_LEN + ndx +
-                                  region_offsets[reg_ndx]];
+         peak_height_B = iso_list_B[iso_B_ndx * ISOLATE_LEN + ndx +
+                                    region_offsets[reg_ndx]];
 
          sum_A += peak_height_A;
          sum_B += peak_height_B;

@@ -226,7 +226,7 @@ class FastClusterer(object):
          for ndx_B in range(ndx_A + 1, len(clusters)):
             clust_B = clusters[ndx_B]
 
-            if (type(clust_A) is not Cluster or type(clust_B) is not Cluster):
+            if (type(clust_A) is not FastCluster or type(clust_B) is not FastCluster):
                print("skipping non cluster comparisons")
                continue
 
@@ -268,7 +268,7 @@ class FastCluster(object):
       self.get_statistics()
 
    def compare_to(self, other_cluster):
-      if (type(other_cluster) is not Cluster):
+      if (type(other_cluster) is not FastCluster):
          print("ignoring comparison to non cluster")
          return -2
 
