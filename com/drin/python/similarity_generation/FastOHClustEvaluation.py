@@ -43,135 +43,6 @@ def load_cuda():
 
 #############################################################################
 #
-# CUDA Workload
-#
-#############################################################################
-def compute_similarity(num_isolates, isolate_data,
-                       num_threads=NUM_THREADS, num_blocks=NUM_BLOCKS,
-                       kernel_name='pearson', device_id=DEFAULT_DEVICE):
-   # Convenience Variables
-   tile_size = (num_threads * num_blocks)
-   sim_matrix_size = num_isolates * (num_isolates - 1) / 2
-   num_tiles = math.ceil(num_isolates / tile_size)
-
-   if ('DEBUG' in os.environ):
-      print("num isolates: %d" % num_isolates)
-      print("num similarities: %d" % sim_matrix_size)
-
-   ############################################################################
-   #
-   # Init CUDA
-   #
-   ############################################################################
-   cuda_context = pycuda.driver.Device(device_id).make_context()
-   cuda_kernel = load_cuda().get_function(kernel_name)
-
-   ############################################################################
-   #
-   # Main Workload
-   #
-   ############################################################################
-
-   sim_matrix_cpu = numpy.zeros(shape=(sim_matrix_size),
-                                dtype=numpy.float32, order='C')
-   sim_matrix_gpu = pycuda.gpuarray.to_gpu(sim_matrix_cpu)
-
-   for tile_row in range(num_tiles):
-      for tile_col in range(tile_row, num_tiles):
-         cuda_kernel(numpy.uint32(num_isolates), numpy.uint32(tile_size),
-                     numpy.uint32(tile_row), numpy.uint32(tile_col),
-                     pycuda.driver.In(isolate_data),
-                     sim_matrix_gpu.gpudata,
-                     block = (num_threads, num_threads, 1),
-                     grid  = (num_blocks,  num_blocks))
-   sim_matrix_gpu.get(sim_matrix_cpu)
-
-   ############################################################################
-   #
-   # Cleanup CUDA
-   #
-   ############################################################################
-   pycuda.driver.Context.pop()
-
-   #return (device_id, sim_matrix_gpu)
-   return sim_matrix_cpu
-
-#############################################################################
-#
-# Prepare Similarity Matrix and Isolate data on GPU
-#
-#############################################################################
-def prep_gpu_data(iso_data_cpu, device_id=DEFAULT_DEVICE):
-   # convenience variables
-   cuda_context = pycuda.driver.Device(device_id).make_context()
-
-   # gpu data
-   iso_data_gpu = pycuda.gpuarray.to_gpu(iso_data_cpu)
-   #sim_matrix_gpu = pycuda.gpuarray.to_gpu(sim_matrix_cpu)
-
-   pycuda.driver.Context.pop()
-   #return (device_id, iso_data_gpu, sim_matrix_gpu)
-   return (device_id, iso_data_gpu)
-
-#############################################################################
-#
-# Get Similarity matrix and Isolate data off of GPU. Not really suggested
-#
-#############################################################################
-def get_gpu_data(iso_data_pair, sim_matrix_pair, device_id=DEFAULT_DEVICE):
-   cuda_context = pycuda.driver.Device(device_id).make_context()
-
-   iso_data_pair[1].get(iso_data_pair[0])
-   sim_matrix_pair[1].get(sim_matrix_pair[0])
-
-   pycuda.driver.Context.pop()
-   return (iso_data_pair[0], sim_matrix_pair[0])
-
-
-def fast_comparator(num_isolates, sim_matrix_gpu, clust_A, clust_B,
-                    num_threads=NUM_THREADS, num_blocks=NUM_BLOCKS,
-                    kernel_name='cached_pearson', device_id=DEFAULT_DEVICE):
-   # Convenience Variables
-   tile_size = (num_threads * num_blocks)
-   num_tiles = math.ceil(num_isolates / tile_size)
-
-   cuda_context = pycuda.driver.Device(device_id).make_context()
-   cuda_kernel = load_cuda().get_function(kernel_name)
-
-   ############################################################################
-   #
-   # Main Workload
-   #
-   ############################################################################
-
-   clust_A_gpu = pycuda.gpuarray.to_gpu(clust_A.elements)
-   clust_B_gpu = pycuda.gpuarray.to_gpu(clust_B.elements)
-
-   cluster_sim = numpy.zeros(shape=(1), dtype=numpy.float32, order='C')
-   cluster_sim_gpu = pycuda.gpuarray.to_gpu(cluster_sim)
-
-   for tile_row in range(num_tiles):
-      for tile_col in range(tile_row, num_tiles):
-         cuda_kernel(numpy.uint32(num_isolates), iso_data_gpu.gpudata,
-                     numpy.uint32(len(clust_A)), clust_A_gpu.gpudata,
-                     numpy.uint32(len(clust_B)), clust_B_gpu.gpudata,
-                     numpy.uint32(tile_size), numpy.uint32(tile_row),
-                     numpy.uint32(tile_col), cluster_sim_gpu.gpudata,
-                     block = (num_threads, num_threads, 1),
-                     grid  = (num_blocks,  num_blocks))
-   cluster_sim_gpu.get(cluster_sim)
-
-   ############################################################################
-   #
-   # Cleanup CUDA
-   #
-   ############################################################################
-   pycuda.driver.Context.pop()
-
-   return cluster_sim[0]
-
-#############################################################################
-#
 # CUDA comparator for clusters
 #
 #############################################################################
@@ -256,29 +127,14 @@ def get_data(dataset_size, ontology=None):
 
    return (iso_ids, iso_labels, iso_data)
 
-def output_similarity_matrix(sim_matrix, num_isolates, isolate_ids):
-   sim_ndx = 0
-   for iso_A_ndx in range(num_isolates):
-      iso_A = isolate_ids[iso_A_ndx]
-
-      for iso_B_ndx in range(iso_A_ndx + 1, num_isolates):
-         iso_B = isolate_ids[iso_B_ndx]
-
-         print("(%s, %s): %.04f " % (iso_A, iso_B, sim_matrix_cpu[sim_ndx]))
-         sim_ndx += 1
-
 #############################################################################
 #
 # Main Function
 #
 #############################################################################
-def main(iso_ids, iso_labels, iso_data_cpu, iso_sim_mapping, sim_matrix_ndx,
+def main(iso_ids, iso_labels, iso_data_cpu,
          use_trans=False, incremental=False, clust_ontology=None,
          init_size=100, up_size=100, num_up=1):
-   algorith_name = 'agglomerative'
-   if (clust_ontology is not None):
-      algorith_name = 'OHClust!'
-
    num_isolates = (init_size + (up_size * num_up))
 
    ############################################################################
@@ -287,16 +143,15 @@ def main(iso_ids, iso_labels, iso_data_cpu, iso_sim_mapping, sim_matrix_ndx,
    #
    ############################################################################
 
-   threshold = 0.75
-   Clusterer.Cluster._sim_matrix_ = sim_matrix_cpu
-   Clusterer.Cluster._iso_mapping_ = iso_sim_mapping
-   Clusterer.Cluster._threshold_ = threshold
-
    conn = CPLOP.connection()
 
+   threshold = 0.75
+   Clusterer.Cluster._threshold_ = threshold
+
    (start_ndx, end_ndx, curr_up) = (0, init_size, -1)
-   (persist_clusters, tmp_clusters, OHClusterer) = ([], None, None)
-   (total_t, perf_info, backup_clusters) = (time.time(), [], [])
+   (persist_clusters, tmp_clusters, backup_clusters) = ([], None, [])
+   (total_t, perf_info) = (time.time(), [])
+   OHClusterer = None
 
    while (curr_up < num_up and end_ndx < num_isolates and start_ndx < end_ndx):
       tmp_clusters = []
@@ -328,20 +183,7 @@ def main(iso_ids, iso_labels, iso_data_cpu, iso_sim_mapping, sim_matrix_ndx,
       start_ndx = end_ndx + 1
       end_ndx += min(up_size, num_isolates - end_ndx)
 
-   print("%d clusters:" % len(persist_clusters))
-   if ('DEBUG' in os.environ):
-      if (clust_ontology is not None):
-         for cluster in persist_clusters:
-            print("cluster [%d]:" % len(cluster))
-            for element in cluster.elements:
-               print("\t%s" % (iso_ids[element]))
-
-      for tmp_ndx in range(10):
-         print(sim_matrix_cpu[tmp_ndx])
-
-      if ('VERBOSE' in os.environ):
-         output_similarity_matrix(sim_matrix_cpu, len(iso_ids), iso_ids)
-
+   '''
    clust_sep = -2
    if (clust_ontology is not None):
       clust_sep = clust_ontology.get_cluster_separation()
@@ -367,24 +209,15 @@ def main(iso_ids, iso_labels, iso_data_cpu, iso_sim_mapping, sim_matrix_ndx,
    print("inserting data for run id %d" % test_run_id)
    conn.insert_run_perf(test_run_id, perf_info)
    conn.insert_clusters(test_run_id, iso_ids, persist_clusters, threshold)
+   '''
 
 if (__name__ == '__main__'):
    (clust_ontology, algorith_name) = (None, 'agglomerative')
    clust_ontology = Ontology.OntologyParser().parse_ontology('generic.ont')
 
    (iso_ids, iso_labels, iso_data_cpu) = get_data(
-      #(2500 + (125 * 100)), ontology=clust_ontology
-      #(100 + (10 * 1)), ontology=clust_ontology
-      (1000 + (100 * 100)), ontology=clust_ontology
+      (100 + (10 * 1)), ontology=clust_ontology
    )
-
-   (iso_sim_mapping, sim_matrix_ndx) = (dict(), 0)
-   for ndx_A in range(len(iso_ids)):
-      for ndx_B in range(ndx_A + 1, len(iso_ids)):
-         if (iso_sim_mapping.get(ndx_A) is None):
-            iso_sim_mapping[ndx_A] = dict()
-         iso_sim_mapping[ndx_A][ndx_B] = sim_matrix_ndx
-         sim_matrix_ndx += 1
 
    ############################################################################
    #
@@ -394,10 +227,9 @@ if (__name__ == '__main__'):
    pycuda.driver.init()
 
    cuda_start = time.time()
-   sim_matrix_cpu = compute_similarity(len(iso_ids), iso_data_cpu)
+   cuda_clust_comp = compute_similarity(len(iso_ids), iso_data_cpu)
+   #sim_matrix_cpu = compute_similarity(len(iso_ids), iso_data_cpu)
    cuda_end = time.time()
-
-   print("%ds to compute similarity matrix" % (cuda_end - cuda_start))
 
    ############################################################################
    #
@@ -405,12 +237,12 @@ if (__name__ == '__main__'):
    #
    ############################################################################
 
+   '''
    configurations = ((100, 10, 100), (500, 50, 100),
-                     (1000, 50, 100), (1000, 100, 100))#,
-                     #(2500, 125, 100))#, (2500, 250, 100))
+                     (1000, 50, 100), (1000, 100, 100),#)#,
+                     (2500, 125, 100))#, (2500, 250, 100))
    '''
    configurations = ((100, 10, 1),)
-   '''
 
    for test_conf in configurations:
       for test_num in range(3):

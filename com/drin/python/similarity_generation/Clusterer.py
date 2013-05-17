@@ -20,9 +20,10 @@ except:
 #
 #############################################################################
 class Clusterer(object):
-   def __init__(self, threshold, ontology=None):
+   def __init__(self, threshold, ontology=None, use_transform=False):
       self.ontology = ontology
       self.threshold = threshold
+      self.transform = use_transform
 
    def cluster_data(self, clusters):
       if (self.ontology is not None):
@@ -77,6 +78,11 @@ class Clusterer(object):
 
             clust_sim = clust_A.compare_to(clust_B)
 
+            if (clust_sim > threshold and self.transform):
+               clust_sim = 1
+            elif (clust_sim < threshold and self.transform):
+               clust_sim = 0
+
             if (clust_sim > threshold and clust_sim > close_clusters[2]):
                close_clusters = (ndx_A, ndx_B, clust_sim)
 
@@ -108,10 +114,13 @@ class Cluster(object):
    def get_similarity(self, ndx_A, ndx_B):
       sim_ndx = -1
 
-      if (ndx_B > ndx_A):
-         sim_ndx = Cluster._iso_mapping_[ndx_A][ndx_B]
-      elif (ndx_A > ndx_B):
-         sim_ndx = Cluster._iso_mapping_[ndx_B][ndx_A]
+      if (ndx_B > ndx_A and ndx_A < len(Cluster._iso_mapping_)):
+         if (ndx_B < len(Cluster._iso_mapping_[ndx_A])):
+            sim_ndx = Cluster._iso_mapping_[ndx_A][ndx_B]
+
+      elif (ndx_A > ndx_B and ndx_B < len(Cluster._iso_mapping_)):
+         if (ndx_A < len(Cluster._iso_mapping_[ndx_B])):
+            sim_ndx = Cluster._iso_mapping_[ndx_B][ndx_A]
 
       if (sim_ndx != -1):
          return Cluster._sim_matrix_[sim_ndx]

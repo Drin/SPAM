@@ -75,7 +75,7 @@ public class SPAMEvaluation {
       threshList.add(new Double(mConfig.getRegionAttr("16-23", Configuration.ALPHA_KEY)));
       threshList.add(new Double(mConfig.getRegionAttr("16-23", Configuration.BETA_KEY)));
 
-      mClusterer = new OHClusterer(ontology, threshList);
+      mClusterer = new OHClusterer(null, threshList);
 
       try {
          Class<?> clustMetricClass = Class.forName(mConfig.getMetric(Configuration.CLUSTER_KEY));
