@@ -1,0 +1,90 @@
+package com.drin.java.clustering;
+
+import com.drin.java.clustering.Clusterable;
+import com.drin.java.clustering.Cluster;
+
+import com.drin.java.metrics.DataMetric;
+
+import com.drin.java.clustering.dendogram.Dendogram;
+import com.drin.java.clustering.dendogram.DendogramNode;
+import com.drin.java.clustering.dendogram.DendogramLeaf;
+
+import java.util.Collection;
+
+public class HCluster extends Cluster {
+
+   public HCluster(DataMetric<Cluster> metric) { super(metric); }
+
+   public HCluster(int clustId, DataMetric<Cluster> metric) {
+      super(clustId, metric);
+   }
+
+   public HCluster(DataMetric<Cluster> metric, Clusterable<?> elem) {
+      this(metric);
+
+      mElements.add(elem);
+      mDendogram = new DendogramLeaf(elem);
+   }
+
+   public void computeStatistics() {
+      double minSim = Double.MAX_VALUE, total = 0;
+      int numComparisons = 0;
+
+      int tmpNdx = 0;
+      System.out.printf("Computing statistics...\n");
+      for (Clusterable<?> tmpElement : mElements) {
+         System.out.printf(",%s", tmpElement.getName());
+         tmpNdx++;
+      }
+
+      System.out.printf("\n");
+
+      for (Clusterable<?> elem_A : mElements) {
+
+         System.out.printf("%s,", elem_A.getName());
+
+         for (Clusterable<?> elem_B : mElements) {
+            if (elem_A.getName().equals(elem_B.getName())) {
+               System.out.printf("--,");
+               continue;
+            }
+
+            double comparison = elem_A.compareTo(elem_B);
+            System.out.printf("%.04f,", comparison);
+
+            total += comparison;
+            numComparisons++;
+
+            if (comparison < minSim) { minSim = comparison; }
+         }
+
+         System.out.printf("\n");
+      }
+
+      mDiameter = minSim;
+      mMean = numComparisons > 0 ? total / numComparisons : 0;
+   }
+
+   public Cluster join(Cluster otherClust) {
+      if (otherClust instanceof HCluster) {
+         Cluster newCluster = new HCluster(Integer.parseInt(this.getName()), this.mMetric);
+
+         Collection<Clusterable<?>> otherData = ((HCluster)otherClust).mElements;
+
+         newCluster.mElements.addAll(this.mElements);
+         newCluster.mElements.addAll(otherData);
+
+         newCluster.mLabel.addAll(this.mLabel);
+         newCluster.mLabel.addAll(otherClust.mLabel);
+
+         newCluster.computeStatistics();
+
+         Dendogram otherDend = ((HCluster)otherClust).mDendogram;
+         newCluster.mDendogram = new DendogramNode(this.mDendogram, otherDend, newCluster);
+
+         return newCluster;
+      }
+
+      return null;
+   }
+}

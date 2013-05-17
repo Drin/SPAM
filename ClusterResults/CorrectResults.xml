@@ -1,0 +1,66 @@
+<Clusters threshold="0.9950">
+   <Cluster diameter="0.9956" mean="0.9956">
+      <Isolate name="Ck-018"/>
+      <Isolate name="Ck-026"/>
+   </Cluster>
+<Isolate name="Ck-017"/>
+<Isolate name="Cw-960"/>
+<Isolate name="Cw-209"/>
+<Isolate name="Cw-512"/>
+<Isolate name="Cw-458"/>
+<Isolate name="Cw-1001"/>
+<Isolate name="Cw-710"/>
+   <Cluster diameter="0.9952" mean="0.9973">
+      <Cluster diameter="0.9968" mean="0.9976">
+         <Cluster diameter="0.9978" mean="0.9979">
+            <Cluster diameter="0.9980" mean="0.9980">
+               <Isolate name="Cw-1105"/>
+               <Isolate name="Cw-1120"/>
+            </Cluster>
+            <Isolate name="Cw-1069"/>
+         </Cluster>
+         <Isolate name="Cw-1117"/>
+      </Cluster>
+      <Isolate name="Cw-1070"/>
+   </Cluster>
+<Isolate name="Cw-819"/>
+<Isolate name="Cw-956"/>
+<Isolate name="Cw-937"/>
+<Isolate name="Cw-955"/>
+</Clusters>
+<Clusters threshold="0.9900">
+   <Cluster diameter="0.9877" mean="0.9928">
+      <Cluster diameter="0.9956" mean="0.9956">
+         <Isolate name="Ck-018"/>
+         <Isolate name="Ck-026"/>
+      </Cluster>
+      <Isolate name="Ck-017"/>
+   </Cluster>
+<Isolate name="Cw-960"/>
+<Isolate name="Cw-209"/>
+<Isolate name="Cw-512"/>
+<Isolate name="Cw-458"/>
+<Isolate name="Cw-1001"/>
+<Isolate name="Cw-710"/>
+   <Cluster diameter="0.9952" mean="0.9973">
+      <Cluster diameter="0.9968" mean="0.9976">
+         <Cluster diameter="0.9978" mean="0.9979">
+            <Cluster diameter="0.9980" mean="0.9980">
+               <Isolate name="Cw-1105"/>
+               <Isolate name="Cw-1120"/>
+            </Cluster>
+            <Isolate name="Cw-1069"/>
+         </Cluster>
+         <Isolate name="Cw-1117"/>
+      </Cluster>
+      <Isolate name="Cw-1070"/>
+   </Cluster>
+<Isolate name="Cw-819"/>
+   <Cluster diameter="0.9831" mean="0.9877">
+      <Cluster diameter="0.9901" mean="0.9901">
+         <Isolate name="Cw-956"/>
+         <Isolate name="Cw-955"/>
+      </Cluster>
+      <Isolate name="Cw-937"/>
+   </Cluster>
+</Clusters>
