@@ -21,13 +21,13 @@ import java.sql.SQLException;
 
 public class CPLOPConnection {
    private static final String DB_DRIVER = "com.mysql.jdbc.Driver";
-   private static final String DB_URL = "jdbc:mysql://cslvm96.csc.calpoly.edu/CPLOP?autoReconnect=true";
-   private static final String DB_USER = "amontana";
-   private static final String DB_PASS = "ILoveData#";
-   private static final int DEFAULT_PAGE_SIZE = 10000,
-                            ISOLATE_LEN       = 188,
-                            LEN_23S           = 93,
-                            LEN_16S           = 95;
+   private static final String DB_URL = "jdbc:mysql://localhost/CPLOP?autoReconnect=true";
+   private static final String DB_USER = "";
+   private static final String DB_PASS = "";
+   private static final short DEFAULT_PAGE_SIZE = 10000,
+                              ISOLATE_LEN       = 188;
+   private static final byte LEN_23S           = 93,
+                             LEN_16S           = 95;
 
    private Connection mConn;
 
@@ -93,11 +93,11 @@ public class CPLOPConnection {
       return distinctValues;
    }
 
-   public IsolateDataContainer getIsolateData(int dataSize) throws SQLException {
+   public IsolateDataContainer getIsolateData(short dataSize) throws SQLException {
       return getIsolateData(dataSize, DEFAULT_PAGE_SIZE);
    }
 
-   public IsolateDataContainer getIsolateData(int dataSize, int pageSize) throws SQLException {
+   public IsolateDataContainer getIsolateData(short dataSize, short pageSize) throws SQLException {
       Statement statement = null;
       ResultSet results = null;
 
@@ -105,10 +105,11 @@ public class CPLOPConnection {
 
       float[] iso_data = new float[dataSize * ISOLATE_LEN];
       int[] iso_ids = new int[dataSize];
-      int iso_id = -1, tmp_iso_id = -1, peak_ndx = 0, isolate_ndx = -1;
+      int iso_id = -1, tmp_iso_id = -1;
+      short peak_ndx = 0, isolate_ndx = -1;
 
       try {
-         for (int pageNdx = 0; pageNdx < Math.ceil((float) peakDataSize / pageSize); pageNdx++) {
+         for (short pageNdx = 0; pageNdx < Math.ceil((float) peakDataSize / pageSize); pageNdx++) {
             statement = mConn.createStatement();
             results = statement.executeQuery(String.format(DATA_QUERY,
                Math.min(pageSize, peakDataSize - (pageSize * pageNdx)),
@@ -163,16 +164,18 @@ public class CPLOPConnection {
       return new IsolateDataContainer(iso_ids, iso_data);
    }
 
-   public String[][] getIsolateMetaData(int[] ids, Ontology ont, int dataSize) throws SQLException {
+   public String[][] getIsolateMetaData(int[] ids, Ontology ont, short dataSize) throws SQLException {
       return getIsolateMetaData(ids, ont, dataSize, DEFAULT_PAGE_SIZE);
    }
 
-   public String[][] getIsolateMetaData(int[] ids, Ontology ont, int dataSize, int pageSize) {
+   public String[][] getIsolateMetaData(int[] ids, Ontology ont, short dataSize, short pageSize) {
       Statement statement = null;
       ResultSet results = null;
       String metaColumns = "", metaIDs = "";
       String metaLabels[][] = new String[ids.length][];
-      int tmp_id = -1, isolateID = -1, isolateNdx = -1, numColumns = 0;
+      int tmp_id = -1, isolateID = -1;
+      short isolateNdx = -1;
+      byte numColumns = 0;
 
       for (Map.Entry<String, Set<String>> ont_entry : ont.getTableColumns().entrySet()) {
          for (String col_name : ont_entry.getValue()) {
@@ -208,10 +211,10 @@ public class CPLOPConnection {
                }
 
                metaLabels[isolateNdx] = new String[numColumns];
-               for (int colNdx = 2; colNdx <= numColumns; colNdx++) {
+               for (byte colNdx = 2; colNdx <= numColumns; colNdx++) {
                   if (colNdx >= metaLabels[isolateNdx].length) {
                      String[] newArr = new String[metaLabels[isolateNdx].length * 2];
-                     for (int metaNdx = 0; metaNdx < metaLabels[isolateNdx].length; metaNdx++) {
+                     for (byte metaNdx = 0; metaNdx < metaLabels[isolateNdx].length; metaNdx++) {
                         newArr[metaNdx] = metaLabels[isolateNdx][metaNdx];
                      }
                   }
