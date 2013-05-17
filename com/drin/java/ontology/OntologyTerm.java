@@ -16,13 +16,13 @@ import java.util.ArrayList;
  * the name of the partition.
  */
 public class OntologyTerm {
-   private static final String TIME_OPTION_KEY = "TimeSensitive",
-                               SCHEME_NAME_DELIMITER = "-";
+   private static final String TIME_OPTION_KEY = "TimeSensitive";
 
    private String mTableName, mColName;
    private Map<String, Boolean> mOptions;
    private Map<String, OntologyTerm> mPartitions;
    private List<Cluster> mData, mClusters;
+   private boolean mHasNewData;
 
    public OntologyTerm(String tableName, String colName) {
       mTableName = tableName;
@@ -32,6 +32,7 @@ public class OntologyTerm {
       mPartitions = new LinkedHashMap<String, OntologyTerm>();
       mData = null;
       mClusters = null;
+      mHasNewData = false;
    }
 
    public OntologyTerm(String tableName, String colName,
@@ -65,59 +66,17 @@ public class OntologyTerm {
    }
 
    public OntologyTerm(Cluster element) {
-      mTableName = "";
-      mOptions = null;
-      mPartitions = null;
+      this(null, null);
 
       mData = new ArrayList<Cluster>();
       mData.add(element);
+      mHasNewData = true;
    }
 
-   public boolean addData(Cluster element) {
-      boolean dataAdded = false;
-
-      if (mPartitions != null) {
-         for (Map.Entry<String, OntologyTerm> partition : mPartitions.entrySet()) {
-            boolean isPartitionMatch = false;
-
-            if (element instanceof Labelable) {
-               isPartitionMatch = ((Labelable) element).hasLabel(partition.getKey());
-            }
-            else {
-               String elementName = element.getName().toLowerCase();
-               int keyNdx = elementName.indexOf(partition.getKey());
-               int delimNdx = elementName.indexOf(SCHEME_NAME_DELIMITER);
-               isPartitionMatch = (keyNdx != -1 && keyNdx < delimNdx);
-            }
-      
-            if (isPartitionMatch) {
-               if (partition.getValue() == null) {
-                  partition.setValue(new OntologyTerm(element));
-                  dataAdded = true;
-               }
-               else { partition.getValue().addData(element); }
-            }
-         }
-      }
-
-      else {
-         mData.add(element);
-         dataAdded = true;
-      }
-
-      return dataAdded;
-   }
-
+   public void clearDataFlag() { mHasNewData = false; }
    public void setClusters(List<Cluster> clusters) {
       mClusters = clusters;
-   }
-
-   public void percolateCluster(Cluster element) {
-      if (mData == null) {
-         mData = new ArrayList<Cluster>();
-      }
-
-      mData.add(element);
+      mHasNewData = false;
    }
 
    public String getTableName() { return mTableName; }
@@ -125,16 +84,47 @@ public class OntologyTerm {
    public List<Cluster> getData() { return mData; }
    public List<Cluster> getClusters() { return mClusters; }
 
-   public boolean isTimeSensitive() {
-      return mOptions.containsKey(TIME_OPTION_KEY);
-   }
-
    public Map<String, OntologyTerm> getPartitions() {
       return mPartitions;
    }
 
    public OntologyTerm getPartition(String partitionName) {
       return mPartitions.get(partitionName);
+   }
+
+   public boolean hasNewData() { return mHasNewData; }
+   public boolean isTimeSensitive() {
+      return mOptions.containsKey(TIME_OPTION_KEY);
+   }
+
+   public boolean addData(Cluster element) {
+      boolean dataAdded = false;
+
+      if (mPartitions != null && (element instanceof Labelable)) {
+         String elementLabel = ((Labelable) element).getLabelValue(mColName);
+
+         if (elementLabel != null && mPartitions.containsKey(elementLabel)) {
+            if (mPartitions.get(elementLabel) == null) {
+               mPartitions.put(elementLabel, new OntologyTerm(element));
+               dataAdded = true;
+            }
+
+            else { dataAdded = mPartitions.get(elementLabel).addData(element); }
+         }
+      }
+
+      if (!dataAdded) {
+         if (mData == null) { mData = new ArrayList<Cluster>(); }
+
+         if (!mData.contains(element)) {
+            mData.add(element);
+            dataAdded = true;
+         }
+      }
+
+      mHasNewData = dataAdded;
+
+      return dataAdded;
    }
 
    @Override

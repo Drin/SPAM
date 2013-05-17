@@ -8,18 +8,21 @@ import com.drin.java.ontology.OntologyParser;
 import java.io.File;
 import java.util.Scanner;
 
-import java.util.List;
-import java.util.ArrayList;
-
 import java.util.Map;
+import java.util.Set;
+
 import java.util.HashMap;
-import java.util.LinkedHashMap;
+import java.util.HashSet;
 
 public class Ontology {
    private OntologyTerm mRoot;
+   private Map<String, Set<String>> mTableColumns, mColumnPartitions;
 
    public Ontology() {
       mRoot = null;
+
+      mTableColumns = new HashMap<String, Set<String>>();
+      mColumnPartitions = new HashMap<String, Set<String>>();
    }
 
    public OntologyTerm getRoot() {
@@ -31,19 +34,30 @@ public class Ontology {
       return Ontology.printOntology(mRoot, "root", "");
    }
 
-   public void addData(Cluster element) {
-      boolean dataAdded = mRoot.addData(element);
-      if (System.getenv().containsKey("DEBUG") && dataAdded) {
-         System.out.printf("added element: '%s' to Ontology \n",
-                           element.getName());
-      }
+   public Map<String, Set<String>> getTableColumns() {
+      return mTableColumns;
+   }
+
+   public Map<String, Set<String>> getColumnPartitions() {
+      return mColumnPartitions;
+   }
+
+   public boolean addData(Cluster element) {
+      return mRoot.addData(element);
    }
 
    public void addTerm(OntologyTerm newTerm) {
-      if (System.getenv().containsKey("DEBUG")) {
-         System.out.printf("adding new term:\n\t%s\n", newTerm.toString());
-         System.out.printf("term table: %s\tterm column: %s\n",
-                           newTerm.getTableName(), newTerm.getColName());
+      if (!mTableColumns.containsKey(newTerm.getTableName())) {
+         mTableColumns.put(newTerm.getTableName(), new HashSet<String>());
+      }
+      mTableColumns.get(newTerm.getTableName()).add(newTerm.getColName());
+
+      for (String partitionVal : newTerm.getPartitions().keySet()) {
+         if (!mColumnPartitions.containsKey(newTerm.getColName())) {
+            mColumnPartitions.put(newTerm.getColName(), new HashSet<String>());
+         }
+
+         mColumnPartitions.get(newTerm.getColName()).add(partitionVal);
       }
 
       if (mRoot != null) {
@@ -79,7 +93,9 @@ public class Ontology {
 
          if (term.getPartitions() != null) {
             for (Map.Entry<String, OntologyTerm> feature : term.getPartitions().entrySet()) {
-               ontologyStr += Ontology.printOntology(feature.getValue(), feature.getKey(), prefix + "   ");
+               ontologyStr += Ontology.printOntology(feature.getValue(),
+                                                     feature.getKey(),
+                                                     prefix + "   ");
             }
          }
       }
@@ -116,7 +132,8 @@ public class Ontology {
    public static Ontology constructOntology(String ontologyStr) {
       Ontology ont = new Ontology();
       OntologyParser parser = new OntologyParser();
-      Scanner termScanner = new Scanner(ontologyStr).useDelimiter("\n");
+      Scanner termScanner = new Scanner(ontologyStr);
+      termScanner.useDelimiter("\n");
 
       while (termScanner.hasNextLine()) {
          String term = termScanner.nextLine();
@@ -124,21 +141,40 @@ public class Ontology {
          if (parser.matchString(term)) { ont.addTerm(parser.getTerm()); }
       }
 
+      termScanner.close();
+
       return ont;
    }
 
-   public static Ontology createOntology(String fileName) {
-      if (fileName == null) { return null; }
+   public static Ontology createOntology(String ontologyStr) {
+      if (ontologyStr == null) { return null; }
 
+      Ontology ont = new Ontology();
+      OntologyParser parser = new OntologyParser();
+      Scanner termScanner = new Scanner(ontologyStr);
+      termScanner.useDelimiter("\n");
+
+      while (termScanner.hasNextLine()) {
+         String term = termScanner.nextLine();
+   
+         if (parser.matchString(term)) { ont.addTerm(parser.getTerm()); }
+      }
+      
+      termScanner.close();
+
+      return ont;
+   }
+
+   public static Ontology createOntology(File ontologyFile) {
       Ontology ont = new Ontology();
       OntologyParser parser = new OntologyParser();
       Scanner termScanner = null;
 
       try {
-         termScanner = new Scanner(new File(fileName)).useDelimiter("\n");
+         termScanner = new Scanner(ontologyFile).useDelimiter("\n");
       }
       catch (java.io.FileNotFoundException fileErr) {
-         System.out.printf("Could not find file '%s'\n", fileName);
+         System.out.printf("Could not find file '%s'\n", ontologyFile.getName());
          fileErr.printStackTrace();
       }
 
@@ -149,24 +185,5 @@ public class Ontology {
       }
 
       return ont;
-   }
-
-   /*
-    * old test:
-    * String testOntology = String.format("%s\n%s\n%s",
-    * "Host(): cw, sw;",
-    * "Location():R1, R2, MorroBay;",
-    * "Day(TimeSensitive):     1,2,3,\t4,5,6,7,10;"
-    * );
-    */
-   public static void main(String[] args) {
-      String testOntology = String.format("%s\n%s\n%s\n",
-         "Isolates.commonName():;",
-         "Isolates.hostID(): ;",
-         "Pyroprints.date_pyroPrintedDate(TimeSensitive): \t;"
-      );
-
-      Ontology ont = Ontology.constructOntology(testOntology);
-      System.out.println("ontology :\n" + ont);
    }
 }

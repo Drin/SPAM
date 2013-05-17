@@ -19,7 +19,7 @@ import java.sql.CallableStatement;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
-public class SpecialCPLOPConnection {
+public class CPLOPConnection {
    private static final String DB_DRIVER = "com.mysql.jdbc.Driver";
    private static final String DB_URL = "jdbc:mysql://localhost/CPLOP?autoReconnect=true";
    private static final String DB_USER = "amontana";
@@ -57,7 +57,7 @@ public class SpecialCPLOPConnection {
                    "ORDER BY test_isolate_id " +
                    "LIMIT %d OFFSET %d";
 
-   public SpecialCPLOPConnection() throws SQLException, DriverException {
+   public CPLOPConnection() throws SQLException, DriverException {
       try {
          Class.forName(DB_DRIVER);
 
@@ -68,7 +68,31 @@ public class SpecialCPLOPConnection {
       }
    }
 
-   
+   public List<String> getDistinctValues(String tableName, String colName) throws SQLException {
+      List<String> distinctValues = new ArrayList<String>();
+      Statement statement = null;
+      ResultSet results = null;
+
+      String query = String.format(
+         "SELECT distinct(%s) FROM %s WHERE %s IS NOT NULL",
+         colName, tableName, colName
+      );
+
+      try {
+         statement = mConn.createStatement();
+         results = statement.executeQuery(query);
+
+         while (results.next()) { distinctValues.add(results.getString(1)); }
+      }
+      catch (SQLException sqlEx) { throw sqlEx; }
+      finally {
+         if (results != null) { results.close(); }
+         if (statement != null) { statement.close(); }
+      }
+
+      return distinctValues;
+   }
+
    public IsolateDataContainer getIsolateData(int dataSize) throws SQLException {
       return getIsolateData(dataSize, DEFAULT_PAGE_SIZE);
    }

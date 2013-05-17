@@ -2,8 +2,7 @@ PACKAGE_PATH=com/drin/java
 PACKAGE_PRFX=com.drin.java
 JAVADOC=documentation
 
-SPAM_MAIN=com.drin.java.ClusterInterface
-SPAM_GUI_MAIN=com.drin.java.gui.SpamGUI
+SPAM_MAIN=com.drin.java.test.FastSPAMEvaluationCPU
 
 CC = javac
 ENGINE = java
@@ -11,7 +10,7 @@ JFLAGS = -deprecation -Xlint
 
 compile: clean spam
 
-spam: ClusterInterface.java
+spam: FastSPAMEvaluationCPU.java
 	@echo "-------------------------------"
 	find $(PACKAGE_PATH) -name $^ | xargs $(CC) $(JFLAGS) $(CLASSES)
 	@echo "-------------------------------"
@@ -42,7 +41,7 @@ docSpam:
 
 SpamGUI.java:
 
-ClusterInterface.java:
+FastSPAMEvaluationCPU.java:
 
 cleanDocs:
 	rm -rf ${JAVADOC}/*
