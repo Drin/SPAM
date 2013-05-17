@@ -102,10 +102,10 @@ class connection(object):
       if (self.CPLOP_CONNECTION is None):
          if (USING_PY3):
             self.CPLOP_CONNECTION = pymysql.connect(host=host, port=port, db=db,
-                                                    user='', passwd='')
+                                                    user='amontana', passwd='4ldr1n*(')
          else:
             self.CPLOP_CONNECTION = MySQLdb.connect(host=host, port=port, db=db,
-                                                    user='', passwd='')
+                                                    user='amontana', passwd='4ldr1n*(')
 
    def get_distinct_values(self, table_name, col_name):
       cplop_cursor = self.CPLOP_CONNECTION.cursor()
@@ -173,6 +173,50 @@ class connection(object):
          cplop_cursor.execute(DATA_QUERY % (
             #','.join([str(val) for val in pyro_ids[NDX_23_5]]),
             #','.join([str(val) for val in pyro_ids[NDX_16_23]]),
+            min(page_size, peak_data_size - (page_ndx * page_size)),
+            (page_ndx * page_size)
+         ))
+
+         for data_tuple in cplop_cursor.fetchall():
+            tmp_isolate_id = data_tuple[0]
+
+            if (isolate_id is None or tmp_isolate_id != isolate_id):
+               isolate_ndx += 1
+               (isolate_id, peak_ndx) = (tmp_isolate_id, 0)
+               if (isolate_ndx < len(ids)):
+                  ids[isolate_ndx] = isolate_id
+
+            if (peak_ndx != data_tuple[3]):
+               print("peak mismatch! on %d, should be %d" % (data_tuple[3],
+                     peak_ndx))
+
+            if (peak_ndx < LEN_23_5):
+               offset_23_5 = isolate_ndx * ISOLATE_LEN + peak_ndx
+               if (offset_23_5 < len(data)):
+                  data[offset_23_5] = data_tuple[NDX_23_5 + DATA_QUERY_OFF]
+
+            if (LEN_23_5 + peak_ndx < ISOLATE_LEN):
+               offset_16_23 = isolate_ndx * ISOLATE_LEN + LEN_23_5 + peak_ndx
+               if (offset_16_23 < len(data)):
+                  data[offset_16_23] = data_tuple[NDX_16_23 + DATA_QUERY_OFF]
+
+            peak_ndx += 1
+
+      cplop_cursor.close()
+      return (ids, data)
+
+   def get_fast_isolate_data(self, pyro_ids=None, data_size=DEFAULT_DATA_SIZE,
+                             page_size=DEFAULT_PAGE_SIZE):
+      cplop_cursor = self.CPLOP_CONNECTION.cursor()
+
+      peak_data_size = (data_size * max(LEN_23_5, LEN_16_23))
+      ids = numpy.zeros(shape=(data_size), dtype=numpy.uint32, order='C')
+      data = numpy.zeros(shape=(data_size, ISOLATE_LEN),
+                         dtype=numpy.float32, order='C')
+
+      (isolate_id, peak_ndx, isolate_ndx) = (None, 0, -1)
+      for page_ndx in range(math.ceil(peak_data_size/page_size)):
+         cplop_cursor.execute(DATA_QUERY % (
             min(page_size, peak_data_size - (page_ndx * page_size)),
             (page_ndx * page_size)
          ))

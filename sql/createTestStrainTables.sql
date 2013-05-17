@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS test_runs (
   run_time TIME NOT NULL,
   cluster_algorithm VARCHAR(100) NOT NULL,
   average_strain_similarity FLOAT NOT NULL,
+  total_size INT DEFAULT -1,
   use_transform TINYINT NOT NULL,
   PRIMARY KEY  (test_run_id),
   KEY date_index (run_date),
