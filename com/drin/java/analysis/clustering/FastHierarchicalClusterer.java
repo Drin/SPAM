@@ -60,7 +60,7 @@ public class FastHierarchicalClusterer {
 
    public float getInterStrainSim() {
       float totalClusterSimilarity = 0;
-      short similarityCount = 0;
+      int similarityCount = 0;
 
       for (short clustNdxA = 0; clustNdxA < mResultClusters.size(); clustNdxA++) {
          FastCluster clustA = mResultClusters.get(clustNdxA);
@@ -73,7 +73,10 @@ public class FastHierarchicalClusterer {
          }
       }
 
-      return totalClusterSimilarity/similarityCount;
+      if (similarityCount > 0) {
+         return totalClusterSimilarity/similarityCount;
+      }
+      else { return -1; }
    }
 
    public class FastClusterPair {

@@ -14,7 +14,6 @@ import java.util.HashMap;
 
 public class FastOHClusterer extends FastHierarchicalClusterer {
    protected FastOntology mOntology;
-   protected List<FastCluster> mResultClusters;
    private float mAlphaThresh;
 
    public FastOHClusterer(FastOntology ontology, short dataSize,
@@ -42,7 +41,7 @@ public class FastOHClusterer extends FastHierarchicalClusterer {
          ontologicalCluster(mOntology.getRoot(), mAlphaThresh);
       }
 
-      List<FastCluster> mResultClusters = mOntology.getRoot().getClusters();
+      mResultClusters = mOntology.getRoot().getClusters();
       if (mResultClusters == null) {
          System.err.println("No clusters formed!?");
          return;

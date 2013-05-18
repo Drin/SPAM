@@ -23,8 +23,8 @@ import java.sql.SQLException;
 public class CPLOPConnection {
    private static final String DB_DRIVER = "com.mysql.jdbc.Driver";
    private static final String DB_URL = "jdbc:mysql://localhost/CPLOP?autoReconnect=true";
-   private static final String DB_USER = "amontana";
-   private static final String DB_PASS = "4ldr1n*(";
+   private static final String DB_USER = "";
+   private static final String DB_PASS = "";
    private static final short DEFAULT_PAGE_SIZE = 10000,
                               ISOLATE_LEN       = 188;
    private static final byte LEN_23S           = 93,
@@ -51,7 +51,7 @@ public class CPLOPConnection {
                            "h2.pyroID = i.pyro_id_2) " +
                    "ORDER BY i.test_isolate_id " +
                    "LIMIT %d OFFSET %d",
-      META_QUERY = "SELECT test_isolate_id %s " +
+      META_QUERY = "SELECT distinct test_isolate_id %s " +
                    "FROM test_isolates join test_pyroprints using (" +
                          "name_prefix, name_suffix) " +
                    "WHERE test_isolate_id in (%s) " +
@@ -83,7 +83,7 @@ public class CPLOPConnection {
          statement = mConn.createStatement();
          results = statement.executeQuery(query);
 
-         while (results.next()) { distinctValues.add(results.getString(1)); }
+         while (results.next()) { distinctValues.add(results.getString(1).trim()); }
       }
       catch (SQLException sqlEx) { throw sqlEx; }
       finally {
@@ -168,6 +168,7 @@ public class CPLOPConnection {
       int tmp_id = -1, isolateID = -1;
       short isolateNdx = -1, pageSize = DEFAULT_PAGE_SIZE;
       byte colOffset = 1, numColumns = 0;
+      short tmpNum = 0;
 
       if (ont == null) { return null; }
 
@@ -229,7 +230,7 @@ public class CPLOPConnection {
 
       try {
          insertSQL = mConn.prepareStatement(String.format(
-            "INSERT INTO test_run_performance(test_run_id, update_id, " +
+            "INSERT IGNORE INTO test_run_performance(test_run_id, update_id, " +
                                              "update_size, run_time) " +
             "VALUES %s", insertValues
          ));
@@ -242,25 +243,29 @@ public class CPLOPConnection {
    public void insertIsolateAndStrainData(String strainValues, String isolateValues) throws SQLException {
       PreparedStatement strainSQL = null, isolateSQL = null;
 
-      String strainInsert = "INSERT INTO test_run_strain_link (test_run_id, cluster_id, " +
+      String strainInsert = "INSERT IGNORE INTO test_run_strain_link (test_run_id, cluster_id, " +
                                                               "cluster_threshold, strain_diameter, " +
                                                               "average_isolate_similarity, " +
                                                               "percent_similar_isolates) " +
-                            "VALUES ";
-      String isolateInsert = "INSERT INTO test_isolate_strains(test_run_id, cluster_id, " +
+                            "VALUES %s";
+      String isolateInsert = "INSERT IGNORE INTO test_isolate_strains(test_run_id, cluster_id, " +
                                                                "cluster_threshold, test_isolate_id) " +
-                             "VALUES ";
+                             "VALUES %s";
 
       try {
-         strainSQL = mConn.prepareStatement(String.format(
-            strainInsert, strainValues
-         ));
-         strainSQL.executeUpdate();
+         if (!strainValues.equals("")) {
+            strainSQL = mConn.prepareStatement(String.format(
+               strainInsert, strainValues
+            ));
+            strainSQL.executeUpdate();
+         }
 
-         isolateSQL = mConn.prepareStatement(String.format(
-            isolateInsert, isolateValues
-         ));
-         isolateSQL.executeUpdate();
+         if (!isolateValues.equals("")) {
+            isolateSQL = mConn.prepareStatement(String.format(
+               isolateInsert, isolateValues
+            ));
+            isolateSQL.executeUpdate();
+         }
       }
       catch (SQLException sqlEx) { throw sqlEx; }
       finally {
@@ -283,7 +288,7 @@ public class CPLOPConnection {
       PreparedStatement insertSQL = null;
 
       String insertQuery = String.format(
-         "INSERT INTO test_runs (run_date, run_time, cluster_algorithm, " +
+         "INSERT IGNORE INTO test_runs (run_date, run_time, cluster_algorithm, " +
                                 "average_strain_similarity, use_transform) " +
          "VALUES (?, '%s', '%s', %.04f, %d)",
          getElapsedTime(runTime), algorith, interStrainSim, use_transform

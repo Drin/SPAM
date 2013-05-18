@@ -99,7 +99,7 @@ BEGIN
       SELECT t1.test_run_id, t2.test_run_id
       FROM test_runs t1 join test_runs t2 ON (
               t1.cluster_algorithm = 'OHClust!' AND
-              t2.cluster_algorithm = 'agglomerative' AND
+              t2.cluster_algorithm = 'Agglomerative' AND
               t1.total_size = t2.total_size
            );
    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;

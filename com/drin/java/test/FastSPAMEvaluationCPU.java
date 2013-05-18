@@ -53,9 +53,9 @@ public class FastSPAMEvaluationCPU {
    }
 
    public static void main(String[] args) {
-      short initSizes[] = new short[] { 100, 100, 100 };
-      float upSizes[] = new float[] { 0.05f, 0.10f };
-      short numUps = 100;
+      short initSizes[] = new short[] { 1000, 2500, 5000};
+      float upSizes[] = new float[] { 0.20f, 0.25f };
+      short numUps = 10;
       int totalSize = 0;
       int maxSize = Math.round((initSizes[initSizes.length - 1] +
          ((initSizes[initSizes.length - 1] * upSizes[upSizes.length - 1]) * (numUps))));
@@ -122,18 +122,18 @@ public class FastSPAMEvaluationCPU {
                            FastOntology clustOnt, int[][] simMapping, float[] simMatrix,
                            IsolateDataContainer data) {
       short isoStart = 0, isoEnd = initSize;
-      long startCluster, finishCluster, runTimes[] = new long[numUps];
+      long startCluster, finishCluster, runTimes[] = new long[numUps + 1];
       long fullTime = System.currentTimeMillis();
 
       //initialize cluster list
       List<FastCluster> clusters = new ArrayList<FastCluster>(initSize);
 
-      mClusterer = new FastOHClusterer(clustOnt, (short) numIsolates, 0.80f, 0.75f);
+      mClusterer = new FastOHClusterer(clustOnt, (short) numIsolates, 0.75f, 0.70f);
 
       for (byte currUp = (byte) (-1);  currUp < numUps; currUp++) {
          clusters.clear();
 
-         for (short isoNdx = isoStart; isoNdx < Math.min(isoEnd, numIsolates); isoNdx++) {
+         for (int isoNdx = isoStart; isoNdx < Math.min(isoEnd, numIsolates); isoNdx++) {
             clusters.add(new FastCluster(isoNdx));
          }
 
@@ -144,7 +144,11 @@ public class FastSPAMEvaluationCPU {
          runTimes[currUp + 1] = finishCluster;
 
          System.out.printf("%d ms\n", finishCluster);
-         System.out.printf("%d data size\n", clusters.size());
+         System.out.printf("%d data size\n", isoEnd);
+         System.out.printf("%dth update\n", currUp);
+
+         isoStart = isoEnd;
+         isoEnd += Math.round(initSize * upSize);
       }
 
       persistResults("OHClust!", mClusterer, mClusterer.getClusters(),
@@ -155,16 +159,16 @@ public class FastSPAMEvaluationCPU {
    public void testAgglom(short initSize, float upSize, short numUps, int numIsolates,
                           int[][] simMapping, float[] simMatrix, IsolateDataContainer data) {
       short isoStart = 0, isoEnd = initSize;
-      long startCluster, finishCluster, runTimes[] = new long[numUps];
+      long startCluster, finishCluster, runTimes[] = new long[numUps + 1];
       long fullTime = System.currentTimeMillis();
 
       //initialize cluster list
       List<FastCluster> tmpClusters = null;
       List<FastCluster> clusters = new ArrayList<FastCluster>(initSize);
 
-      mClusterer = new FastHierarchicalClusterer((short) numIsolates, 0.75f);
+      mClusterer = new FastHierarchicalClusterer((short) numIsolates, 0.70f);
       for (byte currUp = (byte) (-1);  currUp < numUps; currUp++) {
-         for (short isoNdx = isoStart; isoNdx < Math.min(isoEnd, numIsolates); isoNdx++) {
+         for (int isoNdx = isoStart; isoNdx < Math.min(isoEnd, numIsolates); isoNdx++) {
             clusters.add(new FastCluster(isoNdx));
          }
          tmpClusters = new ArrayList<FastCluster>(clusters);
@@ -176,7 +180,11 @@ public class FastSPAMEvaluationCPU {
          runTimes[currUp + 1] = finishCluster;
 
          System.out.printf("%d ms\n", finishCluster);
-         System.out.printf("%d data size\n", clusters.size());
+         System.out.printf("%d data size\n", isoEnd);
+         System.out.printf("%dth update\n", currUp);
+
+         isoStart = isoEnd;
+         isoEnd += Math.round(initSize * upSize);
       }
 
       persistResults("Agglomerative", mClusterer, mClusterer.getClusters(),
@@ -194,6 +202,19 @@ public class FastSPAMEvaluationCPU {
    public void persistResults(String algorithm, FastHierarchicalClusterer clusterer,
                               List<FastCluster> clusters, long[] runTimes, long totalTime,
                               short initSize, float upSize, IsolateDataContainer data) {
+
+      if (clusters == null && clusterer.getClusters() == null) {
+         System.out.println("wtf why is it all null");
+      }
+      else if (clusters == null) {
+         clusters = clusterer.getClusters();
+      }
+
+      if (clusters != null) {
+         System.out.println("size: " + clusters.size());
+         System.out.println(clusterer.getInterStrainSim());
+      }
+
       int run_id = insertTestRun(algorithm, clusterer, (byte) 0, totalTime);
       insertRunPerformance(run_id, initSize, upSize, runTimes);
       insertStrainsAndIsolates(run_id, clusters, clusterer, data);
@@ -214,7 +235,10 @@ public class FastSPAMEvaluationCPU {
    public void insertRunPerformance(int run_id, short initSize, float upSize, long[] runTimes) {
       String runPerfInsert = "";
 
-      for (short timeNdx = 0; timeNdx < runTimes.length; timeNdx++) {
+      runPerfInsert += String.format(",(%d, %d, %d, %d)",
+         run_id, 0, initSize, runTimes[0]
+      );
+      for (short timeNdx = 1; timeNdx < runTimes.length; timeNdx++) {
          runPerfInsert += String.format(",(%d, %d, %d, %d)",
             run_id, timeNdx, Math.round(initSize * upSize), runTimes[timeNdx]
          );
@@ -232,16 +256,28 @@ public class FastSPAMEvaluationCPU {
                                         IsolateDataContainer data) {
       String strainInsert = "", isolateInsert = "";
 
-      for (FastCluster clust : clusters) {
+      if (clusters == null) {
+         System.out.println("clusters are null for some reason...");
+         clusters = clusterer.getClusters();
+      }
+
+      for (int clustNdx = 0; clustNdx < clusters.size(); clustNdx++) {
+         if (clusters.get(clustNdx) == null) { continue; }
+
+         FastCluster clust = clusters.get(clustNdx);
+
+         System.out.printf("cluster size: %d\n", clust.size());
+
          strainInsert += String.format(
             ",(%d, %d, %.04f, %.04f, %.04f, %.04f)",
             run_id, clust.getID(), clusterer.getThreshold(), clust.getDiameter(),
             clust.getMean(), clust.getPercentSimilar()
          );
 
-         short[] clustElements = clust.getElements();
-         for (short isoNdx = 0; isoNdx < clusters.size(); isoNdx++) {
+         int[] clustElements = clust.getElements();
+         for (short isoNdx = 0; isoNdx < clust.size(); isoNdx++) {
             int isolate_id = data.isoIDs[clustElements[isoNdx]];
+
             isolateInsert += String.format(
                ",(%d, %d, %.04f, %d)", run_id, clust.getID(), 
                clusterer.getThreshold(), isolate_id
@@ -250,7 +286,8 @@ public class FastSPAMEvaluationCPU {
       }
 
       try {
-         mConn.insertIsolateAndStrainData(strainInsert, isolateInsert);
+         mConn.insertIsolateAndStrainData(strainInsert.substring(1),
+                                          isolateInsert.substring(1));
       }
       catch (java.sql.SQLException sqlErr) { sqlErr.printStackTrace(); }
       catch (Exception err) { err.printStackTrace(); }
