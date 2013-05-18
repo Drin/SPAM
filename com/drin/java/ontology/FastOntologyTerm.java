@@ -72,6 +72,7 @@ public class FastOntologyTerm {
       mData = new ArrayList<FastCluster>();
       mData.add(element);
       mHasNewData = true;
+
    }
 
    public void clearDataFlag() { mHasNewData = false; }
@@ -106,6 +107,7 @@ public class FastOntologyTerm {
             String isoLabel = mIsoLabels[element.getID()][labelNdx];
 
             if (mPartitions.containsKey(isoLabel)) {
+
                if (mPartitions.get(isoLabel) == null) {
                   mPartitions.put(isoLabel, new FastOntologyTerm(element));
                }

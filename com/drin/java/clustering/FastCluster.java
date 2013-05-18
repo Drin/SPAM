@@ -11,13 +11,13 @@ public class FastCluster {
    public static int[][] mSimMapping = null;
 
    private static final ExecutorService mThreadPool = Executors.newFixedThreadPool(64);
-   private short[] mElements;
-   private short mTail, mSize;
+   private int[] mElements;
+   private int mTail, mSize;
 
    private float mDiameter, mMean, mPerSim;
 
-   public FastCluster(short iso_id) {
-      mElements = new short[2];
+   public FastCluster(int iso_id) {
+      mElements = new int[2];
       mElements[0] = iso_id;
       mTail = 1;
       mSize = 1;
@@ -25,17 +25,17 @@ public class FastCluster {
       mDiameter = mMean = mPerSim = -1.0f;
    }
 
-   public short getID() { return mElements[0]; }
-   public short size() { return mSize; }
-   public short[] getElements() { return mElements; }
+   public int getID() { return mElements[0]; }
+   public int size() { return mSize; }
+   public int[] getElements() { return mElements; }
 
    private void computeStatistics () {
       float total_sim = 0, diameter = Float.MAX_VALUE;
       short num_sim = 0, count = 0;
       float clustSim = 0.0f;
 
-      for (short ndxA = 0; ndxA < mSize; ndxA++) {
-         for (short ndxB = (short) (ndxA + 1); ndxB < mSize; ndxB++) {
+      for (int ndxA = 0; ndxA < mSize; ndxA++) {
+         for (int ndxB = (short) (ndxA + 1); ndxB < mSize; ndxB++) {
             clustSim = mSimMatrix[mSimMapping[mElements[ndxA]][
                mElements[ndxB] % (mNumIsolates - mElements[ndxA])]
             ];
@@ -47,9 +47,16 @@ public class FastCluster {
          }
       }
 
-      mMean = total_sim/count;
-      mDiameter = diameter;
-      mPerSim = num_sim/count;
+      if (count > 0) {
+         mMean = total_sim/count;
+         mPerSim = num_sim/count;
+         mDiameter = diameter;
+      }
+      else {
+         mMean = total_sim;
+         mPerSim = 1;
+         mDiameter = -1;
+      }
    }
 
    public float getDiameter() {
@@ -67,23 +74,26 @@ public class FastCluster {
    }
 
    public float compareTo(FastCluster other) {
-      final short[] elemsA = mElements, elemsB = other.mElements;
-      final short lastA = mSize, lastB = other.mSize;
+      final int[] elemsA = mElements, elemsB = other.mElements;
+      final int lastA = mSize, lastB = other.mSize;
       Float comparison = null;
 
       try {
          comparison = mThreadPool.submit(new Callable<Float>() {
             public Float call() {
                float clustSim = 0;
+               int simCount = 0;
 
-               for (short elemNdxA = 0; elemNdxA < lastA; elemNdxA++) {
-                  for (short elemNdxB = 0; elemNdxB < lastB; elemNdxB++) {
+               for (int elemNdxA = 0; elemNdxA < lastA; elemNdxA++) {
+                  for (int elemNdxB = 0; elemNdxB < lastB; elemNdxB++) {
                      if (elemsA[elemNdxA] > elemsB[elemNdxB]) {
+                        simCount++;
                         clustSim += mSimMatrix[mSimMapping[elemsB[elemNdxB]][
                            elemsA[elemNdxA] % (mNumIsolates - elemsA[elemNdxA])]
                         ];
                      }
                      else if (elemsA[elemNdxA] < elemsB[elemNdxB]) {
+                        simCount++;
                         clustSim += mSimMatrix[mSimMapping[elemsA[elemNdxA]][
                            elemsB[elemNdxB] % (mNumIsolates - elemsA[elemNdxA])]
                         ];
@@ -91,7 +101,9 @@ public class FastCluster {
                   }
                }
 
-               return new Float(clustSim);
+               if (simCount > 0) { return new Float(clustSim/simCount); }
+               else { return new Float(0); }
+
             }
          }).get();
       }
@@ -106,9 +118,9 @@ public class FastCluster {
 
    public void incorporate(FastCluster other) {
       if (mElements.length < mSize + other.mSize) {
-         short[] newArr = new short[(mElements.length * 2) + other.mSize];
+         int[] newArr = new int[(mElements.length * 2) + other.mSize];
 
-         for (short newNdx = 0; newNdx < mSize; newNdx++) {
+         for (int newNdx = 0; newNdx < mSize; newNdx++) {
             newArr[newNdx] = mElements[newNdx];
          }
 
@@ -129,7 +141,7 @@ public class FastCluster {
    public String toString() {
       String str = "";
 
-      for (short elemNdx = 0; elemNdx < mElements.length; elemNdx++) {
+      for (int elemNdx = 0; elemNdx < mSize; elemNdx++) {
          str += String.format("%d, ", mElements[elemNdx]);
       }
 
