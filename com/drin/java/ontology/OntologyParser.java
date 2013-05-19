@@ -90,7 +90,7 @@ public class OntologyParser {
          }
       }
 
-      return new FastOntologyTerm(tableName, colName, getTermOptions(), partitions);
+      return new FastOntologyTerm(colName, getTermOptions(), partitions);
    }
 
    public String getTermTableName() {

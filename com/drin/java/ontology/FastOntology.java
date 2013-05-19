@@ -9,55 +9,90 @@ import java.io.File;
 import java.util.Scanner;
 
 import java.util.Map;
-import java.util.Set;
-
-import java.util.HashMap;
-import java.util.HashSet;
 
 public class FastOntology {
    private FastOntologyTerm mRoot;
-   private Map<String, Set<String>> mTableColumns, mColumnPartitions;
+   private String[] mColumns, mPartitions;
+   private byte mColumnTail, mPartitionTail;
 
    public FastOntology() {
       mRoot = null;
+      
+      mColumns = new String[2];
+      mPartitions = new String[2];
 
-      mTableColumns = new HashMap<String, Set<String>>();
-      mColumnPartitions = new HashMap<String, Set<String>>();
+      mColumnTail = mPartitionTail = 0;
+   }
+   
+   public FastOntology(FastOntology oldOnt) {
+      this();
+      
+      mColumns = oldOnt.mColumns;
+      mPartitions = oldOnt.mPartitions;
+      
+      mColumnTail = oldOnt.mColumnTail;
+      mPartitionTail = oldOnt.mPartitionTail;
+      
+      mRoot = new FastOntologyTerm(oldOnt.mRoot);
    }
 
    public FastOntologyTerm getRoot() {
       return mRoot;
    }
 
+   public int size() { return mRoot.size(); }
+
    @Override
    public String toString() {
       return FastOntology.printOntology(mRoot, "root", "");
    }
 
-   public Map<String, Set<String>> getTableColumns() {
-      return mTableColumns;
+   public byte getNumCols() { return mColumnTail; }
+   public String[] getColumns() {
+      return mColumns;
+   }
+   public void addColumn(String colName) {
+      if (mColumns.length == mColumnTail) {
+         String tmpArr[] = new String[mColumnTail * 2];
+         
+         for (int tmpNdx = 0; tmpNdx < mColumnTail; tmpNdx++) {
+            tmpArr[tmpNdx] = mColumns[tmpNdx];
+         }
+         
+         mColumns = tmpArr;
+      }
+      
+      mColumns[mColumnTail++] = colName;
    }
 
-   public Map<String, Set<String>> getColumnPartitions() {
-      return mColumnPartitions;
+   public byte getNumPartitions() { return mPartitionTail; }
+   public String[] getPartitions() {
+      return mPartitions;
+   }
+   
+   public void addPartition(String partition) {
+      if (mPartitions.length == mPartitionTail) {
+         String tmpArr[] = new String[mPartitionTail * 2];
+         
+         for (int tmpNdx = 0; tmpNdx < mPartitionTail; tmpNdx++) {
+            tmpArr[tmpNdx] = mPartitions[tmpNdx];
+         }
+         
+         mPartitions = tmpArr;
+      }
+      
+      mPartitions[mPartitionTail++] = partition;
    }
 
    public boolean addData(FastCluster element) {
-      return mRoot.addData(element);
+      return mRoot.addData(element, (byte) 0);
    }
 
    public void addFastTerm(FastOntologyTerm newTerm) {
-      if (!mTableColumns.containsKey(newTerm.getTableName())) {
-         mTableColumns.put(newTerm.getTableName(), new HashSet<String>());
-      }
-      mTableColumns.get(newTerm.getTableName()).add(newTerm.getColName());
+      addColumn(newTerm.getColName());
 
       for (String partitionVal : newTerm.getPartitions().keySet()) {
-         if (!mColumnPartitions.containsKey(newTerm.getColName())) {
-            mColumnPartitions.put(newTerm.getColName(), new HashSet<String>());
-         }
-
-         mColumnPartitions.get(newTerm.getColName()).add(partitionVal);
+         addPartition(partitionVal);
       }
 
       if (mRoot != null) {
@@ -93,6 +128,14 @@ public class FastOntology {
 
             ontologyStr += "\n";
          }
+         
+         if (term.getClusters() != null) {
+            for (FastCluster element : term.getClusters()) {
+               ontologyStr += String.format("%s\n%s", prefix + "   ", element);
+            }
+
+            ontologyStr += "\n";
+         }
 
          if (term.getPartitions() != null) {
             for (Map.Entry<String, FastOntologyTerm> feature : term.getPartitions().entrySet()) {
@@ -100,32 +143,6 @@ public class FastOntology {
                                                          feature.getKey(),
                                                          prefix + "   ");
             }
-         }
-      }
-
-      return ontologyStr;
-   }
-
-   public String printClusters() {
-      return FastOntology.printClusters(mRoot, "root", "");
-   }
-
-   public static String printClusters(FastOntologyTerm term, String partitionName, String prefix) {
-      if (term == null) { return ""; }
-
-      String ontologyStr = String.format("%s%s:\n", prefix, partitionName);
-
-      if (term.getClusters() != null) {
-         for (FastCluster element : term.getClusters()) {
-            //ontologyStr += element.prettyPrint(prefix + "   ");
-         }
-
-         ontologyStr += "\n";
-      }
-
-      if (term.getPartitions() != null) {
-         for (Map.Entry<String, FastOntologyTerm> feature : term.getPartitions().entrySet()) {
-            ontologyStr += FastOntology.printClusters(feature.getValue(), feature.getKey(), prefix + "   ");
          }
       }
 
