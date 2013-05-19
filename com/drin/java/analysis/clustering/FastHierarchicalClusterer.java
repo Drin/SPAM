@@ -1,9 +1,8 @@
 package com.drin.java.analysis.clustering;
 
 import com.drin.java.clustering.FastCluster;
+import com.drin.java.ontology.FastOntology;
 
-import java.util.Map;
-import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -29,12 +28,15 @@ public class FastHierarchicalClusterer {
       clusterDataSet(mResultClusters, mThresh);
    }
 
+   public void clusterData(FastOntology clustOnt) { throw new UnsupportedOperationException(); }
+
    protected void clusterDataSet(List<FastCluster> clusters, float threshold) {
       short closeA = -1, closeB = -1;
       float maxSim = 0;
 
       do {
          closeA = closeB = -1;
+         maxSim = 0;
 
          for (short ndxA = 0; ndxA < clusters.size(); ndxA++) {
             FastCluster clustA = clusters.get(ndxA);

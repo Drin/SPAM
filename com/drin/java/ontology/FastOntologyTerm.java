@@ -19,15 +19,15 @@ public class FastOntologyTerm {
    public static String[][] mIsoLabels;
    private static final String TIME_OPTION_KEY = "TimeSensitive";
 
-   private String mTableName, mColName;
+   private String mColName;
    private Map<String, Boolean> mOptions;
    private Map<String, FastOntologyTerm> mPartitions;
    private List<FastCluster> mData, mClusters;
    private boolean mHasNewData;
 
-   public FastOntologyTerm(String tableName, String colName) {
-      mTableName = tableName;
-      mColName = colName;
+   public FastOntologyTerm(String colName) {
+      if (colName.equals("")) { mColName = null; }
+      else { mColName = colName; }
 
       mOptions = new HashMap<String, Boolean>();
       mPartitions = new LinkedHashMap<String, FastOntologyTerm>();
@@ -36,9 +36,8 @@ public class FastOntologyTerm {
       mHasNewData = false;
    }
 
-   public FastOntologyTerm(String tableName, String colName,
-                       Map<String, Boolean> options, List<String> values) {
-      this(tableName, colName);
+   public FastOntologyTerm(String colName, Map<String, Boolean> options, List<String> values) {
+      this(colName);
 
       for (Map.Entry<String, Boolean> option : options.entrySet()) {
          mOptions.put(option.getKey(), new Boolean(option.getValue().booleanValue()));
@@ -50,11 +49,9 @@ public class FastOntologyTerm {
    }
 
    public FastOntologyTerm(FastOntologyTerm originalNode) {
-      this(originalNode.mTableName, originalNode.mColName);
+      this(originalNode.mColName);
 
-      for (Map.Entry<String, Boolean> option : originalNode.mOptions.entrySet()) {
-         mOptions.put(option.getKey(), new Boolean(option.getValue().booleanValue()));
-      }
+      mOptions = originalNode.mOptions;
 
       for (Map.Entry<String, FastOntologyTerm> partition : originalNode.mPartitions.entrySet()) {
          if (partition.getValue() == null) {
@@ -67,12 +64,26 @@ public class FastOntologyTerm {
    }
 
    public FastOntologyTerm(FastCluster element) {
-      this(null, null);
+      this("");
 
       mData = new ArrayList<FastCluster>();
       mData.add(element);
       mHasNewData = true;
+   }
 
+   public int size() {
+      int size = 0;
+      for (Map.Entry<String, FastOntologyTerm> partition : mPartitions.entrySet()) {
+         if (partition != null && partition.getValue() != null) {
+            size += partition.getValue().size();
+         }
+      }
+
+      if (mData != null) {
+         return size + mData.size();
+      }
+
+      return size;
    }
 
    public void clearDataFlag() { mHasNewData = false; }
@@ -81,7 +92,6 @@ public class FastOntologyTerm {
       mHasNewData = false;
    }
 
-   public String getTableName() { return mTableName; }
    public String getColName() { return mColName; }
    public List<FastCluster> getData() { return mData; }
    public List<FastCluster> getClusters() { return mClusters; }
@@ -99,19 +109,24 @@ public class FastOntologyTerm {
       return mOptions.containsKey(TIME_OPTION_KEY);
    }
 
-   public boolean addData(FastCluster element) {
+   public boolean addData(FastCluster element, byte labelNdx) {
       boolean dataAdded = false;
 
-      if (mPartitions != null && mIsoLabels != null && element.getID() < mIsoLabels.length) {
-         for (int labelNdx = 0; labelNdx < mIsoLabels[element.getID()].length; labelNdx++) {
+      if (mPartitions != null && mIsoLabels != null && mPartitions.size() > 0) {
+         if (labelNdx < mIsoLabels[element.getID()].length) {
             String isoLabel = mIsoLabels[element.getID()][labelNdx];
 
             if (mPartitions.containsKey(isoLabel)) {
 
                if (mPartitions.get(isoLabel) == null) {
                   mPartitions.put(isoLabel, new FastOntologyTerm(element));
+                  dataAdded = true;
                }
-               else { dataAdded = mPartitions.get(isoLabel).addData(element); }
+               else {
+                  dataAdded = mPartitions.get(isoLabel).addData(
+                     element, (byte) (labelNdx + 1)
+                  );
+               }
             }
          }
       }
@@ -132,8 +147,7 @@ public class FastOntologyTerm {
 
    @Override
    public String toString() {
-      String fmt = String.format("Feature %s(TimeSensitive[%s]):",
-       getTableName(), isTimeSensitive());
+      String fmt = String.format("Feature %s(TimeSensitive[%s]):", mColName, isTimeSensitive());
 
       for (String partitionName : mPartitions.keySet()) {
          fmt += " " + partitionName + ",";

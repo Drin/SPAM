@@ -10,53 +10,56 @@ import com.drin.java.clustering.FastCluster;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
-import java.util.HashMap;
 
 public class FastOHClusterer extends FastHierarchicalClusterer {
-   protected FastOntology mOntology;
    private float mAlphaThresh;
 
-   public FastOHClusterer(FastOntology ontology, short dataSize,
-                          float alphaThresh, float betaThresh) {
+   public FastOHClusterer(short dataSize, float alphaThresh, float betaThresh) {
       super(dataSize, betaThresh);
       mAlphaThresh = alphaThresh;
-      mOntology = ontology;
    }
 
    @Override
    public List<FastCluster> getClusters() { return mResultClusters; }
 
    @Override
-   public void clusterData(List<FastCluster> clusters) {
-      if (mOntology == null) {
-         super.clusterData(clusters);
+   public void clusterData(FastOntology clustOnt) {
+      if (clustOnt == null ||
+          clustOnt.getRoot() == null ||
+          !clustOnt.getRoot().hasNewData()) {
          return;
       }
 
-      for (FastCluster fastClust : clusters) {
-         mOntology.addData(fastClust);
+      ontologicalCluster(clustOnt.getRoot(), mAlphaThresh);
+      
+      if (clustOnt.getRoot().getClusters() != null) {
+         mResultClusters = new ArrayList<FastCluster>(
+               clustOnt.getRoot().getClusters().size()
+         );
+         
+         for (FastCluster clust : clustOnt.getRoot().getClusters()) {
+            mResultClusters.add(new FastCluster(clust));
+         }
+         
+         super.clusterDataSet(mResultClusters, mThresh);
       }
 
-      if (mOntology.getRoot().hasNewData()) {
-         ontologicalCluster(mOntology.getRoot(), mAlphaThresh);
-      }
-
-      mResultClusters = mOntology.getRoot().getClusters();
-      if (mResultClusters == null) {
+      else {
          System.err.println("No clusters formed!?");
          return;
       }
+   }
 
-      super.clusterDataSet(mResultClusters, mThresh);
+   @Override
+   public void clusterData(List<FastCluster> clusters) {
+      throw new UnsupportedOperationException();
    }
 
    private void ontologicalCluster(FastOntologyTerm root, float threshold) {
-      List<FastCluster> clusters = new ArrayList<FastCluster>();
       boolean unclusteredData = false;
+      List<FastCluster> clusters = new ArrayList<FastCluster>();
 
-      if (root == null || !root.hasNewData()) { return; }
-      else if (!root.getPartitions().isEmpty()) {
-
+      if (!root.getPartitions().isEmpty()) {
          for (Map.Entry<String, FastOntologyTerm> partition : root.getPartitions().entrySet()) {
             if (partition.getValue() == null) { continue; }
 
@@ -67,23 +70,28 @@ public class FastOHClusterer extends FastHierarchicalClusterer {
 
             if (partition.getValue().getClusters() == null) { continue; }
 
-            clusters.addAll(partition.getValue().getClusters());
+            for (FastCluster clust : partition.getValue().getClusters()) {
+               clusters.add(new FastCluster(clust));
+            }
+            
             if (unclusteredData && root.isTimeSensitive()) {
                clusterDataSet(clusters, threshold);
-               root.setClusters(clusters);
             }
          }
       
          if (unclusteredData && !root.isTimeSensitive()) {
             clusterDataSet(clusters, threshold);
-            root.setClusters(clusters);
          }
       }
 
-      else if (root.getData() != null) {
-         clusters.addAll(root.getData());
+      if (root.getData() != null && root.getData().size() > 0) {
+         for (FastCluster clust : root.getData()) {
+            clusters.add(new FastCluster(clust));
+         }
+         
          clusterDataSet(clusters, threshold);
-         root.setClusters(clusters);
       }
+      
+      root.setClusters(clusters);
    }
 }

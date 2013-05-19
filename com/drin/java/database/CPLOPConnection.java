@@ -3,20 +3,14 @@ package com.drin.java.database;
 import com.drin.java.ontology.FastOntology;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import java.util.Date;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 
 import java.sql.Timestamp;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
-import java.sql.CallableStatement;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
@@ -36,11 +30,6 @@ public class CPLOPConnection {
       SCHEMA_QUERY = "SELECT distinct(%s) " +
                      "FROM %s " +
                      "WHERE %s IS NOT NULL",
-      ID_QUERY = "SELECT * " +
-                 "FROM (SELECT test_isolate_id, pyro_id_1, pyro_id_2 " +
-                       "FROM isolate_selection %s " +
-                       "LIMIT %d OFFSET %d) ids " +
-                 "ORDER BY test_isolate_id",
       DATA_QUERY = "SELECT i.test_isolate_id, h1.pHeight, h2.pHeight, h1.position " +
                    "FROM test_histograms h1 " +
                         "JOIN isolate_selection i ON ( " +
@@ -74,10 +63,7 @@ public class CPLOPConnection {
       Statement statement = null;
       ResultSet results = null;
 
-      String query = String.format(
-         "SELECT distinct(%s) FROM %s WHERE %s IS NOT NULL",
-         colName, tableName, colName
-      );
+      String query = String.format(SCHEMA_QUERY, colName, tableName, colName);
 
       try {
          statement = mConn.createStatement();
@@ -163,20 +149,14 @@ public class CPLOPConnection {
       Statement statement = null;
       ResultSet results = null;
 
-      String metaLabels[][] = new String[ids.length][];
+      String metaLabels[][] = new String[ids.length][], colArr[] = ont.getColumns();
       String metaIDs = "", metaColumns = "";
       int tmp_id = -1, isolateID = -1;
       short isolateNdx = -1, pageSize = DEFAULT_PAGE_SIZE;
-      byte colOffset = 1, numColumns = 0;
-      short tmpNum = 0;
+      byte colOffset = 2, numColumns = ont.getNumCols();
 
-      if (ont == null) { return null; }
-
-      for (Map.Entry<String, Set<String>> ont_entry : ont.getTableColumns().entrySet()) {
-         for (String col_name : ont_entry.getValue()) {
-            metaColumns += "," + col_name;
-            numColumns++;
-         }
+      for (byte colNdx = 0; colNdx < ont.getNumCols(); colNdx++) {
+            metaColumns += "," + colArr[colNdx];
       }
 
       for (short id_ndx = 0; id_ndx < ids.length; id_ndx++) { metaIDs += "," + ids[id_ndx]; }
@@ -213,7 +193,7 @@ public class CPLOPConnection {
 
                for (byte colNdx = 0; colNdx < numColumns; colNdx++) {
                   metaLabels[isolateNdx][colNdx] =
-                     String.valueOf(results.getObject(colNdx + 2)).trim();
+                     String.valueOf(results.getObject(colNdx + colOffset)).trim();
                }
             }
          }

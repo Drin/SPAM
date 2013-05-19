@@ -16,10 +16,6 @@ import java.util.concurrent.TimeUnit;
 
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Set;
-import java.util.Map;
-import java.util.Random;
-import java.util.HashMap;
 
 import java.io.File;
 
@@ -28,8 +24,7 @@ public class FastSPAMEvaluationCPU {
 
    private CPLOPConnection mConn;
    private FastHierarchicalClusterer mClusterer;
-   private FastOntology mOntology;
-
+   
    private static final short ISOLATE_LEN = 188;
    private static final byte LEN_23S     = 93,
                              LEN_16S     = 95;
@@ -38,6 +33,9 @@ public class FastSPAMEvaluationCPU {
    private static byte REGION_OFFSETS[] = new byte[] {0, LEN_23S};
 
    private static final String DEFAULT_ONTOLOGY = "ontologies/specific.ont";
+
+   private static final boolean INSERT_RESULTS = false;/*,
+                                DEBUG          = true;*/
 
    public FastSPAMEvaluationCPU(int sizeHint) {
       mThreadPool = Executors.newFixedThreadPool(64);
@@ -53,13 +51,12 @@ public class FastSPAMEvaluationCPU {
    }
 
    public static void main(String[] args) {
-      short initSizes[] = new short[] { 1000, 2500, 5000};
-      float upSizes[] = new float[] { 0.20f, 0.25f };
+      short initSizes[] = new short[] { 10 };
+      float upSizes[] = new float[] { 1.00f};
       short numUps = 10;
       int totalSize = 0;
       int maxSize = Math.round((initSizes[initSizes.length - 1] +
          ((initSizes[initSizes.length - 1] * upSizes[upSizes.length - 1]) * (numUps))));
-
 
       //prepare ontology and class
       FastOntology clustOnt = FastOntology.createFastOntology(new File(DEFAULT_ONTOLOGY));
@@ -90,12 +87,14 @@ public class FastSPAMEvaluationCPU {
             long start = System.currentTimeMillis();
 
             for (int i = 0; i < 3; i++) {
-               runner.testOHClust(initSize, upSize, numUps, totalSize, clustOnt,
+               runner.testOHClust(initSize, upSize, numUps, totalSize, new FastOntology(clustOnt),
                                   simMapping, simMatrix, data);
 
                runner.testAgglom(initSize, upSize, numUps, totalSize,
                                  simMapping, simMatrix, data);
             }
+            
+            System.out.printf("Took about %s ms\n", System.currentTimeMillis() - start);
          }
       }
 
@@ -122,23 +121,18 @@ public class FastSPAMEvaluationCPU {
                            FastOntology clustOnt, int[][] simMapping, float[] simMatrix,
                            IsolateDataContainer data) {
       short isoStart = 0, isoEnd = initSize;
-      long startCluster, finishCluster, runTimes[] = new long[numUps + 1];
+      long startCluster = 0, finishCluster = 0, runTimes[] = new long[numUps + 1];
       long fullTime = System.currentTimeMillis();
 
-      //initialize cluster list
-      List<FastCluster> clusters = new ArrayList<FastCluster>(initSize);
-
-      mClusterer = new FastOHClusterer(clustOnt, (short) numIsolates, 0.75f, 0.70f);
+      mClusterer = new FastOHClusterer((short) numIsolates, 0.85f, 0.80f);
 
       for (byte currUp = (byte) (-1);  currUp < numUps; currUp++) {
-         clusters.clear();
-
          for (int isoNdx = isoStart; isoNdx < Math.min(isoEnd, numIsolates); isoNdx++) {
-            clusters.add(new FastCluster(isoNdx));
+            clustOnt.addData(new FastCluster(isoNdx));
          }
 
          startCluster = System.currentTimeMillis();
-         mClusterer.clusterData(clusters);
+         mClusterer.clusterData(clustOnt);
          finishCluster = System.currentTimeMillis() - startCluster;
 
          runTimes[currUp + 1] = finishCluster;
@@ -166,12 +160,16 @@ public class FastSPAMEvaluationCPU {
       List<FastCluster> tmpClusters = null;
       List<FastCluster> clusters = new ArrayList<FastCluster>(initSize);
 
-      mClusterer = new FastHierarchicalClusterer((short) numIsolates, 0.70f);
+      mClusterer = new FastHierarchicalClusterer((short) numIsolates, 0.80f);
       for (byte currUp = (byte) (-1);  currUp < numUps; currUp++) {
          for (int isoNdx = isoStart; isoNdx < Math.min(isoEnd, numIsolates); isoNdx++) {
             clusters.add(new FastCluster(isoNdx));
          }
-         tmpClusters = new ArrayList<FastCluster>(clusters);
+         
+         tmpClusters = new ArrayList<FastCluster>(clusters.size());
+         for (FastCluster clust : clusters) {
+            tmpClusters.add(new FastCluster(clust));
+         }
 
          startCluster = System.currentTimeMillis();
          mClusterer.clusterData(tmpClusters);
@@ -202,6 +200,8 @@ public class FastSPAMEvaluationCPU {
    public void persistResults(String algorithm, FastHierarchicalClusterer clusterer,
                               List<FastCluster> clusters, long[] runTimes, long totalTime,
                               short initSize, float upSize, IsolateDataContainer data) {
+
+      if (!INSERT_RESULTS) { return; }
 
       if (clusters == null && clusterer.getClusters() == null) {
          System.out.println("wtf why is it all null");
@@ -301,6 +301,34 @@ public class FastSPAMEvaluationCPU {
       try {
          data = mConn.getIsolateData(dataSize);
          data.isoMeta = mConn.getIsolateMetaData(data.isoIDs, ont, dataSize);
+
+         /*
+         if (false && DEBUG) {
+            for (int iso_ndx = 0; iso_ndx < data.isoIDs.length; iso_ndx++) {
+               System.out.printf("%s:", data.isoIDs[iso_ndx]);
+
+               for (int meta_ndx = 0; meta_ndx < data.isoMeta[iso_ndx].length; meta_ndx++) {
+                  System.out.printf("\t%s", data.isoMeta[iso_ndx][meta_ndx]);
+               }
+               
+               System.out.println("");
+
+               for (int peak_ndx = 0; peak_ndx < 93; peak_ndx++) {
+                  System.out.printf("\t,%s", data.isoData[iso_ndx * ISOLATE_LEN + peak_ndx]);
+               }
+
+               System.out.println("");
+
+               for (int peak_ndx = 0; peak_ndx < 95; peak_ndx++) {
+                  System.out.printf("\t,%s", data.isoData[iso_ndx * ISOLATE_LEN + 93 + peak_ndx]);
+               }
+
+               System.out.println("");
+            }
+
+            System.exit(0);
+         }
+         */
       }
       catch (java.sql.SQLException sqlErr) { sqlErr.printStackTrace(); }
       catch (Exception err) { err.printStackTrace(); }

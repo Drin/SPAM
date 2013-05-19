@@ -3,7 +3,6 @@ package com.drin.java.clustering;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
 
 public class FastCluster {
    public static short mNumIsolates = -1;
@@ -12,30 +11,49 @@ public class FastCluster {
 
    private static final ExecutorService mThreadPool = Executors.newFixedThreadPool(64);
    private int[] mElements;
-   private int mTail, mSize;
+   private int mTail;
 
    private float mDiameter, mMean, mPerSim;
 
-   public FastCluster(int iso_id) {
-      mElements = new int[2];
-      mElements[0] = iso_id;
+   public FastCluster(int isoID, int clustSize) {
+      mElements = new int[clustSize];
+      mElements[0] = isoID;
       mTail = 1;
-      mSize = 1;
 
       mDiameter = mMean = mPerSim = -1.0f;
    }
+   
+   public FastCluster(int isoID) {
+      this(isoID, 2);
+   }
+   
+   public FastCluster(FastCluster oldClust) {
+      this(oldClust.mElements[0], oldClust.size());
+      
+      for (int elemNdx = 1; elemNdx < oldClust.size(); elemNdx++) {
+         mElements[mTail++] = oldClust.mElements[elemNdx];
+      }
+   }
 
    public int getID() { return mElements[0]; }
-   public int size() { return mSize; }
+   public int size() { return mTail; }
    public int[] getElements() { return mElements; }
+
+   public boolean equals(Object other) {
+      if (other instanceof FastCluster) {
+         return mElements[0] == ((FastCluster) other).mElements[0];
+      }
+      
+      return false;
+   }
 
    private void computeStatistics () {
       float total_sim = 0, diameter = Float.MAX_VALUE;
       short num_sim = 0, count = 0;
       float clustSim = 0.0f;
 
-      for (int ndxA = 0; ndxA < mSize; ndxA++) {
-         for (int ndxB = (short) (ndxA + 1); ndxB < mSize; ndxB++) {
+      for (int ndxA = 0; ndxA < mTail; ndxA++) {
+         for (int ndxB = (short) (ndxA + 1); ndxB < mTail; ndxB++) {
             clustSim = mSimMatrix[mSimMapping[mElements[ndxA]][
                mElements[ndxB] % (mNumIsolates - mElements[ndxA])]
             ];
@@ -75,7 +93,7 @@ public class FastCluster {
 
    public float compareTo(FastCluster other) {
       final int[] elemsA = mElements, elemsB = other.mElements;
-      final int lastA = mSize, lastB = other.mSize;
+      final int lastA = mTail, lastB = other.mTail;
       Float comparison = null;
 
       try {
@@ -98,6 +116,11 @@ public class FastCluster {
                            elemsB[elemNdxB] % (mNumIsolates - elemsA[elemNdxA])]
                         ];
                      }
+                     else if (elemsA[elemNdxA] == elemsB[elemNdxB]) {
+                        System.out.printf("comparison between the same isolate!\n" +
+                           "[ %s and %s ]\n", elemsA[elemNdxA], elemsB[elemNdxB]
+                        );
+                     }
                   }
                }
 
@@ -117,19 +140,18 @@ public class FastCluster {
    }
 
    public void incorporate(FastCluster other) {
-      if (mElements.length < mSize + other.mSize) {
-         int[] newArr = new int[(mElements.length * 2) + other.mSize];
+      if (mElements.length < mTail + other.mTail) {
+         int[] newArr = new int[(mElements.length * 2) + other.mTail];
 
-         for (int newNdx = 0; newNdx < mSize; newNdx++) {
+         for (int newNdx = 0; newNdx < mTail; newNdx++) {
             newArr[newNdx] = mElements[newNdx];
          }
 
          mElements = newArr;
       }
 
-      for (short otherNdx = 0; otherNdx < other.mSize; otherNdx++) {
+      for (short otherNdx = 0; otherNdx < other.mTail; otherNdx++) {
          mElements[mTail++] = other.mElements[otherNdx];
-         mSize++;
       }
    }
 
@@ -141,7 +163,7 @@ public class FastCluster {
    public String toString() {
       String str = "";
 
-      for (int elemNdx = 0; elemNdx < mSize; elemNdx++) {
+      for (int elemNdx = 0; elemNdx < mTail; elemNdx++) {
          str += String.format("%d, ", mElements[elemNdx]);
       }
 
