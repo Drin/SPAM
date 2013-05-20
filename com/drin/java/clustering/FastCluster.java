@@ -5,7 +5,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Callable;
 
 public class FastCluster {
-   public static short mNumIsolates = -1;
+   public static int mNumIsolates = -1;
    public static float[] mSimMatrix = null;
    public static int[][] mSimMapping = null;
 
@@ -107,7 +107,7 @@ public class FastCluster {
                      if (elemsA[elemNdxA] > elemsB[elemNdxB]) {
                         simCount++;
                         clustSim += mSimMatrix[mSimMapping[elemsB[elemNdxB]][
-                           elemsA[elemNdxA] % (mNumIsolates - elemsA[elemNdxA])]
+                           elemsA[elemNdxA] % (mNumIsolates - elemsB[elemNdxB])]
                         ];
                      }
                      else if (elemsA[elemNdxA] < elemsB[elemNdxB]) {
@@ -124,13 +124,24 @@ public class FastCluster {
                   }
                }
 
-               if (simCount > 0) { return new Float(clustSim/simCount); }
-               else { return new Float(0); }
 
+               try {
+                  if (simCount > 0) { return new Float(clustSim/simCount); }
+               }
+               catch (Exception err) {
+                  System.out.println("Caught inside of the thread");
+                  err.printStackTrace();
+               }
+
+               return new Float(0.0f);
             }
          }).get();
       }
-      catch (Exception err) { err.printStackTrace(); }
+      catch (Exception err) {
+         System.out.println("Caught outside of the thread");
+         err.printStackTrace();
+         System.exit(0);
+      }
 
       if (comparison != null) {
          return comparison.floatValue();

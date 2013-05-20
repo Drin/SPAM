@@ -13,7 +13,7 @@ import java.util.Map;
 public class FastOntology {
    private FastOntologyTerm mRoot;
    private String[] mColumns, mPartitions;
-   private byte mColumnTail, mPartitionTail;
+   private int mColumnTail, mPartitionTail;
 
    public FastOntology() {
       mRoot = null;
@@ -47,7 +47,7 @@ public class FastOntology {
       return FastOntology.printOntology(mRoot, "root", "");
    }
 
-   public byte getNumCols() { return mColumnTail; }
+   public int getNumCols() { return mColumnTail; }
    public String[] getColumns() {
       return mColumns;
    }
@@ -65,7 +65,7 @@ public class FastOntology {
       mColumns[mColumnTail++] = colName;
    }
 
-   public byte getNumPartitions() { return mPartitionTail; }
+   public int getNumPartitions() { return mPartitionTail; }
    public String[] getPartitions() {
       return mPartitions;
    }

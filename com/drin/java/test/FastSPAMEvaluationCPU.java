@@ -34,7 +34,7 @@ public class FastSPAMEvaluationCPU {
 
    private static final String DEFAULT_ONTOLOGY = "ontologies/specific.ont";
 
-   private static final boolean INSERT_RESULTS = false;/*,
+   private static final boolean INSERT_RESULTS = true;/*,
                                 DEBUG          = true;*/
 
    public FastSPAMEvaluationCPU(int sizeHint) {
@@ -51,50 +51,56 @@ public class FastSPAMEvaluationCPU {
    }
 
    public static void main(String[] args) {
-      short initSizes[] = new short[] { 10 };
-      float upSizes[] = new float[] { 1.00f};
-      short numUps = 10;
+      short initSizes[] = new short[] { 100, 250, 500, 1000 };
+      float upSizes[] = new float[] { 0.15f, 0.20f };
+      short numUps[] = new short[] { 20, 50 };
       int totalSize = 0;
-      int maxSize = Math.round((initSizes[initSizes.length - 1] +
-         ((initSizes[initSizes.length - 1] * upSizes[upSizes.length - 1]) * (numUps))));
+      int maxSize = 1000 + (200 * 50);
 
       //prepare ontology and class
       FastOntology clustOnt = FastOntology.createFastOntology(new File(DEFAULT_ONTOLOGY));
-      FastSPAMEvaluationCPU runner = new FastSPAMEvaluationCPU(totalSize);
+      FastSPAMEvaluationCPU runner = new FastSPAMEvaluationCPU(maxSize);
 
       //get the data
+      long dataFetchTime = System.currentTimeMillis();
+      System.out.println("fetching data...");
       IsolateDataContainer data = runner.getIsolateData(clustOnt, (short) maxSize);
+      System.out.printf("finished fetching data in %ds!\n",
+         (System.currentTimeMillis() - dataFetchTime) / 1000
+      );
+
+      //populate the packed similarity matrix
+      float simMatrix[] = runner.calculateSimMatrix(data.isoIDs, data.isoData);
+      int[][] simMapping = runner.getSimMapping((short) data.isoIDs.length);
+
+      //set static data for lookups
+      FastOntologyTerm.mIsoLabels = data.isoMeta;
+      FastCluster.mNumIsolates = maxSize;
+      FastCluster.mSimMatrix = simMatrix;
+      FastCluster.mSimMapping = simMapping;
 
       //iterate on configurations
-      for (short initSize : initSizes) {
-         for (float upSize : upSizes) {
-            totalSize = Math.round(initSize + ((initSize * upSize) * numUps));
+      for (short numUp : numUps) {
+         for (short initSize : initSizes) {
+            for (float upSize : upSizes) {
+               totalSize = Math.round(initSize + ((initSize * upSize) * numUp));
 
-            System.out.printf("initial: %d\nupdate size: %.02f\nnum ups: %d\n",
-               initSize, upSize, numUps
-            );
+               System.out.printf("initial: %d\nupdate size: %.02f\nnum ups: %d\n",
+                  initSize, upSize, numUp
+               );
 
-            //populate the packed similarity matrix
-            float simMatrix[] = runner.calculateSimMatrix(data.isoIDs, data.isoData);
-            int[][] simMapping = runner.getSimMapping((short) data.isoIDs.length);
+               long start = System.currentTimeMillis();
 
-            //set static data for lookups
-            FastOntologyTerm.mIsoLabels = data.isoMeta;
-            FastCluster.mNumIsolates = (short) totalSize;
-            FastCluster.mSimMatrix = simMatrix;
-            FastCluster.mSimMapping = simMapping;
+               for (int i = 0; i < 3; i++) {
+                  runner.testAgglom(initSize, upSize, numUp, totalSize,
+                                    simMapping, simMatrix, data);
 
-            long start = System.currentTimeMillis();
-
-            for (int i = 0; i < 3; i++) {
-               runner.testOHClust(initSize, upSize, numUps, totalSize, new FastOntology(clustOnt),
-                                  simMapping, simMatrix, data);
-
-               runner.testAgglom(initSize, upSize, numUps, totalSize,
-                                 simMapping, simMatrix, data);
+                  runner.testOHClust(initSize, upSize, numUp, totalSize, new FastOntology(clustOnt),
+                                     simMapping, simMatrix, data);
+               }
+               
+               System.out.printf("Took about %s ms\n", System.currentTimeMillis() - start);
             }
-            
-            System.out.printf("Took about %s ms\n", System.currentTimeMillis() - start);
          }
       }
 
@@ -124,7 +130,7 @@ public class FastSPAMEvaluationCPU {
       long startCluster = 0, finishCluster = 0, runTimes[] = new long[numUps + 1];
       long fullTime = System.currentTimeMillis();
 
-      mClusterer = new FastOHClusterer((short) numIsolates, 0.85f, 0.80f);
+      mClusterer = new FastOHClusterer((short) numIsolates, 0.90f, 0.85f);
 
       for (byte currUp = (byte) (-1);  currUp < numUps; currUp++) {
          for (int isoNdx = isoStart; isoNdx < Math.min(isoEnd, numIsolates); isoNdx++) {
@@ -160,7 +166,7 @@ public class FastSPAMEvaluationCPU {
       List<FastCluster> tmpClusters = null;
       List<FastCluster> clusters = new ArrayList<FastCluster>(initSize);
 
-      mClusterer = new FastHierarchicalClusterer((short) numIsolates, 0.80f);
+      mClusterer = new FastHierarchicalClusterer((short) numIsolates, 0.85f);
       for (byte currUp = (byte) (-1);  currUp < numUps; currUp++) {
          for (int isoNdx = isoStart; isoNdx < Math.min(isoEnd, numIsolates); isoNdx++) {
             clusters.add(new FastCluster(isoNdx));
@@ -380,6 +386,11 @@ public class FastSPAMEvaluationCPU {
                      pearsonSum += (REGION_LENS[regNdx] * sumAB - sumA * sumB) /
                          Math.sqrt((REGION_LENS[regNdx] * sumASquared - sumA * sumA) * 
                                    (REGION_LENS[regNdx] * sumBSquared - sumB * sumB));
+                  }
+
+                  if (Float.isNaN(pearsonSum / 2)) {
+                     System.out.printf("ndx %d and %d generated a nan!?\n", ndxA, ndxB);
+                     System.exit(0);
                   }
 
                   simMatrix[tmpSimNdx] = pearsonSum / 2;
