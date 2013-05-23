@@ -73,7 +73,7 @@ public class FastOHClusterer extends FastHierarchicalClusterer {
             for (FastCluster clust : partition.getValue().getClusters()) {
                clusters.add(new FastCluster(clust));
             }
-            partition.getValue().getClusters().clear();
+            //partition.getValue().getClusters().clear();
             
             if (unclusteredData && root.isTimeSensitive()) {
                clusterDataSet(clusters, threshold);

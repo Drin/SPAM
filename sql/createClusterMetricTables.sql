@@ -5,6 +5,8 @@ CREATE TABLE clustering_metrics (
    jaccard_index FLOAT,
    dice_coefficient FLOAT,
    rand_index FLOAT,
+   entropy_1 FLOAT,
+   entropy_2 FLOAT,
    variation_of_information FLOAT,
    PRIMARY KEY(test_run_id_1, test_run_id_2),
    INDEX(jaccard_index),

@@ -151,9 +151,9 @@ public class CPLOPConnection {
 
       String metaLabels[][] = new String[ids.length][], colArr[] = ont.getColumns();
       String metaIDs = "", metaColumns = "";
-      int tmp_id = -1, isolateID = -1;
+      int tmp_id = -1, isolateID = -1, numColumns = ont.getNumCols();
       short isolateNdx = -1, pageSize = DEFAULT_PAGE_SIZE;
-      byte colOffset = 2, numColumns = ont.getNumCols();
+      byte colOffset = 2;
 
       for (byte colNdx = 0; colNdx < ont.getNumCols(); colNdx++) {
             metaColumns += "," + colArr[colNdx];
@@ -260,6 +260,27 @@ public class CPLOPConnection {
       long seconds = ((clusterTime % 3600000) % 60000) / 1000;
 
       return String.format("%02d:%02d:%02d", hours, minutes, seconds);
+   }
+
+   public void insertTestRun(int runID, long runTime, String algorith, float interStrainSim,
+                             byte use_transform) throws SQLException {
+      Timestamp runDate = new Timestamp(new Date().getTime());
+      PreparedStatement insertSQL = null;
+
+      String insertQuery = String.format(
+         "INSERT IGNORE INTO test_runs (test_run_id, run_date, run_time, cluster_algorithm, " +
+                                "average_strain_similarity, use_transform) " +
+         "VALUES (%d, ?, '%s', '%s', %.04f, %d)",
+         runID, getElapsedTime(runTime), algorith, interStrainSim, use_transform
+      );
+
+      try {
+         insertSQL = mConn.prepareStatement(insertQuery);
+         insertSQL.setTimestamp(1, runDate);
+         insertSQL.executeUpdate();
+      }
+      catch (SQLException sqlEx) { throw sqlEx; }
+      finally { if (insertSQL != null) { insertSQL.close(); } }
    }
 
    public void insertTestRun(long runTime, String algorith, float interStrainSim,

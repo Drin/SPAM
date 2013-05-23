@@ -8,6 +8,10 @@ public class FastCluster {
    public static int mNumIsolates = -1;
    public static float[] mSimMatrix = null;
    public static int[][] mSimMapping = null;
+   public static boolean mTransform = false;
+
+   private static final float ALPHA_THRESH = 0.90f,
+                              BETA_THRESH  = 0.85f;
 
    private static final ExecutorService mThreadPool = Executors.newFixedThreadPool(64);
    private int[] mElements;
@@ -144,10 +148,19 @@ public class FastCluster {
       }
 
       if (comparison != null) {
+         if (mTransform) {
+            if (comparison.floatValue() >= ALPHA_THRESH) {
+               return 1.0f;
+            }
+            else if (comparison.floatValue() < BETA_THRESH) {
+               return 0.0f;
+            }
+         }
+
          return comparison.floatValue();
       }
 
-      return 0;
+      return 0.0f;
    }
 
    public void incorporate(FastCluster other) {
