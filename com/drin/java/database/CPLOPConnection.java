@@ -80,11 +80,11 @@ public class CPLOPConnection {
       return distinctValues;
    }
 
-   public IsolateDataContainer getIsolateData(short dataSize) throws SQLException {
+   public IsolateDataContainer getIsolateData(int dataSize) throws SQLException {
       return getIsolateData(dataSize, DEFAULT_PAGE_SIZE);
    }
 
-   public IsolateDataContainer getIsolateData(short dataSize, short pageSize) throws SQLException {
+   public IsolateDataContainer getIsolateData(int dataSize, short pageSize) throws SQLException {
       Statement statement = null;
       ResultSet results = null;
 
@@ -96,7 +96,7 @@ public class CPLOPConnection {
       short peak_ndx = 0, isolate_ndx = -1;
 
       try {
-         for (short pageNdx = 0; pageNdx < Math.ceil((float) peakDataSize / pageSize); pageNdx++) {
+         for (int pageNdx = 0; pageNdx < Math.ceil((float) peakDataSize / pageSize); pageNdx++) {
             statement = mConn.createStatement();
             results = statement.executeQuery(String.format(DATA_QUERY,
                Math.min(pageSize, peakDataSize - (pageSize * pageNdx)),
@@ -145,24 +145,24 @@ public class CPLOPConnection {
       return new IsolateDataContainer(iso_ids, iso_data);
    }
 
-   public String[][] getIsolateMetaData(int[] ids, FastOntology ont, short dataSize) {
+   public String[][] getIsolateMetaData(int[] ids, FastOntology ont, int dataSize) {
       Statement statement = null;
       ResultSet results = null;
 
       String metaLabels[][] = new String[ids.length][], colArr[] = ont.getColumns();
       String metaIDs = "", metaColumns = "";
       int tmp_id = -1, isolateID = -1, numColumns = ont.getNumCols();
-      short isolateNdx = -1, pageSize = DEFAULT_PAGE_SIZE;
+      int isolateNdx = -1, pageSize = DEFAULT_PAGE_SIZE;
       byte colOffset = 2;
 
       for (byte colNdx = 0; colNdx < ont.getNumCols(); colNdx++) {
             metaColumns += "," + colArr[colNdx];
       }
 
-      for (short id_ndx = 0; id_ndx < ids.length; id_ndx++) { metaIDs += "," + ids[id_ndx]; }
+      for (int id_ndx = 0; id_ndx < ids.length; id_ndx++) { metaIDs += "," + ids[id_ndx]; }
 
       try {
-         for (short pageNdx = 0; pageNdx < Math.ceil((float) dataSize / pageSize); pageNdx++) {
+         for (int pageNdx = 0; pageNdx < Math.ceil((float) dataSize / pageSize); pageNdx++) {
             System.out.println(String.format(META_QUERY,
                metaColumns, metaIDs.substring(1),
                Math.min(pageSize, dataSize - (pageNdx * pageSize)),
@@ -226,10 +226,12 @@ public class CPLOPConnection {
       String strainInsert = "INSERT IGNORE INTO test_run_strain_link (test_run_id, cluster_id, " +
                                                               "cluster_threshold, strain_diameter, " +
                                                               "average_isolate_similarity, " +
-                                                              "percent_similar_isolates) " +
+                                                              "percent_similar_isolates, " +
+                                                              "update_id) " +
                             "VALUES %s";
       String isolateInsert = "INSERT IGNORE INTO test_isolate_strains(test_run_id, cluster_id, " +
-                                                               "cluster_threshold, test_isolate_id) " +
+                                                               "cluster_threshold, test_isolate_id, " +
+                                                               "update_id) " +
                              "VALUES %s";
 
       try {
@@ -262,16 +264,17 @@ public class CPLOPConnection {
       return String.format("%02d:%02d:%02d", hours, minutes, seconds);
    }
 
-   public void insertTestRun(int runID, long runTime, String algorith, float interStrainSim,
-                             byte use_transform) throws SQLException {
+   public void insertTestRun(int runID, long runTime, String algorith, String ontName,
+                             float interStrainSim, byte use_transform) throws SQLException {
       Timestamp runDate = new Timestamp(new Date().getTime());
       PreparedStatement insertSQL = null;
 
       String insertQuery = String.format(
          "INSERT IGNORE INTO test_runs (test_run_id, run_date, run_time, cluster_algorithm, " +
-                                "average_strain_similarity, use_transform) " +
-         "VALUES (%d, ?, '%s', '%s', %.04f, %d)",
-         runID, getElapsedTime(runTime), algorith, interStrainSim, use_transform
+                                       "average_strain_similarity, use_transform, ontology) " +
+         "VALUES (%d, ?, '%s', '%s', %.04f, %d, %s)",
+         runID, getElapsedTime(runTime), algorith, interStrainSim,
+         use_transform, ontName
       );
 
       try {
