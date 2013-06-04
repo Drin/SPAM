@@ -29,7 +29,6 @@ public class DataQueryButtonListener implements ActionListener {
 
    private JDialog mDialog = null;
    private Container mPane = null;
-   private JComboBox<String> mDataTypeOptions = null;
    private JTextField mDataSetField = null;
    private JTable mTable = null;
 
@@ -38,9 +37,7 @@ public class DataQueryButtonListener implements ActionListener {
 
    private CPLOPConnection mConn = null;
 
-   public DataQueryButtonListener(JTextField textField, JComboBox<String> dataTypeOptions,
-    CPLOPConnection conn) {
-      mDataTypeOptions = dataTypeOptions;
+   public DataQueryButtonListener(JTextField textField, CPLOPConnection conn) {
       mDataSetField = textField;
 
       mDialog = new JDialog(mDialog);
@@ -57,27 +54,9 @@ public class DataQueryButtonListener implements ActionListener {
 
    public void actionPerformed(ActionEvent e) {
       mPane.removeAll();
-      String dataType = (String) mDataTypeOptions.getSelectedItem();
 
-      if (dataType.equals("Isolates")) {
-         mDialog.setTitle("Isolate Data Set");
-         mPane.add(prepareIsolateDataView());
-      }
-
-      else if (dataType.equals("Pyroprints")) {
-         mDialog.setTitle("Pyroprint Data Set");
-         mPane.add(preparePyroprintDataView());
-      }
-
-      else if (dataType.equals("Experiments")) {
-         mDialog.setTitle("Pyroprint Data Set");
-         mPane.add(prepareExperimentDataView());
-      }
-
-      else {
-         System.out.println("Invalid dataType option.");
-         System.exit(1);
-      }
+      mDialog.setTitle("Isolate Data Set");
+      mPane.add(prepareIsolateDataView());
 
       mPane.add(initControls());
       mPane.validate();

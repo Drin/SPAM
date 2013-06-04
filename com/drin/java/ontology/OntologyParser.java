@@ -1,6 +1,6 @@
 package com.drin.java.ontology;
 
-import com.drin.java.ontology.OntologyTerm;
+import com.drin.java.ontology.FastOntologyTerm;
 import com.drin.java.database.CPLOPConnection;
 
 import java.util.List;
@@ -38,7 +38,13 @@ public class OntologyParser {
       mRegexMatch = null;
 
       if (mConn == null) {
-         mConn = CPLOPConnection.getConnection();
+         try { mConn = new CPLOPConnection(); }
+         catch (java.sql.SQLException sqlErr) {
+            sqlErr.printStackTrace();
+         }
+         catch (Exception err) {
+            err.printStackTrace();
+         }
       }
    }
 
@@ -70,7 +76,7 @@ public class OntologyParser {
       return mRegexMatch.matches();
    }
 
-   public OntologyTerm getTerm() {
+   public FastOntologyTerm getFastTerm() {
       String tableName = getTermTableName(), colName = getTermColName();
       List<String> partitions = getTermValues();
 
@@ -84,7 +90,7 @@ public class OntologyParser {
          }
       }
 
-      return new OntologyTerm(tableName, colName, getTermOptions(), partitions);
+      return new FastOntologyTerm(colName, getTermOptions(), partitions);
    }
 
    public String getTermTableName() {
@@ -121,11 +127,11 @@ public class OntologyParser {
       List<String> valueList = new ArrayList<String>();
 
       if (mRegexMatch != null && mRegexMatch.matches()) {
-         String[] valueArr = mRegexMatch.group(VALUE_NDX).replaceAll("\\s", "").split(VALUE_DELIM);
+         String[] valueArr = mRegexMatch.group(VALUE_NDX).split(VALUE_DELIM);
 
          for (int valNdx = 0; valNdx < valueArr.length; valNdx++) {
-            if (!valueArr[valNdx].equals("")) {
-               valueList.add(valueArr[valNdx]);
+            if (!valueArr[valNdx].replaceAll(" ", "").equals("")) {
+               valueList.add(valueArr[valNdx].trim());
             }
          }
       }

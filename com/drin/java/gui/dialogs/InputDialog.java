@@ -114,7 +114,9 @@ public class InputDialog extends JDialog {
 
       mDataSetType = new JComboBox<String>(DATA_TYPE_VALUES);
 
-      mConn = CPLOPConnection.getConnection();
+      try { mConn = new CPLOPConnection(); }
+      catch(java.sql.SQLException sqlErr) { sqlErr.printStackTrace(); }
+      catch(Exception err) { err.printStackTrace(); }
    }
 
    public InputDialog() {
@@ -260,7 +262,7 @@ public class InputDialog extends JDialog {
       });
 
       dataQueryButton.addActionListener(
-       new DataQueryButtonListener(dataSetField, dataTypeOptions, mConn));
+       new DataQueryButtonListener(dataSetField, mConn));
 
       return dataQueryButton;
    }
@@ -342,7 +344,7 @@ public class InputDialog extends JDialog {
       beta_B  = beta_B  > 1 ? beta_B  / 100 : beta_B;
 
       if (!mOntology.getText().equals("")) {
-         ontology = Ontology.createOntology(mOntology.getText());
+         ontology = Ontology.createOntology(new File(mOntology.getText()));
       }
 
       startTime = System.currentTimeMillis();
@@ -356,7 +358,7 @@ public class InputDialog extends JDialog {
                String.valueOf(mDataSetType.getSelectedItem()).equals(DATA_TYPE_VALUES[2])) {
          entityMap = constructPyroprints(queryData(), alpha_A, beta_A, alpha_B, beta_B);
       }
-      
+
       ClusterAverageMetric clustMetric = new ClusterAverageMetric();
       Cluster.resetClusterIDs();
 
@@ -372,47 +374,13 @@ public class InputDialog extends JDialog {
       thresholds.add(new Double(beta_A));
 
       if (ontology != null) {
-         Logger.debug("OHClust!");
-         List<Cluster> coreClusters = new ArrayList<Cluster>();
-         List<Cluster> boundaryClusters = new ArrayList<Cluster>();
-         Map<Integer, String> promotedClusters = new HashMap<Integer, String>();
-
-         for (int ndx_A = 0; ndx_A < clusters.size(); ndx_A++) {
-            Cluster clust_A = clusters.get(ndx_A);
-
-            for (int ndx_B = ndx_A + 1; ndx_B < clusters.size(); ndx_B++) {
-               Cluster clust_B = clusters.get(ndx_B);
-
-               if (clust_A.compareTo(clust_B) > alpha_A) {
-                  if (!promotedClusters.containsKey(new Integer(ndx_A))) {
-                     coreClusters.add(clust_A);
-                     promotedClusters.put(ndx_A, clust_A.getName());
-                  }
-
-                  if (!promotedClusters.containsKey(new Integer(ndx_B))) {
-                     coreClusters.add(clust_B);
-                     promotedClusters.put(ndx_B, clust_B.getName());
-                  }
-               }
-            }
-         }
-
-         for (int clustNdx = 0; clustNdx < clusters.size(); clustNdx++) {
-            if (!promotedClusters.containsKey(clustNdx)) {
-               boundaryClusters.add(clusters.get(clustNdx));
-            }
-         }
-
-         clusters = null;
-         clusterer = new OHClusterer(coreClusters, boundaryClusters,
-                                     ontology, thresholds);
+         clusterer = new OHClusterer(ontology, thresholds);
       }
       else if (ontology == null) {
-         Logger.debug("Normal Clustering");
-         clusterer = new AgglomerativeClusterer(clusters, thresholds);
+         clusterer = new AgglomerativeClusterer(thresholds);
       }
 
-      AnalysisWorker worker = new AnalysisWorker(clusterer,
+      AnalysisWorker worker = new AnalysisWorker(clusterer, clusters,
        MainWindow.getMainFrame().getOutputCanvas());
 
       worker.setOutputFile(mOutFile.getText());

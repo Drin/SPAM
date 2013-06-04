@@ -4,7 +4,6 @@ import com.drin.java.analysis.clustering.Clusterer;
 
 import com.drin.java.clustering.Cluster;
 import com.drin.java.clustering.CandidatePair;
-import com.drin.java.clustering.CandidateQueue;
 
 import java.util.Map;
 import java.util.HashMap;
@@ -14,80 +13,115 @@ import java.util.ArrayList;
 import javax.swing.JTextArea;
 
 public abstract class HierarchicalClusterer implements Clusterer {
-   protected List<Cluster> mClusters;
-   protected List<Double> mThresholds;
+   protected Map<String, Map<String, Double>> mSimMap;
    protected Map<Double, List<Cluster>> mResultClusters;
+   protected List<Double> mThresholds;
+   protected String mName;
 
-   public HierarchicalClusterer(List<Cluster> clusters, List<Double> thresholds) {
-      mClusters = clusters;
+   protected JTextArea mCanvas;
+   protected double mPercentComplete, mPercentIncr;
+
+   public HierarchicalClusterer(List<Double> thresholds) {
+      mResultClusters = new HashMap<Double, List<Cluster>>();
+      mSimMap = new HashMap<String, Map<String, Double>>();
       mThresholds = thresholds;
+      mName = "Hierarchical";
+
+      mPercentComplete = 0;
+      mPercentIncr = 0;
    }
 
+   public void resetSimilarityCache() { mSimMap.clear(); }
    public Map<Double, List<Cluster>> getClusters() { return mResultClusters; }
 
-   @Override
-   public void clusterData(JTextArea canvas) {
-      mResultClusters = new HashMap<Double, List<Cluster>>();
-      List<Cluster> resultClusters = new ArrayList<Cluster>(mClusters);
+   public String getName() { return mName; }
 
+   @Override
+   public void setProgressCanvas(JTextArea canvas) { mCanvas = canvas; }
+
+   @Override
+   public void writeProgress() {
+      if (mCanvas != null) {
+         mCanvas.setText(String.format("\n\n\t\t%.02f%% Complete!", mPercentComplete));
+                  
+         mPercentComplete += mPercentIncr;
+      }
+   }
+
+   public void persistentClusterData(List<Cluster> clusters) {
       for (Double threshold : mThresholds) {
-         clusterDataSet(resultClusters, threshold, canvas);
+         if (!mResultClusters.containsKey(threshold)) {
+            mResultClusters.put(threshold, new ArrayList<Cluster>(clusters.size()));
+         }
+
+         List<Cluster> resultClusters = mResultClusters.get(threshold);
+         resultClusters.addAll(clusters);
+
+         clusterDataSet(resultClusters, threshold);
 
          mResultClusters.put(threshold, new ArrayList<Cluster>(resultClusters));
       }
    }
 
-   protected void clusterDataSet(List<Cluster> clusters, double threshold, JTextArea canvas) {
-      double percentIncr = 100.0/clusters.size(), percentComplete = 0;
-      Map<String, Map<String, Double>> clustDistMap = new HashMap<String, Map<String, Double>>();
+   @Override
+   public void clusterData(List<Cluster> clusters) {
+      mResultClusters.clear();
 
-      if (canvas != null) {
-         canvas.setText(String.format("\n\n\t\t%.02f%% Complete!", percentComplete));
-         percentComplete += percentIncr;
-      }
+      for (Double threshold : mThresholds) {
+         clusterDataSet(clusters, threshold);
 
-      CandidatePair closeClusters = findCloseClusters(clustDistMap, clusters, threshold);
-
-      for (; closeClusters != null && clusters.size() > 1;
-           closeClusters = findCloseClusters(clustDistMap, clusters, threshold)) {
-
-         if (canvas != null) {
-            canvas.setText(String.format("\n\n\t\t%.02f%% Complete!", percentComplete));
-            percentComplete += percentIncr;
-         }
-
-         combineClusters(closeClusters, clusters);
+         mResultClusters.put(threshold, new ArrayList<Cluster>(clusters));
       }
    }
 
-   //This was experimental and an attempt to speed up clustering. It didn't,
-   //but it took me awhile to implement so I'm leaving it for my own
-   //satisfaction
-   protected void experimentalClusterDataSet(List<Cluster> clusters, double threshold, JTextArea canvas) {
-      double percentIncr = 100.0/clusters.size(), percentComplete = 0;
-
-      if (canvas != null) {
-         canvas.setText(String.format("\n\n\t\t%.02f%% Complete!", percentComplete));
-         percentComplete += percentIncr;
+   protected void clusterDataSet(List<Cluster> clusters, double threshold) {
+      CandidatePair closeClusters = null;
+      if (mPercentIncr == -1) {
+         mPercentIncr = 100.0/clusters.size();
       }
 
-      CandidateQueue clusterCandidates = findCandidatePairs(clusters, threshold);
-      CandidatePair closeClusters = clusterCandidates.dequeue();
+      do {
+         writeProgress();
 
-      for (; closeClusters != null; closeClusters = clusterCandidates.dequeue()) {
-         if (canvas != null) {
-            canvas.setText(String.format("\n\n\t\t%.02f%% Complete!", percentComplete));
-            percentComplete += percentIncr;
+         closeClusters = findCloseClusters(clusters, threshold);
+
+         if (closeClusters != null) {
+            combineClusters(closeClusters, clusters);
          }
 
-         Cluster combinedCluster = combineClusters(closeClusters, clusters);
-         clusterCandidates.addAllCandidates(recompute(combinedCluster, clusters, threshold));
-      }
+      } while (closeClusters != null && clusters.size() > 1);
    }
 
-   protected abstract CandidateQueue findCandidatePairs(List<Cluster> clusters, double threshold);
-   protected abstract CandidatePair findCloseClusters(Map<String, Map<String, Double>> distMap, List<Cluster> clusters, double threshold);
-
-   protected abstract CandidateQueue recompute(Cluster combinedCluster, List<Cluster> clusters, double threshold);
+   protected abstract CandidatePair findCloseClusters(List<Cluster> clusters, double threshold);
    protected abstract Cluster combineClusters(CandidatePair closeClusters, List<Cluster> clusters);
+
+   public double getInterClusterSimilarity() {
+      Double lowThreshold = new Double(100);
+      double totalClusterSimilarity = 0, similarityCount = 0;
+
+      for (Double thresh : mResultClusters.keySet()) {
+         if (thresh.compareTo(lowThreshold) < 0) { lowThreshold = thresh; }
+      }
+
+      List<Cluster> clusters = mResultClusters.get(lowThreshold);
+      for (int clustNdx_A = 0; clustNdx_A < clusters.size(); clustNdx_A++) {
+         Cluster clust_A = clusters.get(clustNdx_A);
+
+         for (int clustNdx_B = clustNdx_A + 1; clustNdx_B < clusters.size(); clustNdx_B++) {
+            Cluster clust_B = clusters.get(clustNdx_B);
+
+            if (mSimMap.containsKey(clust_A.getName())) {
+               Map<String, Double> simMap = mSimMap.get(clust_A.getName());
+
+               if (simMap.containsKey(clust_B.getName())) {
+                  totalClusterSimilarity += simMap.get(clust_B.getName());
+                  similarityCount++;
+               }
+
+            }
+         }
+      }
+
+      return totalClusterSimilarity/similarityCount;
+   }
 }

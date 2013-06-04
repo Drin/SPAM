@@ -2,16 +2,16 @@ PACKAGE_PATH=com/drin/java
 PACKAGE_PRFX=com.drin.java
 JAVADOC=documentation
 
-SPAM_MAIN=com.drin.java.ClusterInterface
-SPAM_GUI_MAIN=com.drin.java.gui.SpamGUI
+SPAM_MAIN=com.drin.java.test.FastSPAMEvaluationCPU
+SPAM_GUI_MAIN=com.drin.java.gui.dialogs.InputDialog
 
 CC = javac
-ENGINE = java
+ENGINE = java -Xmx4g -Xms2g
 JFLAGS = -deprecation -Xlint
 
 compile: clean spam
 
-spam: ClusterInterface.java
+spam: FastSPAMEvaluationCPU.java
 	@echo "-------------------------------"
 	find $(PACKAGE_PATH) -name $^ | xargs $(CC) $(JFLAGS) $(CLASSES)
 	@echo "-------------------------------"
@@ -21,7 +21,7 @@ runSpam:
 	$(ENGINE) $(SPAM_MAIN)
 	@echo "finished running."
 
-spamGUI: SpamGUI.java
+gui: InputDialog.java
 	@echo "-------------------------------"
 	find $(PACKAGE_PATH) -name $^ | xargs $(CC) $(JFLAGS) $(CLASSES)
 	@echo "-------------------------------"
@@ -40,9 +40,9 @@ docSpam:
 ############ Drivers ############
 #################################
 
-SpamGUI.java:
+InputDialog.java:
 
-ClusterInterface.java:
+FastSPAMEvaluationCPU.java:
 
 cleanDocs:
 	rm -rf ${JAVADOC}/*
