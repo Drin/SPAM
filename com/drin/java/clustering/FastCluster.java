@@ -5,6 +5,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Callable;
 
 public class FastCluster {
+   private static final ExecutorService mThreadPool = Executors.newFixedThreadPool(64);
    public static int mNumIsolates = -1;
    public static float[] mSimMatrix = null;
    public static int[][] mSimMapping = null;
@@ -13,7 +14,6 @@ public class FastCluster {
    private static final float ALPHA_THRESH = 0.90f,
                               BETA_THRESH  = 0.85f;
 
-   private static final ExecutorService mThreadPool = Executors.newFixedThreadPool(64);
    private int[] mElements;
    private int mTail;
 
@@ -163,6 +163,48 @@ public class FastCluster {
       return 0.0f;
    }
 
+   /*
+   public float compareTo(FastCluster other) {
+      float clustSim = 0.0f;
+      int simCount = 0;
+
+      for (int elemNdxA = 0; elemNdxA < mTail; elemNdxA++) {
+         for (int elemNdxB = 0; elemNdxB < other.mTail; elemNdxB++) {
+            if (mElements[elemNdxA] > other.mElements[elemNdxB]) {
+               simCount++;
+               clustSim += mSimMatrix[mSimMapping[other.mElements[elemNdxB]][
+                  mElements[elemNdxA] % (mNumIsolates - other.mElements[elemNdxB])]
+               ];
+            }
+            else if (mElements[elemNdxA] < other.mElements[elemNdxB]) {
+               simCount++;
+               clustSim += mSimMatrix[mSimMapping[mElements[elemNdxA]][
+                  other.mElements[elemNdxB] % (mNumIsolates - mElements[elemNdxA])]
+               ];
+            }
+            else if (mElements[elemNdxA] == other.mElements[elemNdxB]) {
+               System.out.printf("comparison between the same isolate!\n" +
+                  "[ %s and %s ]\n", mElements[elemNdxA], other.mElements[elemNdxB]
+               );
+            }
+         }
+      }
+
+      if (simCount > 0) { clustSim /= simCount; }
+
+      if (mTransform) {
+         if (clustSim >= ALPHA_THRESH) { return 1.0f; }
+         else if (clustSim < BETA_THRESH) { return 0.0f; }
+      }
+
+      return clustSim;
+   }
+   */
+
+   public static void shutdownThreadPool() {
+      mThreadPool.shutdown();
+   }
+
    public void incorporate(FastCluster other) {
       if (mElements.length < mTail + other.mTail) {
          int[] newArr = new int[(mElements.length * 2) + other.mTail];
@@ -177,10 +219,6 @@ public class FastCluster {
       for (short otherNdx = 0; otherNdx < other.mTail; otherNdx++) {
          mElements[mTail++] = other.mElements[otherNdx];
       }
-   }
-
-   public static void shutdownThreadPool() {
-      mThreadPool.shutdown();
    }
 
    @Override

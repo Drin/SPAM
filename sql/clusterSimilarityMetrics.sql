@@ -2,6 +2,7 @@ DELIMITER $$
 
 DROP PROCEDURE IF EXISTS calcVariationOfInfo$$
 CREATE PROCEDURE calcVariationOfInfo(IN test_run_1 INT, IN test_run_2 INT,
+                                     IN min_clust_size INT,
                                      OUT info FLOAT, OUT ent_1 FLOAT, OUT ent_2 FLOAT)
 BEGIN
    DECLARE done, data_size_1, data_size_2, overlap INT DEFAULT 0;
@@ -13,7 +14,8 @@ BEGIN
              t2.cluster_id, t2.cluster_size
       FROM test_run_strain_link t1 JOIN test_run_strain_link t2
       WHERE t1.test_run_id = test_run_1 AND
-            t2.test_run_id = test_run_2;
+            t2.test_run_id = test_run_2 AND
+            t1.cluster_size > min_clust_size AND t2.cluster_size > min_clust_size;
    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
 
    drop temporary table if exists debugging;
@@ -89,6 +91,7 @@ END$$
 
 DROP PROCEDURE IF EXISTS calcClustMetrics$$
 CREATE PROCEDURE calcClustMetrics(IN test_run_1 INT, IN test_run_2 INT,
+                                  IN min_clust_size INT,
                                   OUT jaccard DEC(5, 4), OUT dice DEC(5, 4),
                                   OUT rand DEC(5, 4))
 BEGIN
@@ -110,6 +113,11 @@ BEGIN
               c3.test_run_id = c1.test_run_id AND
               c3.test_isolate_id > c1.test_isolate_id
            )
+           JOIN test_run_strain_link s ON (
+              s.test_run_id = c3.test_run_id AND
+              s.cluster_id = c3.cluster_id AND
+              s.cluster_size > min_clust_size
+           )
       ORDER BY c1.test_isolate_id, c3.test_isolate_id;
 
    DECLARE CLUST_SET_2 CURSOR FOR
@@ -124,6 +132,11 @@ BEGIN
            JOIN test_isolate_strains c3 ON (
               c3.test_run_id = c2.test_run_id AND
               c3.test_isolate_id > c1.test_isolate_id
+           )
+           JOIN test_run_strain_link s ON (
+              s.test_run_id = c3.test_run_id AND
+              s.cluster_id = c3.cluster_id AND
+              s.cluster_size > min_clust_size
            )
       ORDER BY c1.test_isolate_id, c3.test_isolate_id;
 
@@ -173,6 +186,7 @@ BEGIN
    DECLARE done, test_run_1, test_run_2 INT DEFAULT 0;
    DECLARE jaccard_index, dice_coefficient, rand_index DEC(5, 4) DEFAULT -1;
    DECLARE ent_1, ent_2, variation FLOAT DEFAULT 0;
+   DECLARE min_clust_size INT DEFAULT 1;
 
    DECLARE CLUSTER_PART CURSOR FOR
       SELECT t1.test_run_id, t2.test_run_id
@@ -192,10 +206,10 @@ BEGIN
          LEAVE CLUST_COMPARISONS;
       END IF;
 
-      CALL calcVariationOfInfo(test_run_1, test_run_2,
+      CALL calcVariationOfInfo(test_run_1, test_run_2, min_clust_size,
                                variation, ent_1, ent_2);
 
-      CALL calcClustMetrics(test_run_1, test_run_2,
+      CALL calcClustMetrics(test_run_1, test_run_2, min_clust_size, 
                             jaccard_index, dice_coefficient, rand_index);
 
       INSERT IGNORE INTO clustering_metrics(test_run_id_1, test_run_id_2,

@@ -11,6 +11,7 @@ import java.util.Scanner;
 import java.util.Map;
 
 public class FastOntology {
+   private String mName;
    private FastOntologyTerm mRoot;
    private String[] mColumns, mPartitions;
    private int mColumnTail, mPartitionTail;
@@ -41,6 +42,8 @@ public class FastOntology {
    }
 
    public int size() { return mRoot.size(); }
+   public void setName(String name) { mName = name; }
+   public String getName() { return mName; }
 
    @Override
    public String toString() {
@@ -153,6 +156,8 @@ public class FastOntology {
       FastOntology ont = new FastOntology();
       OntologyParser parser = new OntologyParser();
       Scanner termScanner = null;
+
+      ont.setName(ontologyFile.getName());
 
       try {
          termScanner = new Scanner(ontologyFile).useDelimiter("\n");
