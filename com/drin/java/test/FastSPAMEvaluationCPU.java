@@ -55,10 +55,10 @@ public class FastSPAMEvaluationCPU {
    }
 
    public static void main(String[] args) {
-      short initSizes[] = new short[] { 1000, 2500, 5000, 10000 };
+      short initSizes[] = new short[] { 500, 1000, 1500, 2000, 2500 };
       float upSizes[] = new float[] { 0.0f };
       short numUps[] = new short[] { 0 };
-      int maxSize = 10000;
+      int maxSize = 2500;
       boolean shouldTransform = true;
       //short initSizes[] = new short[] { 2500, 5000, 7500, 10000, 15000, 20000 };
       //float upSizes[] = new float[] { 0f };
