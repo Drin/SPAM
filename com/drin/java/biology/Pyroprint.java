@@ -6,7 +6,7 @@ import com.drin.java.metrics.DataMetric;
 import com.drin.java.util.Logger;
 
 import java.util.List;
-import java.util.Iterator;
+import java.util.ArrayList;
 
 /**
  * A Pyroprint is the result of pyrosequencing each replicate of a specified
@@ -18,25 +18,19 @@ import java.util.Iterator;
  * associates a list of light emittance peak heights to the DNA sequence being
  * analyzed.
  */
-public class Pyroprint extends Clusterable<Double> {
-   private String mDisp;
+public class Pyroprint extends Clusterable<Float> {
    private DataMetric<Pyroprint> mMetric;
+   private String mDisp;
+   private byte mPyroLen;
 
-   public Pyroprint(int pyroId, String wellId, String dispSeq,
-                    List<Double> data, DataMetric<Pyroprint> metric) {
-      super(String.format("%d (%s)", pyroId, wellId), data);
-      mDisp = dispSeq;
+   public Pyroprint(String pyroId, byte pyroLen, String disp, DataMetric<Pyroprint> metric) {
+      super(pyroId, new ArrayList<Float>(pyroLen));
+      mDisp = disp;
+      mPyroLen = pyroLen;
       mMetric = metric;
    }
 
-   public Pyroprint(String isoId, String dispSeq,
-                    List<Double> data, DataMetric<Pyroprint> metric) {
-      super(isoId, data);
-      mDisp = dispSeq;
-      mMetric = metric;
-   }
-
-   public int getDispLen() { return mDisp.length(); }
+   public byte getPyroLen() { return mPyroLen; }
 
    /**
     * Get the dispensation sequence used to construct this pyroprint.
@@ -54,85 +48,66 @@ public class Pyroprint extends Clusterable<Double> {
     * @return boolean A boolean value representing whether this pyroprint's
     * protocol parameters match the other pyroprint's protocol parameters.
     */
-   public boolean hasSameProtocol(Pyroprint other_pyro) {
-      return this.size() == other_pyro.size() &&
-             this.getDispSeq().equals(other_pyro.getDispSeq());
+   public boolean hasSameProtocol(Pyroprint other) {
+      return mPyroLen == other.mPyroLen && mDisp.equals(other.mDisp);
    }
 
-   /*
-    * Utility Methods
-    */
-   /**
-    * Find the maximum peak height for the given list of peak heights. This
-    * method returns -1 if there are no peak heights for this pyroprint.
-    *
-    * @return double The value of the peak height for the given list of peak
-    * heights.
-    */
-   public Double getMaxPeak() {
-      double mMaxPeak = -1;
-
-      for (Double peakVal : mData) {
-         mMaxPeak = Math.max(mMaxPeak, peakVal.doubleValue());
+   public boolean addDispensation(byte position, float pHeight) {
+      if (position == mData.size() && position < mPyroLen) {
+         mData.add(new Float(pHeight));
+         return true;
       }
 
-      return new Double(mMaxPeak);
+      return false;
    }
 
    /*
     * Overridden Object Methods
     */
    @Override
-   public String toString() {
-      String str = this.getName() + ": " + mDisp + "\n\t";
-
-      for (Double peak : mData) {
-         str += peak.doubleValue() + ", ";
-      }
-
-      return str;
-   }
-
-   @Override
-   public boolean equals(Object otherPyroprint) {
-      if (otherPyroprint instanceof Pyroprint) {
-         Pyroprint otherPyro = (Pyroprint) otherPyroprint;
-
-         if (mName.equals(otherPyro.mName) &&
-          mData.size() == otherPyro.mData.size()) {
-            Iterator<Double> itr_A = mData.iterator();
-            Iterator<Double> itr_B = otherPyro.mData.iterator();
-
-            while (itr_A.hasNext() && itr_B.hasNext()) {
-               Double peakOne = itr_A.next();
-               Double peakTwo = itr_B.next();
-
-               if (peakOne.compareTo(peakTwo) != 0) { return false; }
-            }
-
-            return true;
-         }
+   public boolean equals(Object obj) {
+      if (obj instanceof Pyroprint) {
+         return mName.equals(((Pyroprint) obj).mName);
       }
 
       return false;
    }
 
    @Override
-   public double compareTo(Clusterable<?> otherObj) {
+   public float compareTo(Clusterable<?> otherObj) {
       if (otherObj instanceof Pyroprint) {
          mMetric.apply(this, (Pyroprint) otherObj);
 
-         double value = mMetric.result();
+         float value = mMetric.result();
 
-         Logger.error(mMetric.getError(),
-                      String.format("PyroprintComparator:\n\tCorrelation " +
-                                    "between '%s' and '%s': %.04f",
-                                    getName(), ((Pyroprint)otherObj).getName(),
-                                    value));
+         Logger.error(mMetric.getError(), String.format(
+            "PyroprintComparator:\n\tCorrelation between '%s' and '%s': %.04f",
+            mName, otherObj.getName(), value
+         ));
 
          return value;
       }
 
       return -2;
    }
+
+   @Override
+   public Pyroprint deepCopy() {
+      Pyroprint newPyro = new Pyroprint(mName, mPyroLen, mDisp, mMetric);
+
+      for (Float peak : mData) { newPyro.getData().add(new Float(peak.floatValue())); }
+
+      return newPyro;
+   }
+
+   @Override
+   public String toString() {
+      String peaks = "";
+
+      for (Float peak : mData) { peaks += ", " + peak.floatValue(); }
+
+      return String.format("%s: %s\n\t%s", this.getName(), mDisp,
+                           peaks.substring(2));
+   }
+
 }

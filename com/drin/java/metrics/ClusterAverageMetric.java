@@ -31,8 +31,8 @@ public class ClusterAverageMetric extends DataMetric<Cluster> {
    }
 
    @Override
-   public double result() {
-      double result = mResult;
+   public float result() {
+      float result = mResult;
 
       if (mLinkCount <= 0) { setError(-1); }
       else { result /= mLinkCount; }

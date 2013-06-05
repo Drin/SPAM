@@ -57,7 +57,7 @@ public class FastCluster {
       float clustSim = 0.0f;
 
       for (int ndxA = 0; ndxA < mTail; ndxA++) {
-         for (int ndxB = (short) (ndxA + 1); ndxB < mTail; ndxB++) {
+         for (int ndxB = ndxA + 1; ndxB < mTail; ndxB++) {
             clustSim = mSimMatrix[mSimMapping[mElements[ndxA]][
                mElements[ndxB] % (mNumIsolates - mElements[ndxA])]
             ];

@@ -11,29 +11,31 @@ import java.util.HashSet;
 
 public class ITSRegion extends Clusterable<Pyroprint> {
    private DataMetric<ITSRegion> mMetric;
-   private double mAlpha, mBeta;
+   private float mAlpha, mBeta;
 
-   public ITSRegion(String regionName, DataMetric<ITSRegion> metric) {
-      super(regionName, new HashSet<Pyroprint>());
+   public ITSRegion(String regName, DataMetric<ITSRegion> metric) {
+      this(regName, (byte) 2, metric);
+   }
 
-      mAlpha = 0.995;
-      mBeta = 0.99;
+   public ITSRegion(String regName, byte numPyros, DataMetric<ITSRegion> metric) {
+      super(regName, new HashSet<Pyroprint>(numPyros));
+
+      mAlpha = 0.995f;
+      mBeta = 0.99f;
 
       mMetric = metric;
    }
 
    @Override
-   public double compareTo(Clusterable<?> otherObj) {
+   public float compareTo(Clusterable<?> otherObj) {
       if (otherObj instanceof ITSRegion) {
          mMetric.apply(this, (ITSRegion) otherObj);
+         float comparison = mMetric.result();
 
-         double comparison = mMetric.result();
-
-         Logger.debug(String.format("ITSRegionComparator:\n\tComparison " +
-                                    "between '%s' and '%s': %.04f\n",
-                                    this.getName(),
-                                    ((ITSRegion)otherObj).getName(),
-                                    comparison));
+         Logger.debug(String.format(
+            "Comparison between regions '%s' and '%s': %.04f\n",
+            this.getName(), ((ITSRegion)otherObj).getName(), comparison
+         ));
 
          return comparison;
       }
@@ -42,12 +44,21 @@ public class ITSRegion extends Clusterable<Pyroprint> {
    }
 
    @Override
-   public String toString() {
-      String str = mName;
+   public ITSRegion deepCopy() {
+      ITSRegion newRegion = new ITSRegion(mName, (byte) mData.size(), mMetric);
 
       for (Pyroprint pyro : mData) {
-         str += String.format("\t%s\n", pyro);
+         newRegion.getData().add(pyro.deepCopy());
       }
+
+      return newRegion;
+   }
+
+   @Override
+   public String toString() {
+      String str = String.format("\t%s:\n", mName);
+
+      for (Pyroprint pyro : mData) { str += String.format("\t\t%s\n", pyro); }
 
       return str;
    }

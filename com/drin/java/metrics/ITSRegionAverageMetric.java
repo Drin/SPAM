@@ -14,13 +14,13 @@ public class ITSRegionAverageMetric extends DataMetric<ITSRegion> {
 
    private Boolean mTransform;
    private int mPairCount;
-   private double mAlpha, mBeta;
+   private float mAlpha, mBeta;
 
    public ITSRegionAverageMetric() {
       this.reset();
 
-      mAlpha = 0.995;
-      mBeta = 0.99;
+      mAlpha = 0.995f;
+      mBeta = 0.99f;
 
       mTransform = Configuration.getBoolean(TRANSFORM_KEY);
    }
@@ -37,12 +37,12 @@ public class ITSRegionAverageMetric extends DataMetric<ITSRegion> {
 
          for (Pyroprint pyro_A : elem_A.getData()) {
             for (Pyroprint pyro_B : elem_B.getData()) {
-               double result = pyro_A.compareTo(pyro_B);
+               float result = pyro_A.compareTo(pyro_B);
 
                Logger.debug(String.format("ITSRegionAverageMetric:\n\t" +
                                           "comparison between '%s' and " +
                                           "'%s' [%d]: %.04f", pyro_A.getName(),
-                                          pyro_B.getName(), pyro_A.getDispLen(),
+                                          pyro_B.getName(), pyro_A.getPyroLen(),
                                           result));
 
                mResult += result;
@@ -54,8 +54,8 @@ public class ITSRegionAverageMetric extends DataMetric<ITSRegion> {
    }
 
    @Override
-   public double result() {
-      double result = mResult;
+   public float result() {
+      float result = mResult;
 
       if (mPairCount <= 0) { setError(-1); }
       else { result /= mPairCount; }
@@ -73,7 +73,7 @@ public class ITSRegionAverageMetric extends DataMetric<ITSRegion> {
       return result;
    }
 
-   private double transformResult(double result) {
+   private float transformResult(float result) {
       if (result > mAlpha) { return 1; }
       else if (result < mBeta) { return 0; }
       return result;

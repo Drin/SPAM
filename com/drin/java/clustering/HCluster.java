@@ -5,68 +5,35 @@ import com.drin.java.clustering.Cluster;
 
 import com.drin.java.metrics.DataMetric;
 
-import com.drin.java.clustering.dendogram.Dendogram;
-import com.drin.java.clustering.dendogram.DendogramNode;
-import com.drin.java.clustering.dendogram.DendogramLeaf;
-
-import java.util.Collection;
-
 public class HCluster extends Cluster {
-
-   public HCluster(DataMetric<Cluster> metric) { super(metric); }
-
-   public HCluster(int clustId, DataMetric<Cluster> metric) {
-      super(clustId, metric);
+   public HCluster(int clustSize, DataMetric<Cluster> metric) {
+      super(clustSize, metric);
    }
 
    public HCluster(DataMetric<Cluster> metric, Clusterable<?> elem) {
-      this(metric);
+      super(1, metric);
 
+      mSize = 1;
       mElements.add(elem);
-      mDendogram = new DendogramLeaf(elem);
+      mMetaLabels = elem.getMetaData();
    }
 
-   public void computeStatistics() {
-      double minSim = Double.MAX_VALUE, total = 0;
-      int numComparisons = 0;
+   public HCluster(HCluster oldCluster) { super(oldCluster); }
 
-      for (Clusterable<?> elem_A : mElements) {
-         for (Clusterable<?> elem_B : mElements) {
-            if (elem_A.getName().equals(elem_B.getName())) { continue; }
-
-            double comparison = elem_A.compareTo(elem_B);
-
-            total += comparison;
-            numComparisons++;
-
-            if (comparison < minSim) { minSim = comparison; }
-         }
-      }
-
-      mDiameter = minSim;
-      mMean = numComparisons > 0 ? total / numComparisons : 0;
-   }
-
-   public Cluster join(Cluster otherClust) {
+   @Override
+   public void join(Cluster otherClust) {
       if (otherClust instanceof HCluster) {
-         Cluster newCluster = new HCluster(Integer.parseInt(this.getName()), this.mMetric);
+         mElements.addAll(otherClust.mElements);
 
-         Collection<Clusterable<?>> otherData = ((HCluster)otherClust).mElements;
+         for (int labelNdx = 0; labelNdx < otherClust.mMetaLabels.length; labelNdx++) {
+            mMetaLabels[labelNdx] += (", " + otherClust.mMetaLabels[labelNdx]);
+         }
 
-         newCluster.mElements.addAll(this.mElements);
-         newCluster.mElements.addAll(otherData);
-
-         newCluster.mLabel.addAll(this.mLabel);
-         newCluster.mLabel.addAll(otherClust.mLabel);
-
-         newCluster.computeStatistics();
-
-         Dendogram otherDend = ((HCluster)otherClust).mDendogram;
-         newCluster.mDendogram = new DendogramNode(this.mDendogram, otherDend, newCluster);
-
-         return newCluster;
+         mSize = mElements.size();
       }
-
-      return null;
+      else {
+         System.err.println("Error incorporating cluster");
+         System.exit(1);
+      }
    }
 }

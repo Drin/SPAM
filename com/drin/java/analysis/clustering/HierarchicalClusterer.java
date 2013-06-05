@@ -1,127 +1,139 @@
 package com.drin.java.analysis.clustering;
 
-import com.drin.java.analysis.clustering.Clusterer;
-
 import com.drin.java.clustering.Cluster;
-import com.drin.java.clustering.CandidatePair;
+import com.drin.java.ontology.Ontology;
+
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+
+import javax.swing.JTextArea;
 
 import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
 
-import javax.swing.JTextArea;
-
 public abstract class HierarchicalClusterer implements Clusterer {
-   protected Map<String, Map<String, Double>> mSimMap;
-   protected Map<Double, List<Cluster>> mResultClusters;
-   protected List<Double> mThresholds;
-   protected String mName;
+   private static final ExecutorService mThreadPool = Executors.newFixedThreadPool(64);
+   protected Map<Float, List<Cluster>> mResultClusters;
+   protected float mThresh;
 
-   protected JTextArea mCanvas;
-   protected double mPercentComplete, mPercentIncr;
+   protected String mName = "Hierarchical";
 
-   public HierarchicalClusterer(List<Double> thresholds) {
-      mResultClusters = new HashMap<Double, List<Cluster>>();
-      mSimMap = new HashMap<String, Map<String, Double>>();
-      mThresholds = thresholds;
-      mName = "Hierarchical";
-
-      mPercentComplete = 0;
-      mPercentIncr = 0;
+   public HierarchicalClusterer(int dataSize, float threshold) {
+      mResultClusters = new HashMap<Float, List<Cluster>>();
+      mThresh = threshold;
    }
 
-   public void resetSimilarityCache() { mSimMap.clear(); }
-   public Map<Double, List<Cluster>> getClusters() { return mResultClusters; }
+   /* public static void shutdownThreadPool() { mThreadPool.shutdown(); } */
 
+   //TODO
+   public void setProgressCanvas(JTextArea canvas) { return; }
+   public void writeProgress() { return; }
+   public float getInterClusterSimilarity() { return -2.0f; }
+
+   public Map<Float, List<Cluster>> getClusters() { return mResultClusters; }
+   public float getThreshold() { return mThresh; }
    public String getName() { return mName; }
 
-   @Override
-   public void setProgressCanvas(JTextArea canvas) { mCanvas = canvas; }
-
-   @Override
-   public void writeProgress() {
-      if (mCanvas != null) {
-         mCanvas.setText(String.format("\n\n\t\t%.02f%% Complete!", mPercentComplete));
-                  
-         mPercentComplete += mPercentIncr;
-      }
-   }
-
-   public void persistentClusterData(List<Cluster> clusters) {
-      for (Double threshold : mThresholds) {
-         if (!mResultClusters.containsKey(threshold)) {
-            mResultClusters.put(threshold, new ArrayList<Cluster>(clusters.size()));
-         }
-
-         List<Cluster> resultClusters = mResultClusters.get(threshold);
-         resultClusters.addAll(clusters);
-
-         clusterDataSet(resultClusters, threshold);
-
-         mResultClusters.put(threshold, new ArrayList<Cluster>(resultClusters));
-      }
-   }
-
-   @Override
    public void clusterData(List<Cluster> clusters) {
-      mResultClusters.clear();
-
-      for (Double threshold : mThresholds) {
-         clusterDataSet(clusters, threshold);
-
-         mResultClusters.put(threshold, new ArrayList<Cluster>(clusters));
-      }
+      clusterDataSet(clusters, mThresh);
+      mResultClusters.put(mThresh, clusters);
    }
 
-   protected void clusterDataSet(List<Cluster> clusters, double threshold) {
-      CandidatePair closeClusters = null;
-      if (mPercentIncr == -1) {
-         mPercentIncr = 100.0/clusters.size();
-      }
+   public void clusterData(Ontology clustOnt) {
+      throw new UnsupportedOperationException();
+   }
+
+   protected void clusterDataSet(List<Cluster> clusters, float threshold) {
+      boolean combineSuccess = false;
 
       do {
-         writeProgress();
+         ClusterPair clustPair = findCloseClusters(clusters, threshold);
 
-         closeClusters = findCloseClusters(clusters, threshold);
+         combineSuccess = combineClusters(clusters, clustPair);
 
-         if (closeClusters != null) {
-            combineClusters(closeClusters, clusters);
-         }
-
-      } while (closeClusters != null && clusters.size() > 1);
+      } while (combineSuccess && clusters.size() > 1);
    }
 
-   protected abstract CandidatePair findCloseClusters(List<Cluster> clusters, double threshold);
-   protected abstract Cluster combineClusters(CandidatePair closeClusters, List<Cluster> clusters);
+   protected abstract ClusterPair findCloseClusters(List<Cluster> clusters, float threshold);
+   protected abstract boolean combineClusters(List<Cluster> clusters, ClusterPair clustPair);
 
-   public double getInterClusterSimilarity() {
-      Double lowThreshold = new Double(100);
-      double totalClusterSimilarity = 0, similarityCount = 0;
+   /*
+   protected void clusterDataSet(List<Cluster> clusters, final float threshold) {
+      final Object lockObj = new Object();
+      final float[] maxSim = new float[] { 0.0f };
+      final int[] closeA = new int[] { -1 },
+                  closeB = new int[] { -1 };
 
-      for (Double thresh : mResultClusters.keySet()) {
-         if (thresh.compareTo(lowThreshold) < 0) { lowThreshold = thresh; }
-      }
+      do {
+         closeA[0] = closeB[0] = -1;
+         maxSim[0] = 0.0f;
 
-      List<Cluster> clusters = mResultClusters.get(lowThreshold);
-      for (int clustNdx_A = 0; clustNdx_A < clusters.size(); clustNdx_A++) {
-         Cluster clust_A = clusters.get(clustNdx_A);
+         for (int ndxA = 0; ndxA < clusters.size(); ndxA++) {
+            final Cluster clustA = clusters.get(ndxA);
 
-         for (int clustNdx_B = clustNdx_A + 1; clustNdx_B < clusters.size(); clustNdx_B++) {
-            Cluster clust_B = clusters.get(clustNdx_B);
+            for (int ndxB = ndxA + 1; ndxB < clusters.size(); ndxB++) {
+               final int tmpNdxA = ndxA, tmpNdxB = ndxB;
+               final Cluster clustB = clusters.get(ndxB);
 
-            if (mSimMap.containsKey(clust_A.getName())) {
-               Map<String, Double> simMap = mSimMap.get(clust_A.getName());
+               mThreadPool.execute(new Runnable() {
+                  public void run() {
+                     float clustSim = clustA.compareTo(clustB);
 
-               if (simMap.containsKey(clust_B.getName())) {
-                  totalClusterSimilarity += simMap.get(clust_B.getName());
-                  similarityCount++;
-               }
+                     synchronized (lockObj) {
+                        if (clustSim > maxSim[0] && clustSim > threshold) {
+                           closeA[0] = tmpNdxA;
+                           closeB[0] = tmpNdxB;
+                           maxSim[0] = clustSim;
+                        }
+                     }
+                  }
 
+               });
             }
+         }
+
+         if (closeA[0] != -1 && closeB[0] != -1) {
+            clusters.get(closeA[0]).incorporate(clusters.get(closeB[0]));
+            clusters.remove(closeB[0]);
+         }
+
+      } while (closeA[0] != -1 && closeB[0] != -1 && clusters.size() > 1);
+   }
+   */
+
+   public float getInterStrainSim() {
+      float totalClusterSimilarity = 0;
+      int similarityCount = 0;
+
+      List<Cluster> clusters = mResultClusters.get(mThresh);
+
+      for (int clustNdxA = 0; clustNdxA < clusters.size(); clustNdxA++) {
+         Cluster clustA = clusters.get(clustNdxA);
+
+         for (int clustNdxB = clustNdxA + 1; clustNdxB < clusters.size(); clustNdxB++) {
+            Cluster clustB = clusters.get(clustNdxB);
+
+            totalClusterSimilarity += clustA.compareTo(clustB);
+            similarityCount++;
          }
       }
 
-      return totalClusterSimilarity/similarityCount;
+      if (similarityCount > 0) {
+         return totalClusterSimilarity/similarityCount;
+      }
+      else { return -1; }
+   }
+
+   public class ClusterPair {
+      public int mClustANdx, mClustBNdx;
+      public float mClustSim;
+
+      public ClusterPair(int clustANdx, int clustBNdx, float clustSim) {
+         mClustANdx = clustANdx;
+         mClustBNdx = clustBNdx;
+         mClustSim = clustSim;
+      }
    }
 }

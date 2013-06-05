@@ -14,11 +14,10 @@ public class ClusterResults {
    }
 
    public String toString() {
-      String clustInfo = "", dendInfo = "", clustContents = "", bigClustName = "";
+      String clustInfo = "", clustContents = "", bigClustName = "";
       int biggestClust = 0;
 
       for (Map.Entry<Double, List<Cluster>> clusterData : mClusters.entrySet()) {
-         dendInfo += String.format("<Clusters threshold=\"%.04f\">\n", clusterData.getKey());
          clustInfo += String.format("\nThreshold: %.04f\nNumber of Result Clusters, %d\n",
                                      clusterData.getKey(), clusterData.getValue().size());
 
@@ -33,12 +32,10 @@ public class ClusterResults {
             }
          }
 
-         dendInfo += "</Clusters>\n";
          clustInfo += String.format("Largest Cluster, %s\nLargest Cluster Size, %d\n\n%s",
                                     bigClustName, biggestClust, clustContents);
       }
 
-      return String.format("%s%s", ("******\n\nDendogram:\n" + dendInfo),
-                          ("******\n\nClusters:\n" + clustInfo));
+      return String.format("%s", "******\n\nClusters:\n" + clustInfo);
    }
 }

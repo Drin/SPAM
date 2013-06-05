@@ -1,6 +1,15 @@
 package com.drin.java.database;
 
-import com.drin.java.ontology.FastOntology;
+import com.drin.java.ontology.Ontology;
+
+import com.drin.java.biology.Pyroprint;
+import com.drin.java.biology.ITSRegion;
+import com.drin.java.biology.Isolate;
+
+import com.drin.java.metrics.DataMetric;
+import com.drin.java.metrics.IsolateAverageMetric;
+import com.drin.java.metrics.ITSRegionAverageMetric;
+import com.drin.java.metrics.PyroprintUnstablePearsonMetric;
 
 import java.util.List;
 import java.util.Date;
@@ -19,10 +28,7 @@ public class CPLOPConnection {
    private static final String DB_URL = "jdbc:mysql://localhost/CPLOP?autoReconnect=true";
    private static final String DB_USER = "";
    private static final String DB_PASS = "";
-   private static final short DEFAULT_PAGE_SIZE = 10000,
-                              ISOLATE_LEN       = 188;
-   private static final byte LEN_23S           = 93,
-                             LEN_16S           = 95;
+   private static final short DEFAULT_PAGE_SIZE = 10000;
 
    private Connection mConn;
 
@@ -30,21 +36,41 @@ public class CPLOPConnection {
       SCHEMA_QUERY = "SELECT distinct(%s) " +
                      "FROM %s " +
                      "WHERE %s IS NOT NULL",
-      DATA_QUERY = "SELECT i.test_isolate_id, h1.pHeight, h2.pHeight, h1.position " +
-                   "FROM test_histograms h1 " +
-                        "JOIN isolate_selection i ON ( " +
-                           "h1.pyroID = i.pyro_id_1 AND " +
-                           "h1.position < 95) " +
-                        "JOIN test_histograms h2 ON ( " +
-                           "h1.position = h2.position AND " +
-                           "h2.pyroID = i.pyro_id_2) " +
-                   "ORDER BY i.test_isolate_id " +
+
+      //DATA_QUERY = "SELECT i.isoID, p1.pyroID, p2.pyroID, h1.pHeight, " +
+      //                    "h2.pHeight, h1.position " +
+      DATA_QUERY = "SELECT i.isoID, p1.pyroID, p1.appliedRegion, p1.dsName, " +
+                          "h1.pHeight, h1.position " +
+                   "FROM Isolates i " +
+                        "JOIN Pyroprints p1 ON ( " +
+                           "i.isoID = p1.isoID " +
+                           //"p1.appliedRegion = '23-5'" +
+                        ") " +
+                        /*
+                        "JOIN Pyroprints p2 ON ( " +
+                           "i.isoID = p2.pyroID AND " +
+                           "p2.appliedRegion = '16-23'" +
+                        ") " +
+                        */
+                        "JOIN Histograms h1 ON ( " +
+                           "p1.pyroID = h1.pyroID AND " +
+                           "h1.position < %d" +
+                        ") " +
+                        /*
+                        "JOIN Histograms h2 ON ( " +
+                           "p2.pyroID = h2.pyroID AND " +
+                           "h2.position < %d AND" +
+                           "h1.position = h2.position " +
+                        ") " +
+                        */
+                   //"ORDER BY i.isoID, p1.pyroID, p2.pyroID, position " +
+                   "ORDER BY i.isoID, p1.pyroID, position " +
                    "LIMIT %d OFFSET %d",
-      META_QUERY = "SELECT distinct test_isolate_id %s " +
-                   "FROM test_isolates join test_pyroprints using (" +
-                         "name_prefix, name_suffix) " +
-                   "WHERE test_isolate_id in (%s) " +
-                   "ORDER BY test_isolate_id " +
+
+      META_QUERY = "SELECT distinct isoID %s " +
+                   "FROM Isolates join Pyroprints using (isoID) " +
+                   "WHERE isoID in (%s) " +
+                   "ORDER BY isoID " +
                    "LIMIT %d OFFSET %d";
 
    public CPLOPConnection() throws SQLException, DriverException {
@@ -80,86 +106,103 @@ public class CPLOPConnection {
       return distinctValues;
    }
 
-   public IsolateDataContainer getIsolateData(int dataSize) throws SQLException {
+   public List<Isolate> getIsolateData(int dataSize) throws SQLException {
       return getIsolateData(dataSize, DEFAULT_PAGE_SIZE);
    }
 
-   public IsolateDataContainer getIsolateData(int dataSize, short pageSize) throws SQLException {
+   public List<Isolate> getIsolateData(int dataSize, short pageSize) throws SQLException {
       Statement statement = null;
       ResultSet results = null;
 
-      int peakDataSize = dataSize * LEN_16S;
+      DataMetric<Isolate> isoMetric = new IsolateAverageMetric();
+      DataMetric<ITSRegion> regionMetric = new ITSRegionAverageMetric();
+      DataMetric<Pyroprint> pyroMetric = new PyroprintUnstablePearsonMetric();
 
-      float[] iso_data = new float[dataSize * ISOLATE_LEN];
-      int[] iso_ids = new int[dataSize];
-      int iso_id = -1, tmp_iso_id = -1;
-      short peak_ndx = 0, isolate_ndx = -1;
+      byte pyroLen = 95;
+      List<Isolate> isoData = new ArrayList<Isolate>(dataSize);
+      String isoId = null, tmpIsoId = null, regName = null, dsName = null;
+      int peakDataSize = dataSize * pyroLen, pyroId = -1, tmpPyroId = -1;
+
+      Isolate tmpIso = null;
+      ITSRegion tmpRegion = null;
+      Pyroprint tmpPyro = null;
 
       try {
          for (int pageNdx = 0; pageNdx < Math.ceil((float) peakDataSize / pageSize); pageNdx++) {
             statement = mConn.createStatement();
+            //3 Data Query Variables:
+            //    Length of Pyroprint
+            //    Page size
+            //    Page offset
             results = statement.executeQuery(String.format(DATA_QUERY,
+               pyroLen,
                Math.min(pageSize, peakDataSize - (pageSize * pageNdx)),
                (pageSize * pageNdx)
             ));
 
             while (results.next()) {
-               tmp_iso_id = results.getInt(1);
+               tmpIsoId = results.getString(1);
+               tmpPyroId = results.getInt(2);
+               regName = results.getString(3);
+               dsName = results.getString(4);
+               float pHeight = results.getFloat(5);
+               byte position = results.getByte(6);
 
-               if (iso_id == -1 || tmp_iso_id != iso_id) {
-                  isolate_ndx++;
-                  iso_id = tmp_iso_id;
-                  peak_ndx = 0;
+               byte dispLen = -1;
+               if (regName.equals("16-23")) { dispLen = 95; }
+               else if (regName.equals("23-5")) { dispLen = 93; }
 
-                  if (isolate_ndx < iso_ids.length) {
-                     iso_ids[isolate_ndx] = iso_id;
+               if (isoId == null || !tmpIsoId.equals(isoId)) {
+                  isoId = tmpIsoId;
+                  tmpIso = new Isolate(isoId, isoMetric);
+                  isoData.add(tmpIso);
+               }
+
+               if (tmpIso != null) {
+                  tmpIso.getData().add(new ITSRegion(regName, regionMetric));
+               }
+
+               if (tmpPyroId != pyroId) {
+                  pyroId = tmpPyroId;
+                  tmpPyro = new Pyroprint(String.valueOf(pyroId),
+                                          dispLen, dsName, pyroMetric);
+               }
+
+               if (tmpPyro != null) {
+                  if (!tmpPyro.addDispensation(position, pHeight)) {
+                     if (position < dispLen) {
+                        System.out.println("pyroprint peak mismatch!");
+                        System.out.printf("Found peak %d, expected %d\n", position,
+                                          tmpPyro.getData().size());
+                     }
                   }
                }
-
-               if (peak_ndx != results.getInt(4)) {
-                  System.err.printf("peak mismatch! on %d, should be %d\n",
-                                    results.getInt(4), peak_ndx);
-                  System.exit(0);
-               }
-
-               if (peak_ndx < LEN_23S && isolate_ndx < dataSize) {
-                  iso_data[isolate_ndx * ISOLATE_LEN + peak_ndx] = results.getFloat(2);
-               }
-
-               if (peak_ndx < LEN_16S && isolate_ndx < dataSize) {
-                  iso_data[isolate_ndx * ISOLATE_LEN + LEN_23S + peak_ndx] = results.getFloat(3);
-               }
-
-               peak_ndx++;
             }
          }
       }
-      catch (Exception err) {
-         err.printStackTrace();
-      }
+      catch (Exception err) { err.printStackTrace(); }
       finally {
          if (statement != null) { statement.close(); }
          if (results != null) { results.close(); }
       }
 
-      return new IsolateDataContainer(iso_ids, iso_data);
+      return isoData;
    }
 
-   public String[][] getIsolateMetaData(int[] ids, FastOntology ont, int dataSize) {
+   public void getIsolateMetaData(List<Isolate> isoData, Ontology ont, int dataSize) {
       Statement statement = null;
       ResultSet results = null;
 
-      String metaLabels[][] = new String[ids.length][], colArr[] = ont.getColumns();
-      String metaIDs = "", metaColumns = "";
-      int tmp_id = -1, isolateID = -1, numColumns = ont.getNumCols();
-      int isolateNdx = -1, pageSize = DEFAULT_PAGE_SIZE;
+      String metaLabels[] = null;
+      String metaIDs = "", metaColumns = "", isoId = null, tmpId = null;
+      int isoNdx = -1, numColumns = ont.getNumCols();
+      int pageSize = DEFAULT_PAGE_SIZE;
       byte colOffset = 2;
 
-      for (byte colNdx = 0; colNdx < ont.getNumCols(); colNdx++) {
-            metaColumns += "," + colArr[colNdx];
+      for (String metaCol : ont.getColumns()) { metaColumns += "," + metaCol; }
+      for (int ndx = 0; ndx < isoData.size(); ndx++) {
+         metaIDs += ",'" + isoData.get(ndx).getName() + "'";
       }
-
-      for (int id_ndx = 0; id_ndx < ids.length; id_ndx++) { metaIDs += "," + ids[id_ndx]; }
 
       try {
          for (int pageNdx = 0; pageNdx < Math.ceil((float) dataSize / pageSize); pageNdx++) {
@@ -176,33 +219,30 @@ public class CPLOPConnection {
             ));
 
             while (results.next()) {
-               tmp_id = results.getInt(1);
+               tmpId = results.getString(1);
 
-               if (isolateID == -1 || tmp_id != isolateID) {
-                  isolateID = tmp_id;
-                  isolateNdx++;
+               if (isoId == null || !tmpId.equals(isoId)) {
+                  isoId = tmpId;
+                  isoNdx++;
 
-                  if (ids[isolateNdx] != isolateID) {
-                     System.err.printf("meta data mismatch for isolate %d\n",
-                                       isolateID);
+                  if (!isoData.get(isoNdx).getName().equals(isoId)) {
+                     System.err.printf("meta data mismatch for isolate %s\n", isoId);
                      continue;
                   }
                }
 
-               metaLabels[isolateNdx] = new String[numColumns];
+               metaLabels = new String[numColumns];
 
                for (byte colNdx = 0; colNdx < numColumns; colNdx++) {
-                  metaLabels[isolateNdx][colNdx] =
+                  metaLabels[colNdx] =
                      String.valueOf(results.getObject(colNdx + colOffset)).trim();
                }
+
+               isoData.get(isoNdx).setMetaData(metaLabels);
             }
          }
       }
-      catch (java.sql.SQLException sqlErr) {
-         sqlErr.printStackTrace();
-      }
-
-      return metaLabels;
+      catch (java.sql.SQLException sqlErr) { sqlErr.printStackTrace(); }
    }
 
    public void insertRunPerf(String insertValues) throws SQLException {
@@ -272,7 +312,7 @@ public class CPLOPConnection {
       String insertQuery = String.format(
          "INSERT IGNORE INTO test_runs (test_run_id, run_date, run_time, cluster_algorithm, " +
                                        "average_strain_similarity, use_transform, ontology) " +
-         "VALUES (%d, ?, '%s', '%s', %.04f, %d, %s)",
+         "VALUES (%d, ?, '%s', '%s', %.04f, %d, '%s')",
          runID, getElapsedTime(runTime), algorith, interStrainSim,
          use_transform, ontName
       );
@@ -337,17 +377,6 @@ public class CPLOPConnection {
       }
 
       return newRunId;
-   }
-
-   public class IsolateDataContainer {
-      public int[] isoIDs;
-      public float[] isoData;
-      public String[][] isoMeta;
-
-      public IsolateDataContainer(int[] ids, float[] data) {
-         isoIDs = ids;
-         isoData = data;
-      }
    }
 
    /**

@@ -17,7 +17,7 @@ public class IsolateAverageMetric extends DataMetric<Isolate> {
 
    @Override
    public void apply(Isolate elem_A, Isolate elem_B) {
-      double total = 0;
+      float total = 0;
       int regionCount = 0;
 
       Iterator<ITSRegion> itr_A = elem_A.getData().iterator();
@@ -30,7 +30,7 @@ public class IsolateAverageMetric extends DataMetric<Isolate> {
             ITSRegion region_B = itr_B.next();
 
             if (region_A.getName().equals(region_B.getName())) {
-               double comparison = region_A.compareTo(region_B);
+               float comparison = region_A.compareTo(region_B);
 
                Logger.debug(String.format("Isolate Average Metric:\n\tregion " +
                                           "comparison is %.04f for region %s",

@@ -1,7 +1,8 @@
 package com.drin.java.analysis.clustering;
 
 import com.drin.java.clustering.Cluster;
-import com.drin.java.clustering.CandidatePair;
+import com.drin.java.analysis.clustering.HierarchicalClusterer;
+import com.drin.java.analysis.clustering.HierarchicalClusterer.ClusterPair;
 
 import com.drin.java.util.Logger;
 
@@ -10,82 +11,50 @@ import java.util.HashMap;
 import java.util.List;
 
 public class AgglomerativeClusterer extends HierarchicalClusterer {
-
-   public AgglomerativeClusterer(List<Double> thresholds) {
-      super(thresholds);
+   public AgglomerativeClusterer(int dataSize, float thresh) {
+      super(dataSize, thresh);
 
       mName = "Agglomerative";
    }
 
    @Override
-   protected CandidatePair findCloseClusters(List<Cluster> clusters, double threshold) {
-      Map<String, Double> clustSimMap = null;
-      Cluster close_A = null, close_B = null;
-      double maxSim = 0;
+   protected ClusterPair findCloseClusters(final List<Cluster> clusters,
+                                           final float threshold) {
+      int closeA = -1, closeB = -1;
+      float maxSim = 0;
 
-      for (int ndx_A = 0; ndx_A < clusters.size(); ndx_A++) {
-         Cluster clust_A = clusters.get(ndx_A);
+      for (int ndxA = 0; ndxA < clusters.size(); ndxA++) {
+         Cluster clustA = clusters.get(ndxA);
 
-         if (!mSimMap.containsKey(clust_A.getName())) {
-            mSimMap.put(clust_A.getName(), new HashMap<String, Double>());
-         }
+         for (int ndxB = ndxA + 1; ndxB < clusters.size(); ndxB++) {
+            Cluster clustB = clusters.get(ndxB);
 
-         clustSimMap = mSimMap.get(clust_A.getName());
-
-         for (int ndx_B = ndx_A + 1; ndx_B < clusters.size(); ndx_B++) {
-            Cluster clust_B = clusters.get(ndx_B);
-
-            if (!clustSimMap.containsKey(clust_B.getName())) {
-               clustSimMap.put(clust_B.getName(), clust_A.compareTo(clust_B));
-            }
-
-            double clustSim = clustSimMap.get(clust_B.getName());
-
+            float clustSim = clustA.compareTo(clustB);
             if (clustSim > maxSim && clustSim > threshold) {
-               close_A = clust_A;
-               close_B = clust_B;
+               closeA = ndxA;
+               closeB = ndxB;
                maxSim = clustSim;
             }
          }
-
-         clustSimMap = null;
       }
 
-      if (close_A != null && close_B != null) {
-         return new CandidatePair(close_A, close_B, maxSim);
-      }
-
-      return null;
+      return new ClusterPair(closeA, closeB, maxSim);
    }
 
    @Override
-   protected Cluster combineClusters(CandidatePair closeClusters, List<Cluster> clusters) {
-      int removeNdx = -1;
-      Cluster combinedCluster = null;
+   protected boolean combineClusters(List<Cluster> clusters, ClusterPair clustPair) {
+      boolean success = false;
 
-      Logger.debug(String.format("combining clusters '%s' and '%s'",
-                                 closeClusters.getLeftClusterName(),
-                                 closeClusters.getRightClusterName()));
+      if (clustPair.mClustANdx != -1 && clustPair.mClustBNdx!= -1) {
+         clusters.get(clustPair.mClustANdx).join(
+            clusters.get(clustPair.mClustBNdx)
+         );
 
-      for (int clustNdx = 0; clustNdx < clusters.size(); clustNdx++) {
-         Cluster tmpClust = clusters.get(clustNdx);
-
-         if (tmpClust.getName().equals(closeClusters.getLeftClusterName())) {
-            combinedCluster = tmpClust.join(closeClusters.getRightCluster());
-
-            clusters.set(clustNdx, combinedCluster);
-         }
-
-         else if (tmpClust.getName().equals(closeClusters.getRightClusterName())) {
-            removeNdx = clustNdx;
-         }
+         clusters.remove(clustPair.mClustBNdx);
+         success = true;
       }
+      else { Logger.error(-1, "Invalid clusters to combine.\n"); }
 
-      if (removeNdx != -1) { clusters.remove(removeNdx); }
-      else {
-         Logger.error(-1, "Remove Index is -1. Error during clustering.\n");
-      }
-
-      return combinedCluster;
+      return success;
    }
 }

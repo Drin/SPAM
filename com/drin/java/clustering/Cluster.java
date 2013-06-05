@@ -1,107 +1,145 @@
 package com.drin.java.clustering;
 
-import com.drin.java.ontology.Labelable;
-import com.drin.java.ontology.OntologyLabel;
-
 import com.drin.java.clustering.Clusterable;
-import com.drin.java.clustering.dendogram.Dendogram;
 
 import com.drin.java.metrics.DataMetric;
 
 import com.drin.java.util.Logger;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Callable;
+
 import java.util.Map;
-import java.util.Set;
-import java.util.HashSet;
+import java.util.List;
+import java.util.ArrayList;
 
-public abstract class Cluster implements Labelable {
+public abstract class Cluster {
+   private static final ExecutorService mThreadPool = Executors.newFixedThreadPool(64);
    private static int CLUST_ID = 1;
-   private int mId;
-   private String mName;
 
-   protected OntologyLabel mLabel;
+   protected int mId, mSize;
+
    protected DataMetric<Cluster> mMetric;
-   protected Dendogram mDendogram;
-   protected Set<Clusterable<?>> mElements;
-   protected double mDiameter, mMean;
+   protected List<Clusterable<?>> mElements;
 
-   public Cluster(DataMetric<Cluster> metric) { this(CLUST_ID++, metric); }
+   protected String[] mMetaLabels;
+   protected float mDiameter, mMean;
 
-   public Cluster(int clustId, DataMetric<Cluster> metric) {
+   public Cluster(int clustId, int clustSize, DataMetric<Cluster> metric) {
       mId = clustId;
-      mName = String.format("%d", clustId);
       mMetric = metric;
 
-      mDendogram = null;
-      mLabel = new OntologyLabel();
-      mElements = new HashSet<Clusterable<?>>();
+      mElements = new ArrayList<Clusterable<?>>(clustSize);
+      mMetaLabels = null;
 
+      mSize = 0;
       mDiameter = -2;
       mMean = -2;
    }
 
-   public int getId() { return mId; }
-   public static void resetClusterIDs() { Cluster.CLUST_ID = 1; }
-   public String getName() { return mName; }
-   public int size() { return mElements.size(); }
-   public double getDiameter() { return mDiameter; }
-   public double getMean() { return mMean; }
+   public Cluster(int clustSize, DataMetric<Cluster> metric) {
+      this(CLUST_ID++, clustSize, metric);
+   }
 
-   public abstract void computeStatistics();
-   public abstract Cluster join(Cluster otherClust);
+   public Cluster(Cluster oldCluster) {
+      this(CLUST_ID++, oldCluster.size(), oldCluster.mMetric);
 
-   public Dendogram getDendogram() { return mDendogram; }
-   public Set<Clusterable<?>> getElements() { return mElements; }
-   public void add(Clusterable<?> element) { mElements.add(element); }
+      for (Clusterable<?> oldElem : oldCluster.getElements()) {
+         mElements.add(oldElem.deepCopy());
+      }
+
+      mSize = mElements.size();
+   }
 
    /*
     * This is for ontological labels. Clusters should have a set of labels that
     * is a superset of the labels of its data points.
     */
-   public void addLabel(String label, String value) { mLabel.addLabel(label, value); }
-   public boolean hasLabel(String label) { return mLabel.hasLabel(label); }
-   public String getLabelValue(String label) { return mLabel.getLabelValue(label); }
-   public Map<String, String> getLabels() { return mLabel.getLabels(); }
+   public void setMetaData(String[] metaLabels) { mMetaLabels = metaLabels; }
+   public String[] getMetaData() { return mMetaLabels; }
+
+   public abstract void join(Cluster otherClust);
+
+   public static void resetClusterIDs() { Cluster.CLUST_ID = 1; }
+   public static void shutdownThreadPool() { mThreadPool.shutdown(); }
+
+   public int getId() { return mId; }
+   public int size() { return mSize; }
+
+   public List<Clusterable<?>> getElements() { return mElements; }
+
+   public float getDiameter() {
+      if (mDiameter == -1) { computeStatistics(); }
+      return mDiameter;
+   }
+   public float getMean() {
+      if (mMean == -1) { computeStatistics(); }
+      return mMean;
+   }
+
+   protected void computeStatistics() {
+      float total_sim = 0.0f, clustSim = 0.0f, diameter = Float.MAX_VALUE;
+      int count = 0;
+
+      for (int ndxA = 0; ndxA < mSize; ndxA++) {
+         Clusterable<?> elemA = mElements.get(ndxA);
+
+         for (int ndxB = ndxA + 1; ndxB < mSize; ndxB++) {
+            Clusterable<?> elemB = mElements.get(ndxB);
+
+            clustSim = elemA.compareTo(elemB);
+
+            total_sim += clustSim;
+            diameter = Math.min(diameter, clustSim);
+            count++;
+         }
+      }
+
+      if (count > 0) {
+         mMean = total_sim/count;
+         mDiameter = diameter;
+      }
+      else {
+         mMean = total_sim;
+         mDiameter = -1;
+      }
+   }
 
    @Override
    public boolean equals(Object otherObj) {
       if (otherObj instanceof Cluster) {
-         Cluster otherClust = (Cluster) otherObj;
-
-         for (Clusterable<?> elem : mElements) {
-            if (!otherClust.mElements.contains(elem)) { return false; }
-         }
-
-         return true;
+         return mId == ((Cluster) otherObj).mId;
       }
 
       return false;
    }
 
-   public double compareTo(Cluster otherClust) {
+   public float compareTo(Cluster otherClust) {
       mMetric.apply(this, otherClust);
-      double comparison = mMetric.result();
+      float comparison = mMetric.result();
 
-      Logger.error(mMetric.getError(), String.format("error computing metric" +
-                                       " between '%s' and '%s'\n", this.mName,
-                                       otherClust.mName));
+      Logger.error(mMetric.getError(), String.format(
+         "error computing metric between '%d' and '%d'\n",
+         mId, otherClust.mId
+      ));
 
       return comparison;
    }
 
    @Override
    public String toString() {
-      String str = this.getName() + ": ";
+      String elements = "";
 
       for (Clusterable<?> element : mElements) {
-         str += String.format("%s, ", element);
+         elements += String.format(", %s", element);
       }
 
-      return str;
+      return String.format("Cluster %d:\n\t%s", mId, elements.substring(2));
    }
 
    public String prettyPrint(String prefix) {
-      String str = this.getName() + ":\n";
+      String str = mId + ":\n";
 
       for (Clusterable<?> element : mElements) {
          str += String.format("%s\n", element);

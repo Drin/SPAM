@@ -15,7 +15,7 @@ public class PyroprintUnstablePearsonMetric extends DataMetric<Pyroprint> {
    private static final int DEFAULT_LEN = 104;
 
    private int mPeakCount, mPyroLen;
-   private double mPyro_A_sum, mPyro_B_sum, mProduct_AB,
+   private float mPyro_A_sum, mPyro_B_sum, mProduct_AB,
                   mPyro_A_squared_sum, mPyro_B_squared_sum;
 
    public PyroprintUnstablePearsonMetric() {
@@ -39,7 +39,7 @@ public class PyroprintUnstablePearsonMetric extends DataMetric<Pyroprint> {
       mProduct_AB = 0;
    }
 
-   private void unstableCalc(double peak_A, double peak_B) {
+   private void unstableCalc(float peak_A, float peak_B) {
       mPyro_A_sum += peak_A;
       mPyro_B_sum += peak_B;
       
@@ -59,15 +59,15 @@ public class PyroprintUnstablePearsonMetric extends DataMetric<Pyroprint> {
 
       Logger.debug("Comparing pyroprints...");
 
-      Collection<Double> peaks_A = elem_A.getData();
-      Collection<Double> peaks_B = elem_B.getData();
+      Collection<Float> peaks_A = elem_A.getData();
+      Collection<Float> peaks_B = elem_B.getData();
 
-      Iterator<Double> itr_A = peaks_A.iterator();
-      Iterator<Double> itr_B = peaks_B.iterator();
+      Iterator<Float> itr_A = peaks_A.iterator();
+      Iterator<Float> itr_B = peaks_B.iterator();
 
       while (itr_A.hasNext() && itr_B.hasNext()) {
-         double val_A = itr_A.next().doubleValue();
-         double val_B = itr_B.next().doubleValue();
+         float val_A = itr_A.next().floatValue();
+         float val_B = itr_B.next().floatValue();
 
          unstableCalc(val_A, val_B);
       }
@@ -86,20 +86,20 @@ public class PyroprintUnstablePearsonMetric extends DataMetric<Pyroprint> {
                            mProduct_AB);
    }
 
-   private double getUnstablePearson() {
+   private float getUnstablePearson() {
       Logger.debug(debugState());
 
       if (mPeakCount == 0) { return -2; }
 
-      double pearson_numerator = (mPeakCount * mProduct_AB) - (mPyro_A_sum * mPyro_B_sum);
-      double denom_A = (mPeakCount * mPyro_A_squared_sum) - (mPyro_A_sum * mPyro_A_sum);
-      double denom_B = (mPeakCount * mPyro_B_squared_sum) - (mPyro_B_sum * mPyro_B_sum);
+      float pearson_numerator = (mPeakCount * mProduct_AB) - (mPyro_A_sum * mPyro_B_sum);
+      float denom_A = (mPeakCount * mPyro_A_squared_sum) - (mPyro_A_sum * mPyro_A_sum);
+      float denom_B = (mPeakCount * mPyro_B_squared_sum) - (mPyro_B_sum * mPyro_B_sum);
 
-      return (pearson_numerator/Math.sqrt(denom_A * denom_B));
+      return (pearson_numerator/(float) Math.sqrt(denom_A * denom_B));
    }
 
-   public double result() {
-      double result = mResult;
+   public float result() {
+      float result = mResult;
 
       if (result == -2) { setError(-1); }
 

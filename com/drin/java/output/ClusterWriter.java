@@ -14,21 +14,11 @@ public class ClusterWriter {
                                FILE_SEP = System.getProperty("file.separator");
 
    private Map<Double, List<Cluster>> mClusterData;
-   private String mDendInfo, mClustInfo;
+   private String mClustInfo;
 
    public ClusterWriter(Map<Double, List<Cluster>> clusterData) {
       mClusterData = clusterData;
-
-      mDendInfo = null;
       mClustInfo = null;
-   }
-
-   public String getDendInfo() {
-      if (mDendInfo == null) {
-         getClusterOutput();
-      }
-
-      return mDendInfo;
    }
 
    public String getClustInfo() {
@@ -39,29 +29,19 @@ public class ClusterWriter {
       return mClustInfo;
    }
 
-   public void clearClusterOutput() {
-      mDendInfo = null;
-      mClustInfo = null;
-   }
+   public void clearClusterOutput() { mClustInfo = null; }
 
    private void getClusterOutput() {
       String clustContents = "", bigClustName = "";
       int biggestClust = 0;
 
-      mDendInfo = "";
       mClustInfo = "";
 
       for (Map.Entry<Double, List<Cluster>> clusterData : mClusterData.entrySet()) {
-         mDendInfo += String.format("<Clusters threshold=\"%.04f\">\n", clusterData.getKey());
          mClustInfo += String.format("\nThreshold: %.04f\nNumber of Result Clusters, %d\n",
                                      clusterData.getKey(), clusterData.getValue().size());
 
          for (Cluster cluster : clusterData.getValue()) {
-            /*
-             * Dendogram Information
-             */
-            mDendInfo += cluster.getDendogram().toString();
-
             /*
              * Cluster Information
              */
@@ -75,7 +55,6 @@ public class ClusterWriter {
             }
          }
 
-         mDendInfo += "</Clusters>\n";
          mClustInfo += String.format("Largest Cluster, %s\nLargest Cluster Size, %d\n\n%s",
                                      bigClustName, biggestClust, clustContents);
 
@@ -110,14 +89,9 @@ public class ClusterWriter {
       CSV(".csv"), MATRIX(".matrix"), XML(".xml"), PYRORUN(".pyrorun");
 
       private String mExt;
-
-      private FileType(String fileExt) {
-         mExt = fileExt;
-      }
+      private FileType(String fileExt) { mExt = fileExt; }
 
       @Override
-      public String toString() {
-         return mExt;
-      }
+      public String toString() { return mExt; }
    }
 }

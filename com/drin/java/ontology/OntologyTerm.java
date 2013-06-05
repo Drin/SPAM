@@ -1,6 +1,6 @@
 package com.drin.java.ontology;
 
-import com.drin.java.clustering.FastCluster;
+import com.drin.java.clustering.Cluster;
 
 import java.util.List;
 import java.util.Map;
@@ -10,33 +10,35 @@ import java.util.LinkedHashMap;
 import java.util.ArrayList;
 
 /**
- * The mPartitions Map is a map of edge/branch names to an FastOntologyTerm
+ * The mPartitions Map is a map of edge/branch names to an OntologyTerm
  * (ontology node). The keys of the mPartitions map denote the distinct values
  * for the partition whereas the node itself denotes the data points that match
  * the name of the partition.
  */
-public class FastOntologyTerm {
-   public static String[][] mIsoLabels;
-   private static final String TIME_OPTION_KEY = "TimeSensitive";
+public class OntologyTerm {
+   private static final String TIME_OPTION_KEY = "TimeSensitive",
+                               STATIC_OPTION_KEY = "StaticOntology",
+                               SQUISHY_OPTION_KEY = "SquishyCorr",
+                               SIMILAR_OPTION_KEY = "SimilarCorr";
 
    private String mColName;
    private Map<String, Boolean> mOptions;
-   private Map<String, FastOntologyTerm> mPartitions;
-   private List<FastCluster> mData, mClusters;
+   private Map<String, OntologyTerm> mPartitions;
+   private List<Cluster> mData, mClusters;
    private boolean mHasNewData;
 
-   public FastOntologyTerm(String colName) {
+   public OntologyTerm(String colName) {
       if (colName.equals("")) { mColName = null; }
       else { mColName = colName; }
 
       mOptions = new HashMap<String, Boolean>();
-      mPartitions = new LinkedHashMap<String, FastOntologyTerm>();
+      mPartitions = new LinkedHashMap<String, OntologyTerm>();
       mData = null;
       mClusters = null;
       mHasNewData = false;
    }
 
-   public FastOntologyTerm(String colName, Map<String, Boolean> options, List<String> values) {
+   public OntologyTerm(String colName, Map<String, Boolean> options, List<String> values) {
       this(colName);
 
       for (Map.Entry<String, Boolean> option : options.entrySet()) {
@@ -48,32 +50,33 @@ public class FastOntologyTerm {
       }
    }
 
-   public FastOntologyTerm(FastOntologyTerm originalNode) {
+   public OntologyTerm(OntologyTerm originalNode) {
       this(originalNode.mColName);
 
       mOptions = originalNode.mOptions;
 
-      for (Map.Entry<String, FastOntologyTerm> partition : originalNode.mPartitions.entrySet()) {
+      for (Map.Entry<String, OntologyTerm> partition : originalNode.mPartitions.entrySet()) {
          if (partition.getValue() == null) {
             mPartitions.put(partition.getKey(), null);
          }
          else {
-            mPartitions.put(partition.getKey(), new FastOntologyTerm(partition.getValue()));
+            mPartitions.put(partition.getKey(), new OntologyTerm(partition.getValue()));
          }
       }
    }
 
-   public FastOntologyTerm(FastCluster element) {
+   public OntologyTerm(Cluster element) {
       this("");
 
-      mData = new ArrayList<FastCluster>();
+      mData = new ArrayList<Cluster>();
       mData.add(element);
       mHasNewData = true;
    }
 
    public int size() {
       int size = 0;
-      for (Map.Entry<String, FastOntologyTerm> partition : mPartitions.entrySet()) {
+
+      for (Map.Entry<String, OntologyTerm> partition : mPartitions.entrySet()) {
          if (partition != null && partition.getValue() != null) {
             size += partition.getValue().size();
          }
@@ -87,39 +90,37 @@ public class FastOntologyTerm {
    }
 
    public void clearDataFlag() { mHasNewData = false; }
-   public void setClusters(List<FastCluster> clusters) {
+   public void setClusters(List<Cluster> clusters) {
       mClusters = clusters;
       mHasNewData = false;
    }
 
    public String getColName() { return mColName; }
-   public List<FastCluster> getData() { return mData; }
-   public List<FastCluster> getClusters() { return mClusters; }
+   public List<Cluster> getData() { return mData; }
+   public List<Cluster> getClusters() { return mClusters; }
 
-   public Map<String, FastOntologyTerm> getPartitions() {
-      return mPartitions;
-   }
-
-   public FastOntologyTerm getPartition(String partitionName) {
+   public Map<String, OntologyTerm> getPartitions() { return mPartitions; }
+   public OntologyTerm getPartition(String partitionName) {
       return mPartitions.get(partitionName);
    }
 
    public boolean hasNewData() { return mHasNewData; }
-   public boolean isTimeSensitive() {
-      return mOptions.containsKey(TIME_OPTION_KEY);
-   }
+   public boolean isTimeSensitive() { return mOptions.containsKey(TIME_OPTION_KEY); }
+   public boolean isStatic() { return mOptions.containsKey(STATIC_OPTION_KEY); }
+   public boolean isSquishyCorr() { return mOptions.containsKey(SQUISHY_OPTION_KEY); }
+   public boolean isSimilarCorr() { return mOptions.containsKey(SIMILAR_OPTION_KEY); }
 
-   public boolean addData(FastCluster element, byte labelNdx) {
+   public boolean addData(Cluster element, byte labelNdx) {
       boolean dataAdded = false;
 
-      if (mPartitions != null && mIsoLabels != null && mPartitions.size() > 0) {
-         if (labelNdx < mIsoLabels[element.getID()].length) {
-            String isoLabel = mIsoLabels[element.getID()][labelNdx];
+      if (mPartitions != null && element.getMetaData() != null && mPartitions.size() > 0) {
+         if (labelNdx < element.getMetaData().length) {
+            String isoLabel = element.getMetaData()[labelNdx];
 
             if (mPartitions.containsKey(isoLabel)) {
 
                if (mPartitions.get(isoLabel) == null) {
-                  mPartitions.put(isoLabel, new FastOntologyTerm(element));
+                  mPartitions.put(isoLabel, new OntologyTerm(element));
                   dataAdded = true;
                }
                else {
@@ -132,7 +133,7 @@ public class FastOntologyTerm {
       }
 
       if (!dataAdded) {
-         if (mData == null) { mData = new ArrayList<FastCluster>(); }
+         if (mData == null) { mData = new ArrayList<Cluster>(); }
 
          if (!mData.contains(element)) {
             mData.add(element);

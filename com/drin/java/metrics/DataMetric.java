@@ -1,7 +1,7 @@
 package com.drin.java.metrics;
 
 public abstract class DataMetric<E> {
-   protected double mResult;
+   protected float mResult;
    protected int mErrCode;
 
    public DataMetric() { this.reset(); }
@@ -18,8 +18,8 @@ public abstract class DataMetric<E> {
     * Returns the computed result associated with this DataMetric. Used after
     * the metric has been applied.
     */
-   public double result() {
-      double result = mResult;
+   public float result() {
+      float result = mResult;
 
       this.reset();
       return result;
