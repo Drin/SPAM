@@ -11,9 +11,14 @@ import com.drin.java.metrics.IsolateAverageMetric;
 import com.drin.java.metrics.ITSRegionAverageMetric;
 import com.drin.java.metrics.PyroprintUnstablePearsonMetric;
 
-import java.util.List;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 
 import java.sql.Timestamp;
 import java.sql.Connection;
@@ -35,8 +40,8 @@ public class CPLOPConnection {
    private static final String
       SCHEMA_QUERY = "SELECT distinct %s " +
                      "FROM %s " +
-                     "GROUP BY %s " +
-                     "HAVING count(*) > 0",
+                     "%s " +
+                     "ORDER BY %s",
 
       //DATA_QUERY = "SELECT i.isoID, p1.pyroID, p2.pyroID, h1.pHeight, " +
       //                    "h2.pHeight, h1.position " +
@@ -98,11 +103,41 @@ public class CPLOPConnection {
                    "ORDER BY i.isoID, p1.pyroID, position " +
                    "LIMIT %d OFFSET %d",
 
+      //The join with samples is necessary because there are some isolates that
+      //don't have an entry in the samples table
+      FULL_DATA_QUERY = 
+                   "SELECT i.isoID, p1.pyroID, p1.appliedRegion, p1.dsName, " +
+                          "h1.pHeight, h1.position " +
+                   "FROM Isolates i join Samples using (hostID, commonName, sampleID) " +
+                        "JOIN Pyroprints p1 ON ( " +
+                           "i.isoID = p1.isoID " +
+                           //"p1.appliedRegion = '23-5'" +
+                        ") " +
+                        /*
+                        "JOIN Pyroprints p2 ON ( " +
+                           "i.isoID = p2.pyroID AND " +
+                           "p2.appliedRegion = '16-23'" +
+                        ") " +
+                        */
+                        "JOIN Histograms h1 ON ( " +
+                           "p1.pyroID = h1.pyroID AND " +
+                           "h1.position < %d" +
+                        ") " +
+                        /*
+                        "JOIN Histograms h2 ON ( " +
+                           "p2.pyroID = h2.pyroID AND " +
+                           "h2.position < %d AND" +
+                           "h1.position = h2.position " +
+                        ") " +
+                        */
+                   //"ORDER BY i.isoID, p1.pyroID, p2.pyroID, position " +
+                   "ORDER BY i.isoID, p1.pyroID, position ",
+
       META_QUERY = "SELECT distinct isoID %s " +
                    "FROM Isolates join Pyroprints using (isoID) join Samples using (hostID, commonName, sampleID) " +
+                                 "JOIN Histograms using (pyroID) " +
                    "WHERE isoID in (%s) " +
-                   "ORDER BY isoID " +
-                   "LIMIT %d OFFSET %d";
+                   "ORDER BY isoID ";
 
    public CPLOPConnection() throws SQLException, DriverException {
       try {
@@ -115,24 +150,82 @@ public class CPLOPConnection {
       }
    }
 
-   public List<String> getDistinctValues(String tableName, String colNames) throws SQLException {
-      List<String> distinctValues = new ArrayList<String>();
+   public Map<String, Set<String>> getDistinctValues(String tableName, List<String> colNames,
+                                                     List<String> filterValues) throws SQLException {
+      Map<String, Set<String>> distinctValues = new HashMap<String, Set<String>>();
       Statement statement = null;
       ResultSet results = null;
 
-      String query = String.format(SCHEMA_QUERY, colNames, tableName, colNames);
+      String colNameString = "";
+      for (String ontCol : colNames) {
+         colNameString += "," + ontCol;
+      }
+
+      String whereClause = "";
+      if (!filterValues.isEmpty()) {
+         String whereFilter = "";
+         whereClause = "WHERE " + colNames.get(colNames.size() - 1) +
+                       " IN (%s) ";
+
+         for (String filterVal : filterValues) {
+            whereFilter += ",'" + filterVal + "'";
+         }
+
+         whereClause = String.format(whereClause, whereFilter.substring(1));
+      }
+
+      String query = String.format(SCHEMA_QUERY,
+         colNameString.substring(1), tableName, whereClause,
+         colNameString.substring(1)
+      );
+
+      System.out.println(query);
 
       try {
          statement = mConn.createStatement();
          results = statement.executeQuery(query);
 
-         while (results.next()) { distinctValues.add(results.getString(1).trim()); }
+         while (results.next()) {
+            if (colNames.size() == 1) {
+               String colName = results.getString(1).trim();
+               distinctValues.put(colName, null);
+            }
+
+            for (int colNdx = 1; colNdx < colNames.size(); colNdx++) {
+               String colName = "";
+               
+               for (int prevCol = 1; prevCol <= colNdx; prevCol++) {
+                  colName += ":" + results.getString(prevCol).trim();
+               }
+
+               String subColName = results.getString(colNdx + 1).trim();
+
+               if (!distinctValues.containsKey(colName.substring(1))) {
+                  distinctValues.put(colName.substring(1), new HashSet<String>());
+               }
+
+               distinctValues.get(colName.substring(1)).add(subColName);
+            }
+         }
       }
       catch (SQLException sqlEx) { throw sqlEx; }
       finally {
          if (results != null) { results.close(); }
          if (statement != null) { statement.close(); }
       }
+
+      /*
+      System.out.println("distinct values...");
+      for (Map.Entry<String, Set<String>> values : distinctValues.entrySet()) {
+         System.out.println("\t" + values.getKey() + ":");
+
+         if (values.getValue() != null) {
+            for (String strVal : values.getValue()) {
+               System.out.println("\t\t" + strVal);
+            }
+         }
+      }
+      */
 
       return distinctValues;
    }
@@ -165,11 +258,18 @@ public class CPLOPConnection {
             //    Length of Pyroprint
             //    Page size
             //    Page offset
-            results = statement.executeQuery(String.format(DIRECTED_DATA_QUERY,
-               pyroLen, isoIdList,
-               Math.min(pageSize, peakDataSize - (pageSize * pageNdx)),
-               (pageSize * pageNdx)
-            ));
+            if (isoIdList != null) {
+               results = statement.executeQuery(String.format(DIRECTED_DATA_QUERY,
+                  pyroLen, isoIdList,
+                  Math.min(pageSize, peakDataSize - (pageSize * pageNdx)),
+                  (pageSize * pageNdx)
+               ));
+            }
+            else {
+               results = statement.executeQuery(String.format(FULL_DATA_QUERY,
+                  pyroLen
+               ));
+            }
 
             while (results.next()) {
                tmpIsoId = results.getString(1);
@@ -238,15 +338,11 @@ public class CPLOPConnection {
       try {
          for (int pageNdx = 0; pageNdx < Math.ceil((float) dataSize / pageSize); pageNdx++) {
             System.out.println(String.format(META_QUERY,
-               metaColumns, metaIDs.substring(1),
-               Math.min(pageSize, dataSize - (pageNdx * pageSize)),
-               pageNdx * pageSize
+               metaColumns, metaIDs.substring(1)
             ));
             statement = mConn.createStatement();
             results = statement.executeQuery(String.format(META_QUERY,
-               metaColumns, metaIDs.substring(1),
-               Math.min(pageSize, dataSize - (pageNdx * pageSize)),
-               pageNdx * pageSize
+               metaColumns, metaIDs.substring(1)
             ));
 
             while (results.next()) {
@@ -257,7 +353,9 @@ public class CPLOPConnection {
                   isoNdx++;
 
                   if (!isoData.get(isoNdx).getName().equals(isoId)) {
-                     System.err.printf("meta data mismatch for isolate %s\n", isoId);
+                     System.err.printf("meta data mismatch:\n");
+                     System.err.printf("expected '%s' found '%s'\n", isoId,
+                                       isoData.get(isoNdx).getName());
                      continue;
                   }
                }

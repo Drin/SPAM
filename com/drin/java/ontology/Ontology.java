@@ -4,13 +4,19 @@ import com.drin.java.clustering.Cluster;
 
 import com.drin.java.ontology.OntologyTerm;
 import com.drin.java.ontology.OntologyParser;
+import com.drin.java.ontology.OntologyParser.TermContainer;
 
 import java.io.File;
 import java.util.Scanner;
 
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 
 public class Ontology {
    private String mName;
@@ -51,21 +57,47 @@ public class Ontology {
 
    public boolean addData(Cluster element) { return mRoot.addData(element, (byte) 0); }
 
-   public void addTerm(OntologyTerm newTerm) {
+   public void addTerm(Map<String, Set<String>> partitions, OntologyTerm newTerm) {
       addColumn(newTerm.getColName());
 
-      if (mRoot != null) { Ontology.addTerm(mRoot, newTerm); }
-      else { mRoot = new OntologyTerm(newTerm); }
+      System.out.println("adding term...");
+
+      if (mRoot != null) {
+         System.out.println("mRoot not null...");
+         Ontology.addTerm(partitions, mRoot, newTerm);
+      }
+      else {
+         Map<String, OntologyTerm> termPartitions = new LinkedHashMap<String, OntologyTerm>();
+
+         for (String termPartition : partitions.keySet()) {
+            termPartitions.put(termPartition, null);
+         }
+
+         mRoot = new OntologyTerm(newTerm);
+         mRoot.setPartitions(termPartitions);
+      }
    }
 
-   private static void addTerm(OntologyTerm root, OntologyTerm newTerm) {
+   private static void addTerm(Map<String, Set<String>> partitionLookup,
+                               OntologyTerm root, OntologyTerm newTerm) {
       Map<String, OntologyTerm> partitionMap = root.getPartitions();
 
       for (Map.Entry<String, OntologyTerm> partition : partitionMap.entrySet()) {
+         Set<String> usefulPartitions = partitionLookup.get(partition.getKey());
+
+         if (usefulPartitions == null || usefulPartitions.isEmpty()) { continue; }
+
          if (partition.getValue() == null) {
-            partition.setValue(new OntologyTerm(newTerm));
+            OntologyTerm newTermCopy = new OntologyTerm(newTerm);
+            Map<String, OntologyTerm> termPartitions = new LinkedHashMap<String, OntologyTerm>();
+            for (String lookupVal : usefulPartitions) {
+               termPartitions.put(partition.getKey() + ":" + lookupVal, null);
+            }
+
+            newTermCopy.setPartitions(termPartitions);
+            partition.setValue(newTermCopy);
          }
-         else { Ontology.addTerm(partition.getValue(), newTerm); }
+         else { Ontology.addTerm(partitionLookup, partition.getValue(), newTerm); }
       }
    }
 
@@ -120,8 +152,15 @@ public class Ontology {
          String term = termScanner.nextLine();
    
          if (parser.matchString(term)) {
-            ont.addTerm(parser.getTerm(ont.getColumns()));
+            TermContainer newTerm = parser.getTerm(
+               new ArrayList<String>(ont.getColumns())
+            );
+
+            ont.addTerm(newTerm.mPartitionLookup, newTerm.mTerm);
          }
+
+         System.out.println("size: " + ont.size());
+         //System.out.println(ont);
       }
 
       return ont;

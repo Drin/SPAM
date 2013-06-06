@@ -37,7 +37,7 @@ public class SPAMEvaluation {
    private CPLOPConnection mConn;
    private HierarchicalClusterer mClusterer;
    
-   private static int TEST_RUN_ID = 400;
+   private static int TEST_RUN_ID = 410;
 
    private static final float ALPHA_THRESH = 0.995f,
                               BETA_THRESH  = 0.99f;
@@ -46,7 +46,7 @@ public class SPAMEvaluation {
       "ontologies_build_down/large.ont",
    };
 
-   private static final boolean INSERT_RESULTS = false,
+   private static final boolean INSERT_RESULTS = true,
                                 USE_TRANSFORM  = false;
 
    public SPAMEvaluation(int sizeHint) {
@@ -59,10 +59,10 @@ public class SPAMEvaluation {
    }
 
    public static void main(String[] args) {
-      short initSizes[] = new short[] { 500 };//, 1000, 1500, 2000, 2500 };
+      short initSizes[] = new short[] { 4345 };//, 1000, 1500, 2000, 2500 };
       float upSizes[] = new float[] { 0.0f };
       byte numUps[] = new byte[] { 0 };
-      int maxSize = 500;
+      int maxSize = 4345;
       boolean shouldTransform = true;
       int totalSize = 0;
 
@@ -295,7 +295,7 @@ public class SPAMEvaluation {
       List<Isolate> isoData = null;
 
       try {
-         isoData = mConn.getIsolateData(dataSize, "'Av-001', 'Av-002', 'Av-003', 'Av-004'");
+         isoData = mConn.getIsolateData(dataSize, null);
          mConn.getIsolateMetaData(isoData, ont, dataSize);
 
       }

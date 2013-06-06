@@ -39,6 +39,7 @@ public class OHClusterer extends AgglomerativeClusterer {
          //betaThresh)" statement in the constructor
          clusters = copyClusters(clusters);
          super.clusterDataSet(clusters, mThresh);
+         mResultClusters.put(mThresh, clusters);
       }
 
       else {

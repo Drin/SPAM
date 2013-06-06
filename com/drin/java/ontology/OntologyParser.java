@@ -5,9 +5,11 @@ import com.drin.java.database.CPLOPConnection;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -76,29 +78,25 @@ public class OntologyParser {
       return mRegexMatch.matches();
    }
 
-   public OntologyTerm getTerm(List<String> ontColumns) {
+   public TermContainer getTerm(List<String> ontColumns) {
       String tableName = getTermTableName(), colNames = "";
-      List<String> partitions = getTermValues();
+      Map<String, Set<String>> partitions = null;
 
       //hardcoded for Jan
       tableName = "Isolates JOIN Samples using (hostID, commonName, sampleID) ";
+      ontColumns.add(getTermColName());
 
-      if (partitions.isEmpty()) {
-         for (String ontCol : ontColumns) {
-            colNames += "," + ontCol;
-         }
-         colNames += "," + getTermColName();
+      try {
+         partitions = mConn.getDistinctValues(tableName, ontColumns, getTermValues());
 
-         try {
-            partitions = mConn.getDistinctValues(tableName, colNames.substring(1));
-         }
-         catch (java.sql.SQLException sqlErr) {
-            System.out.printf("SQL Exception: '%s'\n", sqlErr);
-            System.exit(1);
-         }
+         //System.exit(0);
+      }
+      catch (java.sql.SQLException sqlErr) {
+         System.out.printf("SQL Exception: '%s'\n", sqlErr);
+         System.exit(1);
       }
 
-      return new OntologyTerm(getTermColName(), getTermOptions(), partitions);
+      return new TermContainer(new OntologyTerm(getTermColName(), getTermOptions()), partitions);
    }
 
    public String getTermTableName() {
@@ -167,5 +165,15 @@ public class OntologyParser {
       }
 
       System.out.printf("%s\n", feature);
+   }
+
+   public class TermContainer {
+      public OntologyTerm mTerm;
+      public Map<String, Set<String>> mPartitionLookup;
+
+      public TermContainer(OntologyTerm term, Map<String, Set<String>> partitions) {
+         mTerm = term;
+         mPartitionLookup = partitions;
+      }
    }
 }

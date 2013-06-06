@@ -4,10 +4,12 @@ import com.drin.java.clustering.Cluster;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.ArrayList;
+import java.util.HashSet;
 
 /**
  * The mPartitions Map is a map of edge/branch names to an OntologyTerm
@@ -38,15 +40,11 @@ public class OntologyTerm {
       mHasNewData = false;
    }
 
-   public OntologyTerm(String colName, Map<String, Boolean> options, List<String> values) {
+   public OntologyTerm(String colName, Map<String, Boolean> options) {
       this(colName);
 
       for (Map.Entry<String, Boolean> option : options.entrySet()) {
          mOptions.put(option.getKey(), new Boolean(option.getValue().booleanValue()));
-      }
-
-      for (String value : values) {
-         mPartitions.put(value, null);
       }
    }
 
@@ -74,17 +72,20 @@ public class OntologyTerm {
    }
 
    public int size() {
-      int size = 0;
+      int size = 1;
 
       for (Map.Entry<String, OntologyTerm> partition : mPartitions.entrySet()) {
          if (partition != null && partition.getValue() != null) {
             size += partition.getValue().size();
          }
+         else { size += 1; }
       }
 
+      /*
       if (mData != null) {
          return size + mData.size();
       }
+      */
 
       return size;
    }
@@ -99,6 +100,7 @@ public class OntologyTerm {
    public List<Cluster> getData() { return mData; }
    public List<Cluster> getClusters() { return mClusters; }
 
+   public void setPartitions(Map<String, OntologyTerm> partitions) { mPartitions = partitions; }
    public Map<String, OntologyTerm> getPartitions() { return mPartitions; }
    public OntologyTerm getPartition(String partitionName) {
       return mPartitions.get(partitionName);
