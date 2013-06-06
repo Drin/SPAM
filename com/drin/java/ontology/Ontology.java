@@ -15,20 +15,18 @@ import java.util.ArrayList;
 public class Ontology {
    private String mName;
    private OntologyTerm mRoot;
-   private List<String> mColumns, mPartitions;
+   private List<String> mColumns;
 
    public Ontology() {
       mRoot = null;
       
       mColumns = new ArrayList<String>(2);
-      mPartitions = new ArrayList<String>(2);
    }
    
    public Ontology(Ontology oldOnt) {
       this();
       
       mColumns = new ArrayList<String>(oldOnt.mColumns);
-      mPartitions = new ArrayList<String>(oldOnt.mPartitions);
       
       mRoot = new OntologyTerm(oldOnt.mRoot);
       mName = oldOnt.mName;
@@ -51,18 +49,10 @@ public class Ontology {
    public void addColumn(String colName) { mColumns.add(colName); }
    public List<String> getColumns() { return mColumns; }
 
-   public int getNumPartitions() { return mPartitions.size(); }
-   public void addPartition(String partition) { mPartitions.add(partition); }
-   public List<String> getPartitions() { return mPartitions; }
-
    public boolean addData(Cluster element) { return mRoot.addData(element, (byte) 0); }
 
    public void addTerm(OntologyTerm newTerm) {
       addColumn(newTerm.getColName());
-
-      for (String partitionVal : newTerm.getPartitions().keySet()) {
-         addPartition(partitionVal);
-      }
 
       if (mRoot != null) { Ontology.addTerm(mRoot, newTerm); }
       else { mRoot = new OntologyTerm(newTerm); }
@@ -72,7 +62,6 @@ public class Ontology {
       Map<String, OntologyTerm> partitionMap = root.getPartitions();
 
       for (Map.Entry<String, OntologyTerm> partition : partitionMap.entrySet()) {
-
          if (partition.getValue() == null) {
             partition.setValue(new OntologyTerm(newTerm));
          }
@@ -130,7 +119,9 @@ public class Ontology {
       while (termScanner.hasNextLine()) {
          String term = termScanner.nextLine();
    
-         if (parser.matchString(term)) { ont.addTerm(parser.getTerm()); }
+         if (parser.matchString(term)) {
+            ont.addTerm(parser.getTerm(ont.getColumns()));
+         }
       }
 
       return ont;

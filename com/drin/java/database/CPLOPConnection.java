@@ -33,9 +33,10 @@ public class CPLOPConnection {
    private Connection mConn;
 
    private static final String
-      SCHEMA_QUERY = "SELECT distinct(%s) " +
+      SCHEMA_QUERY = "SELECT distinct %s " +
                      "FROM %s " +
-                     "WHERE %s IS NOT NULL",
+                     "GROUP BY %s " +
+                     "HAVING count(*) > 0",
 
       //DATA_QUERY = "SELECT i.isoID, p1.pyroID, p2.pyroID, h1.pHeight, " +
       //                    "h2.pHeight, h1.position " +
@@ -114,12 +115,12 @@ public class CPLOPConnection {
       }
    }
 
-   public List<String> getDistinctValues(String tableName, String colName) throws SQLException {
+   public List<String> getDistinctValues(String tableName, String colNames) throws SQLException {
       List<String> distinctValues = new ArrayList<String>();
       Statement statement = null;
       ResultSet results = null;
 
-      String query = String.format(SCHEMA_QUERY, colName, tableName, colName);
+      String query = String.format(SCHEMA_QUERY, colNames, tableName, colNames);
 
       try {
          statement = mConn.createStatement();

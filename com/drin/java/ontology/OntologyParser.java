@@ -76,13 +76,21 @@ public class OntologyParser {
       return mRegexMatch.matches();
    }
 
-   public OntologyTerm getTerm() {
-      String tableName = getTermTableName(), colName = getTermColName();
+   public OntologyTerm getTerm(List<String> ontColumns) {
+      String tableName = getTermTableName(), colNames = "";
       List<String> partitions = getTermValues();
 
+      //hardcoded for Jan
+      tableName = "Isolates JOIN Samples using (hostID, commonName, sampleID) ";
+
       if (partitions.isEmpty()) {
+         for (String ontCol : ontColumns) {
+            colNames += "," + ontCol;
+         }
+         colNames += "," + getTermColName();
+
          try {
-            partitions = mConn.getDistinctValues(tableName, colName);
+            partitions = mConn.getDistinctValues(tableName, colNames.substring(1));
          }
          catch (java.sql.SQLException sqlErr) {
             System.out.printf("SQL Exception: '%s'\n", sqlErr);
@@ -90,7 +98,7 @@ public class OntologyParser {
          }
       }
 
-      return new OntologyTerm(colName, getTermOptions(), partitions);
+      return new OntologyTerm(getTermColName(), getTermOptions(), partitions);
    }
 
    public String getTermTableName() {
