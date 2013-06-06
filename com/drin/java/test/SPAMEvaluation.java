@@ -70,6 +70,7 @@ public class SPAMEvaluation {
 
       for (String ontFile : ONTOLOGIES) {
          Ontology clustOnt = Ontology.createOntology(new File(ontFile));
+         System.out.println(clustOnt.size());
          SPAMEvaluation runner = new SPAMEvaluation(maxSize);
 
          //get the data
@@ -297,7 +298,6 @@ public class SPAMEvaluation {
       try {
          isoData = mConn.getIsolateData(dataSize, "'Av-001', 'Av-002', 'Av-003', 'Av-004'");
          mConn.getIsolateMetaData(isoData, ont, dataSize);
-
       }
       catch (java.sql.SQLException sqlErr) { sqlErr.printStackTrace(); }
       catch (Exception err) { err.printStackTrace(); }

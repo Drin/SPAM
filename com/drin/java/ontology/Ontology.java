@@ -122,6 +122,8 @@ public class Ontology {
          if (parser.matchString(term)) {
             ont.addTerm(parser.getTerm(ont.getColumns()));
          }
+
+         System.out.println(ont.size());
       }
 
       return ont;
