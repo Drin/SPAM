@@ -67,8 +67,38 @@ public class CPLOPConnection {
                    "ORDER BY i.isoID, p1.pyroID, position " +
                    "LIMIT %d OFFSET %d",
 
+      DIRECTED_DATA_QUERY = 
+                   "SELECT i.isoID, p1.pyroID, p1.appliedRegion, p1.dsName, " +
+                          "h1.pHeight, h1.position " +
+                   "FROM Isolates i " +
+                        "JOIN Pyroprints p1 ON ( " +
+                           "i.isoID = p1.isoID " +
+                           //"p1.appliedRegion = '23-5'" +
+                        ") " +
+                        /*
+                        "JOIN Pyroprints p2 ON ( " +
+                           "i.isoID = p2.pyroID AND " +
+                           "p2.appliedRegion = '16-23'" +
+                        ") " +
+                        */
+                        "JOIN Histograms h1 ON ( " +
+                           "p1.pyroID = h1.pyroID AND " +
+                           "h1.position < %d" +
+                        ") " +
+                        /*
+                        "JOIN Histograms h2 ON ( " +
+                           "p2.pyroID = h2.pyroID AND " +
+                           "h2.position < %d AND" +
+                           "h1.position = h2.position " +
+                        ") " +
+                        */
+                   //"ORDER BY i.isoID, p1.pyroID, p2.pyroID, position " +
+                   "WHERE i.isoID in (%s) " +
+                   "ORDER BY i.isoID, p1.pyroID, position " +
+                   "LIMIT %d OFFSET %d",
+
       META_QUERY = "SELECT distinct isoID %s " +
-                   "FROM Isolates join Pyroprints using (isoID) " +
+                   "FROM Isolates join Pyroprints using (isoID) join Samples using (hostID, commonName, sampleID) " +
                    "WHERE isoID in (%s) " +
                    "ORDER BY isoID " +
                    "LIMIT %d OFFSET %d";
@@ -106,11 +136,11 @@ public class CPLOPConnection {
       return distinctValues;
    }
 
-   public List<Isolate> getIsolateData(int dataSize) throws SQLException {
-      return getIsolateData(dataSize, DEFAULT_PAGE_SIZE);
+   public List<Isolate> getIsolateData(int dataSize, String isoIdList) throws SQLException {
+      return getIsolateData(dataSize, DEFAULT_PAGE_SIZE, isoIdList);
    }
 
-   public List<Isolate> getIsolateData(int dataSize, short pageSize) throws SQLException {
+   public List<Isolate> getIsolateData(int dataSize, short pageSize, String isoIdList) throws SQLException {
       Statement statement = null;
       ResultSet results = null;
 
@@ -134,8 +164,8 @@ public class CPLOPConnection {
             //    Length of Pyroprint
             //    Page size
             //    Page offset
-            results = statement.executeQuery(String.format(DATA_QUERY,
-               pyroLen,
+            results = statement.executeQuery(String.format(DIRECTED_DATA_QUERY,
+               pyroLen, isoIdList,
                Math.min(pageSize, peakDataSize - (pageSize * pageNdx)),
                (pageSize * pageNdx)
             ));

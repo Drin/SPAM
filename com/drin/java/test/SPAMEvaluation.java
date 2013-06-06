@@ -37,19 +37,13 @@ public class SPAMEvaluation {
    private CPLOPConnection mConn;
    private HierarchicalClusterer mClusterer;
    
-   private static int TEST_RUN_ID = 340;
+   private static int TEST_RUN_ID = 400;
 
-   private static final float ALPHA_THRESH = 0.90f,
-                              BETA_THRESH  = 0.85f;
+   private static final float ALPHA_THRESH = 0.995f,
+                              BETA_THRESH  = 0.99f;
 
    private static final String ONTOLOGIES[] = new String[] {
-      "ontologies_build_down/small.ont",
-      "ontologies_build_down/medium.ont",
       "ontologies_build_down/large.ont",
-      "ontology_partitions/full_3_3_3.ont",
-      "ontology_partitions/full_4_4_4.ont",
-      "ontology_partitions/full_5_5_5.ont",
-      "ontology_partitions/full_6_6_6.ont"
    };
 
    private static final boolean INSERT_RESULTS = false,
@@ -301,7 +295,7 @@ public class SPAMEvaluation {
       List<Isolate> isoData = null;
 
       try {
-         isoData = mConn.getIsolateData(dataSize);
+         isoData = mConn.getIsolateData(dataSize, "'Av-001', 'Av-002', 'Av-003', 'Av-004'");
          mConn.getIsolateMetaData(isoData, ont, dataSize);
 
       }

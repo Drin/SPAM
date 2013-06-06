@@ -1,3 +1,4 @@
-test_isolates.hostID():;
-test_isolates.commonName():;
-test_isolates.userName():;
+Isolates.hostID():;
+Isolates.commonName():;
+Samples.dateCollected():;
+Isolates.sampleID():;
