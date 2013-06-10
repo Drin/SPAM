@@ -37,10 +37,10 @@ public class SPAMEvaluation {
    private CPLOPConnection mConn;
    private HierarchicalClusterer mClusterer;
    
-   private static int TEST_RUN_ID = 460;
+   private static int TEST_RUN_ID = 600;
 
-   private static final float ALPHA_THRESH = 0.995f,
-                              BETA_THRESH  = 0.99f;
+   private static final float ALPHA_THRESH = 0.85f,
+                              BETA_THRESH  = 0.80f;
 
    private static final String ONTOLOGIES[] = new String[] {
       "ontologies_build_down/large.ont",
@@ -59,11 +59,10 @@ public class SPAMEvaluation {
    }
 
    public static void main(String[] args) {
-      short initSizes[] = new short[] { 4877 };//, 1000, 1500, 2000, 2500 };
-      float upSizes[] = new float[] { 0.0f };
-      byte numUps[] = new byte[] { 0 };
-      int maxSize = 4877;
-      boolean shouldTransform = true;
+      short initSizes[] = new short[] { 1000, 1500, 2000, 2500 };
+      float upSizes[] = new float[] { 0.25f };
+      byte numUps[] = new byte[] { 4 };
+      int maxSize = 5000;
       int totalSize = 0;
 
       System.out.println("HAVE YOU CHANGED TEST RUN ID!?");

@@ -21,6 +21,8 @@ public class Isolate extends Clusterable<ITSRegion> {
    private static final int ALPHA_NDX = 0, BETA_NDX = 1;
    private Map<String, Float> mComparisonCache;
 
+   private int mIdNum;
+
    public Isolate(String isoId) {
       this(isoId, 2);
    }
@@ -28,8 +30,12 @@ public class Isolate extends Clusterable<ITSRegion> {
    public Isolate(String isoId, int dataSize) {
       super(isoId, new HashSet<ITSRegion>(dataSize));
 
+      mIdNum = -1;
       mComparisonCache = new HashMap<String, Float>();
    }
+
+   public void setIdNum(int idNum) { mIdNum = idNum; }
+   public int getIdNum() { return mIdNum; }
 
    @Override
    public float compareTo(Clusterable<?> otherObj) {
