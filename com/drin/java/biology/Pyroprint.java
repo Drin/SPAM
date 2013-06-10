@@ -1,10 +1,10 @@
 package com.drin.java.biology;
 
 import com.drin.java.clustering.Clusterable;
-import com.drin.java.metrics.DataMetric;
 
 import com.drin.java.util.Logger;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -19,15 +19,16 @@ import java.util.ArrayList;
  * analyzed.
  */
 public class Pyroprint extends Clusterable<Float> {
-   private DataMetric<Pyroprint> mMetric;
    private String mDisp;
    private byte mPyroLen;
+   private int mPeakCount;
+   private float mPyroASum, mPyroBSum, mProductAB,
+                  mPyroASquaredSum, mPyroBSquaredSum;
 
-   public Pyroprint(String pyroId, byte pyroLen, String disp, DataMetric<Pyroprint> metric) {
+   public Pyroprint(String pyroId, byte pyroLen, String disp) {
       super(pyroId, new ArrayList<Float>(pyroLen));
       mDisp = disp;
       mPyroLen = pyroLen;
-      mMetric = metric;
    }
 
    public byte getPyroLen() { return mPyroLen; }
@@ -61,31 +62,46 @@ public class Pyroprint extends Clusterable<Float> {
       return false;
    }
 
-   /*
-    * Overridden Object Methods
-    */
-   @Override
-   public boolean equals(Object obj) {
-      if (obj instanceof Pyroprint) {
-         return mName.equals(((Pyroprint) obj).mName);
-      }
-
-      return false;
-   }
-
    @Override
    public float compareTo(Clusterable<?> otherObj) {
-      if (otherObj instanceof Pyroprint) {
-         mMetric.apply(this, (Pyroprint) otherObj);
+      float peakA = 0.0f, peakB = 0.0f;
 
-         float value = mMetric.result();
+      mPyroASum = mPyroBSum = 0.0f;
+      mPyroASquaredSum = mPyroBSquaredSum = mProductAB = 0.0f;
+      mPeakCount = 0;
 
-         Logger.error(mMetric.getError(), String.format(
-            "PyroprintComparator:\n\tCorrelation between '%s' and '%s': %.04f",
-            mName, otherObj.getName(), value
-         ));
+      if (otherObj instanceof Pyroprint && hasSameProtocol((Pyroprint) otherObj)) {
+         Iterator<Float> itrA = mData.iterator(),
+                         itrB = ((Pyroprint) otherObj).mData.iterator();
 
-         return value;
+         while (itrA.hasNext() && itrB.hasNext()) {
+            peakA = itrA.next().floatValue();
+            peakB = itrB.next().floatValue();
+
+            mPyroASum += peakA;
+            mPyroBSum += peakB;
+            
+            mPyroASquaredSum += peakA * peakA;
+            mPyroBSquaredSum += peakB * peakB;
+            
+            mProductAB += peakA * peakB;
+            mPeakCount++;
+         }
+
+         if (mPeakCount > 0) {
+            float pearson = 
+               ((mPeakCount * mProductAB) - (mPyroASum * mPyroBSum))/ (float) Math.sqrt(
+                (((mPeakCount * mPyroASquaredSum) - (mPyroASum * mPyroASum)) *
+                 ((mPeakCount * mPyroBSquaredSum) - (mPyroBSum * mPyroBSum)))
+            );
+
+            if (pearson > 1) {
+               System.err.println("Pearson greater than 1?!");
+               System.exit(0);
+            }
+
+            return pearson;
+         }
       }
 
       return -2;
@@ -93,7 +109,7 @@ public class Pyroprint extends Clusterable<Float> {
 
    @Override
    public Pyroprint deepCopy() {
-      Pyroprint newPyro = new Pyroprint(mName, mPyroLen, mDisp, mMetric);
+      Pyroprint newPyro = new Pyroprint(mName, mPyroLen, mDisp);
 
       for (Float peak : mData) { newPyro.getData().add(new Float(peak.floatValue())); }
 

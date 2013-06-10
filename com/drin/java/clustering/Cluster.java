@@ -2,8 +2,6 @@ package com.drin.java.clustering;
 
 import com.drin.java.clustering.Clusterable;
 
-import com.drin.java.metrics.DataMetric;
-
 import com.drin.java.util.Logger;
 
 import java.util.concurrent.Executors;
@@ -15,35 +13,33 @@ import java.util.List;
 import java.util.ArrayList;
 
 public abstract class Cluster {
-   private static final ExecutorService mThreadPool = Executors.newFixedThreadPool(64);
+   //private static final ExecutorService mThreadPool = Executors.newFixedThreadPool(64);
    private static int CLUST_ID = 1;
 
    protected int mId, mSize;
 
-   protected DataMetric<Cluster> mMetric;
    protected List<Clusterable<?>> mElements;
 
    protected String[] mMetaLabels;
    protected float mDiameter, mMean;
 
-   public Cluster(int clustId, int clustSize, DataMetric<Cluster> metric) {
+   public Cluster(int clustId, int clustSize) {
       mId = clustId;
-      mMetric = metric;
 
       mElements = new ArrayList<Clusterable<?>>(clustSize);
       mMetaLabels = null;
 
       mSize = 0;
-      mDiameter = -2;
-      mMean = -2;
+      mDiameter = -2.0f;
+      mMean = -2.0f;
    }
 
-   public Cluster(int clustSize, DataMetric<Cluster> metric) {
-      this(CLUST_ID++, clustSize, metric);
+   public Cluster(int clustSize) {
+      this(CLUST_ID++, clustSize);
    }
 
    public Cluster(Cluster oldCluster) {
-      this(CLUST_ID++, oldCluster.size(), oldCluster.mMetric);
+      this(CLUST_ID++, oldCluster.size());
 
       for (Clusterable<?> oldElem : oldCluster.getElements()) {
          mElements.add(oldElem.deepCopy());
@@ -62,7 +58,7 @@ public abstract class Cluster {
    public abstract void join(Cluster otherClust);
 
    public static void resetClusterIDs() { Cluster.CLUST_ID = 1; }
-   public static void shutdownThreadPool() { mThreadPool.shutdown(); }
+   //public static void shutdownThreadPool() { mThreadPool.shutdown(); }
 
    public int getId() { return mId; }
    public int size() { return mSize; }
@@ -70,11 +66,11 @@ public abstract class Cluster {
    public List<Clusterable<?>> getElements() { return mElements; }
 
    public float getDiameter() {
-      if (mDiameter == -1) { computeStatistics(); }
+      if (mDiameter == -2.0f) { computeStatistics(); }
       return mDiameter;
    }
    public float getMean() {
-      if (mMean == -1) { computeStatistics(); }
+      if (mMean == -2.0f) { computeStatistics(); }
       return mMean;
    }
 
@@ -90,6 +86,12 @@ public abstract class Cluster {
 
             clustSim = elemA.compareTo(elemB);
 
+            if (clustSim > 1.0f) {
+               System.err.printf("Similarity too high between %s and %s\n",
+                  elemA.getName(), elemB.getName()
+               );
+            }
+
             total_sim += clustSim;
             diameter = Math.min(diameter, clustSim);
             count++;
@@ -101,9 +103,24 @@ public abstract class Cluster {
          mDiameter = diameter;
       }
       else {
-         mMean = total_sim;
-         mDiameter = -1;
+         mMean = -2.0f;
+         mDiameter = -2.0f;
       }
+   }
+
+   public float compareTo(Cluster otherClust) {
+      int count = 0;
+      float comparison = 0.0f;
+
+      for (Clusterable<?> elemA : mElements) {
+         for (Clusterable<?> elemB : otherClust.getElements()) {
+            comparison += elemA.compareTo(elemB);
+            count++;
+         }
+      }
+
+      if (count > 0) { return comparison / count; }
+      return -2;
    }
 
    @Override
@@ -113,18 +130,6 @@ public abstract class Cluster {
       }
 
       return false;
-   }
-
-   public float compareTo(Cluster otherClust) {
-      mMetric.apply(this, otherClust);
-      float comparison = mMetric.result();
-
-      Logger.error(mMetric.getError(), String.format(
-         "error computing metric between '%d' and '%d'\n",
-         mId, otherClust.mId
-      ));
-
-      return comparison;
    }
 
    @Override

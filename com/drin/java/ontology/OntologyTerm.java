@@ -126,6 +126,11 @@ public class OntologyTerm {
                   dataAdded = true;
                }
                else {
+                  if (labelNdx < element.getMetaData().length - 1) {
+                     element.getMetaData()[labelNdx + 1] =
+                        isoLabel + ":" + element.getMetaData()[labelNdx + 1];
+                  }
+
                   dataAdded = mPartitions.get(isoLabel).addData(
                      element, (byte) (labelNdx + 1)
                   );

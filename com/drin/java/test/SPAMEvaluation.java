@@ -37,7 +37,7 @@ public class SPAMEvaluation {
    private CPLOPConnection mConn;
    private HierarchicalClusterer mClusterer;
    
-   private static int TEST_RUN_ID = 410;
+   private static int TEST_RUN_ID = 460;
 
    private static final float ALPHA_THRESH = 0.995f,
                               BETA_THRESH  = 0.99f;
@@ -59,10 +59,10 @@ public class SPAMEvaluation {
    }
 
    public static void main(String[] args) {
-      short initSizes[] = new short[] { 4345 };//, 1000, 1500, 2000, 2500 };
+      short initSizes[] = new short[] { 4877 };//, 1000, 1500, 2000, 2500 };
       float upSizes[] = new float[] { 0.0f };
       byte numUps[] = new byte[] { 0 };
-      int maxSize = 4345;
+      int maxSize = 4877;
       boolean shouldTransform = true;
       int totalSize = 0;
 
@@ -78,7 +78,6 @@ public class SPAMEvaluation {
          System.out.println("fetching data...");
 
          List<Isolate> isoData = runner.getIsolateData(clustOnt, maxSize);
-         DataMetric<Cluster> clustMetric = new ClusterAverageMetric();
 
          System.out.printf("finished fetching data in %ds!\n",
             (System.currentTimeMillis() - dataFetchTime) / 1000
@@ -97,10 +96,9 @@ public class SPAMEvaluation {
                   long start = System.currentTimeMillis();
 
                   for (int i = 0; i < 3; i++) {
-                     runner.testAgglom(initSize, upSize, numUp, isoData, clustMetric);
+                     runner.testAgglom(initSize, upSize, numUp, isoData);
 
-                     runner.testOHClust(initSize, upSize, numUp,
-                                        new Ontology(clustOnt), isoData, clustMetric);
+                     runner.testOHClust(initSize, upSize, numUp, new Ontology(clustOnt), isoData);
                   }
                   
                   System.out.printf("Took about %s ms\n", System.currentTimeMillis() - start);
@@ -111,8 +109,7 @@ public class SPAMEvaluation {
    }
 
    public void testOHClust(short initSize, float upSize, byte numUps,
-                           Ontology clustOnt, List<Isolate> isoData,
-                           DataMetric<Cluster> clustMetric) {
+                           Ontology clustOnt, List<Isolate> isoData) {
       int isoStart = 0, isoEnd = initSize;
       long startCluster = 0, finishCluster = 0, runTimes[] = new long[numUps + 1];
       long fullTime = System.currentTimeMillis();
@@ -121,8 +118,10 @@ public class SPAMEvaluation {
 
       for (byte currUp = (byte) (-1);  currUp < numUps; currUp++) {
          for (int isoNdx = isoStart; isoNdx < Math.min(isoEnd, isoData.size()); isoNdx++) {
-            clustOnt.addData(new HCluster(clustMetric, isoData.get(isoNdx)));
+            clustOnt.addData(new HCluster(isoData.get(isoNdx)));
          }
+
+         System.out.println("OHClust! clustering...");
 
          startCluster = System.currentTimeMillis();
          mClusterer.clusterData(clustOnt);
@@ -146,7 +145,7 @@ public class SPAMEvaluation {
    }
 
    public void testAgglom(short initSize, float upSize, byte numUps,
-                          List<Isolate> isoData, DataMetric<Cluster> clustMetric) {
+                          List<Isolate> isoData) {
       int isoStart = 0, isoEnd = initSize;
       long startCluster, finishCluster, runTimes[] = new long[numUps + 1];
       long fullTime = System.currentTimeMillis();
@@ -158,7 +157,7 @@ public class SPAMEvaluation {
       mClusterer = new AgglomerativeClusterer(isoData.size(), BETA_THRESH);
       for (byte currUp = (byte) (-1);  currUp < numUps; currUp++) {
          for (int isoNdx = isoStart; isoNdx < Math.min(isoEnd, isoData.size()); isoNdx++) {
-            clusters.add(new HCluster(clustMetric, isoData.get(isoNdx)));
+            clusters.add(new HCluster(isoData.get(isoNdx)));
          }
          
          tmpClusters = new ArrayList<Cluster>(clusters.size());
@@ -167,6 +166,11 @@ public class SPAMEvaluation {
                tmpClusters.add(new HCluster((HCluster) clust));
             }
          }
+
+         System.out.println("clust 0:\n" + tmpClusters.get(0));
+         System.out.println("clust 1:\n" + tmpClusters.get(1));
+
+         System.out.println("agglomerative clustering...");
 
          startCluster = System.currentTimeMillis();
          mClusterer.clusterData(tmpClusters);
@@ -218,7 +222,7 @@ public class SPAMEvaluation {
 
       insertTestRun(TEST_RUN_ID, algorithm, ontName, clusterer, use_transform, totalTime);
       insertRunPerformance(TEST_RUN_ID, initSize, upSize, runTimes);
-      //insertStrainsAndIsolates(TEST_RUN_ID, threshold, clusters, clusterer);
+      insertStrainsAndIsolates(TEST_RUN_ID, threshold, clusters, clusterer);
 
       TEST_RUN_ID++;
    }
@@ -256,8 +260,7 @@ public class SPAMEvaluation {
       catch (Exception err) { err.printStackTrace(); }
    }
 
-   public void insertStrainsAndIsolates(int run_id, float threshold, List<Cluster> clusters,
-                                        HierarchicalClusterer clusterer, byte updateId) {
+   public void insertStrainsAndIsolates(int run_id, float threshold, List<Cluster> clusters, HierarchicalClusterer clusterer) {
       String strainInsert = "", isolateInsert = "";
 
       /*
@@ -271,15 +274,15 @@ public class SPAMEvaluation {
          System.out.printf("cluster size: %d\n", clust.size());
 
          strainInsert += String.format(
-            ",(%d, %d, %.04f, %.04f, %.04f, %d)",
+            ",(%d, %d, %.04f, %.04f, %.04f)",
             run_id, clust.getId(), threshold, clust.getDiameter(),
-            clust.getMean(), updateId
+            clust.getMean()
          );
 
          for (Clusterable<?> elem : clust.getElements()) {
             isolateInsert += String.format(
-               ",(%d, %d, %.04f, '%s', %d)", run_id, clust.getId(), 
-               threshold, elem.getName(), updateId
+               ",(%d, %d, %.04f, '%s')", run_id, clust.getId(), 
+               threshold, elem.getName()
             );
          }
       }
@@ -297,7 +300,9 @@ public class SPAMEvaluation {
 
       try {
          isoData = mConn.getIsolateData(dataSize, null);
+
          mConn.getIsolateMetaData(isoData, ont, dataSize);
+         System.out.println("retrieved meta-data...");
       }
       catch (java.sql.SQLException sqlErr) { sqlErr.printStackTrace(); }
       catch (Exception err) { err.printStackTrace(); }

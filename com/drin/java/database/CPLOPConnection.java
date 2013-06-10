@@ -6,11 +6,6 @@ import com.drin.java.biology.Pyroprint;
 import com.drin.java.biology.ITSRegion;
 import com.drin.java.biology.Isolate;
 
-import com.drin.java.metrics.DataMetric;
-import com.drin.java.metrics.IsolateAverageMetric;
-import com.drin.java.metrics.ITSRegionAverageMetric;
-import com.drin.java.metrics.PyroprintUnstablePearsonMetric;
-
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +50,7 @@ public class CPLOPConnection {
                         /*
                         "JOIN Pyroprints p2 ON ( " +
                            "i.isoID = p2.pyroID AND " +
-                           "p2.appliedRegion = '16-23'" +
+                           "p2.appliedRegion != p1.appliedRegion" +
                         ") " +
                         */
                         "JOIN Histograms h1 ON ( " +
@@ -70,6 +65,16 @@ public class CPLOPConnection {
                         ") " +
                         */
                    //"ORDER BY i.isoID, p1.pyroID, p2.pyroID, position " +
+                   "WHERE i.isoID in (SELECT distinct i.isoID " +
+                                     "FROM Isolates i " +
+                                          "JOIN Pyroprints p1 ON ( " +
+                                              "i.isoID = p1.isoID AND " +
+                                              "p1.appliedRegion = '16-23') " +
+                                          "JOIN Pyroprints p2 ON ( " +
+                                              "i.isoID = p2.isoID AND " +
+                                              "p2.appliedRegion = '23-5') " +
+                                     ") AND " +
+                         "i.isoID NOT LIKE 'ES%' " +
                    "ORDER BY i.isoID, p1.pyroID, position " +
                    "LIMIT %d OFFSET %d",
 
@@ -131,7 +136,23 @@ public class CPLOPConnection {
                         ") " +
                         */
                    //"ORDER BY i.isoID, p1.pyroID, p2.pyroID, position " +
-                   "ORDER BY i.isoID, p1.pyroID, position ",
+                   "WHERE i.isoID in (SELECT distinct t.isoID " +
+                                     "FROM Isolates t " +
+                                          "JOIN Pyroprints t1 ON ( " +
+                                              "t.isoID = t1.isoID AND " +
+                                              "t1.appliedRegion = '16-23') " +
+                                          "JOIN Pyroprints t2 ON ( " +
+                                              "t.isoID = t2.isoID AND " +
+                                              "t2.appliedRegion = '23-5') " +
+                                          "JOIN Histograms t3 ON ( " +
+                                             "t1.pyroID = t3.pyroID" +
+                                          ") " +
+                                          "JOIN Histograms t4 ON ( " +
+                                             "t2.pyroID = t4.pyroID" +
+                                          ") " +
+                                     ") AND " +
+                         "i.isoID NOT LIKE 'ES%%' " +
+                   "ORDER BY i.isoID, p1.pyroID, h1.position ",
 
       META_QUERY = "SELECT distinct isoID %s " +
                    "FROM Isolates join Pyroprints using (isoID) join Samples using (hostID, commonName, sampleID) " +
@@ -179,7 +200,7 @@ public class CPLOPConnection {
          colNameString.substring(1)
       );
 
-      System.out.println(query);
+      //System.out.println(query);
 
       try {
          statement = mConn.createStatement();
@@ -238,14 +259,10 @@ public class CPLOPConnection {
       Statement statement = null;
       ResultSet results = null;
 
-      DataMetric<Isolate> isoMetric = new IsolateAverageMetric();
-      DataMetric<ITSRegion> regionMetric = new ITSRegionAverageMetric();
-      DataMetric<Pyroprint> pyroMetric = new PyroprintUnstablePearsonMetric();
-
       byte pyroLen = 95;
+      int peakDataSize = dataSize * pyroLen, pyroId = -1, tmpPyroId = -1;
       List<Isolate> isoData = new ArrayList<Isolate>(dataSize);
       String isoId = null, tmpIsoId = null, regName = null, dsName = null;
-      int peakDataSize = dataSize * pyroLen, pyroId = -1, tmpPyroId = -1;
 
       Isolate tmpIso = null;
       ITSRegion tmpRegion = null;
@@ -259,6 +276,7 @@ public class CPLOPConnection {
             //    Page size
             //    Page offset
             if (isoIdList != null) {
+               System.out.println("Executing directed data query");
                results = statement.executeQuery(String.format(DIRECTED_DATA_QUERY,
                   pyroLen, isoIdList,
                   Math.min(pageSize, peakDataSize - (pageSize * pageNdx)),
@@ -266,9 +284,10 @@ public class CPLOPConnection {
                ));
             }
             else {
-               results = statement.executeQuery(String.format(FULL_DATA_QUERY,
-                  pyroLen
-               ));
+               System.out.println("Executing full data query:");
+               System.out.println(String.format(FULL_DATA_QUERY, pyroLen));
+
+               results = statement.executeQuery(String.format(FULL_DATA_QUERY, pyroLen));
             }
 
             while (results.next()) {
@@ -285,18 +304,27 @@ public class CPLOPConnection {
 
                if (isoId == null || !tmpIsoId.equals(isoId)) {
                   isoId = tmpIsoId;
-                  tmpIso = new Isolate(isoId, isoMetric);
+
+                  tmpIso = new Isolate(isoId);
+                  tmpRegion = new ITSRegion(regName);
+
+                  tmpIso.getData().add(tmpRegion);
+
                   isoData.add(tmpIso);
                }
 
-               if (tmpIso != null) {
-                  tmpIso.getData().add(new ITSRegion(regName, regionMetric));
+               if (tmpRegion == null || !tmpRegion.getName().equals(regName)) {
+                  tmpRegion = new ITSRegion(regName);
+
+                  if (tmpIso != null) { tmpIso.getData().add(tmpRegion); }
                }
 
                if (tmpPyroId != pyroId) {
                   pyroId = tmpPyroId;
-                  tmpPyro = new Pyroprint(String.valueOf(pyroId),
-                                          dispLen, dsName, pyroMetric);
+
+                  tmpPyro = new Pyroprint(String.valueOf(pyroId), dispLen, dsName);
+
+                  tmpRegion.getData().add(tmpPyro);
                }
 
                if (tmpPyro != null) {
@@ -309,12 +337,21 @@ public class CPLOPConnection {
                   }
                }
             }
+
+            if (isoIdList == null) { break; }
          }
       }
       catch (Exception err) { err.printStackTrace(); }
       finally {
          if (statement != null) { statement.close(); }
          if (results != null) { results.close(); }
+      }
+
+      for (Isolate iso : isoData) {
+         if (iso.getData().size() != 2) {
+            System.err.printf("Isolate %s has %d regions\n",
+               iso.getName(), iso.getData().size());
+         }
       }
 
       return isoData;
@@ -394,13 +431,10 @@ public class CPLOPConnection {
 
       String strainInsert = "INSERT IGNORE INTO test_run_strain_link (test_run_id, cluster_id, " +
                                                               "cluster_threshold, strain_diameter, " +
-                                                              "average_isolate_similarity, " +
-                                                              "percent_similar_isolates, " +
-                                                              "update_id) " +
+                                                              "average_isolate_similarity) " +
                             "VALUES %s";
-      String isolateInsert = "INSERT IGNORE INTO test_isolate_strains(test_run_id, cluster_id, " +
-                                                               "cluster_threshold, test_isolate_id, " +
-                                                               "update_id) " +
+      String isolateInsert = "INSERT IGNORE INTO real_isolate_strains(test_run_id, cluster_id, " +
+                                                               "cluster_threshold, real_isolate_id) " +
                              "VALUES %s";
 
       try {

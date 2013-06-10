@@ -4,8 +4,6 @@ import com.drin.java.clustering.Clusterable;
 import com.drin.java.biology.ITSRegion;
 import com.drin.java.biology.Pyroprint;
 
-import com.drin.java.metrics.DataMetric;
-
 import com.drin.java.util.Logger;
 
 import java.util.Iterator;
@@ -21,33 +19,53 @@ import java.util.HashSet;
  */
 public class Isolate extends Clusterable<ITSRegion> {
    private static final int ALPHA_NDX = 0, BETA_NDX = 1;
-   private DataMetric<Isolate> mMetric;
    private Map<String, Float> mComparisonCache;
 
-   public Isolate(String isoId, DataMetric<Isolate> metric) {
-      this(isoId, 2, metric);
+   public Isolate(String isoId) {
+      this(isoId, 2);
    }
 
-   public Isolate(String isoId, int dataSize, DataMetric<Isolate> metric) {
+   public Isolate(String isoId, int dataSize) {
       super(isoId, new HashSet<ITSRegion>(dataSize));
 
-      mMetric = metric;
       mComparisonCache = new HashMap<String, Float>();
    }
 
    @Override
    public float compareTo(Clusterable<?> otherObj) {
+      Iterator<ITSRegion> itrA, itrB;
+      float comparison = 0.0f;
+      byte numRegions = 0;
+
       if (otherObj instanceof Isolate) {
          if (!mComparisonCache.containsKey(otherObj.getName())) {
-            mMetric.apply(this, (Isolate) otherObj);
-            float comparison = mMetric.result();
+            itrA = mData.iterator();
+
+            while (itrA.hasNext()) {
+               ITSRegion regionA = itrA.next();
+
+               itrB = ((Isolate) otherObj).getData().iterator();
+               while (itrB.hasNext()) {
+                  ITSRegion regionB = itrB.next();
+
+                  if (regionA.equals(regionB)) {
+                     comparison += regionA.compareTo(regionB);
+                     numRegions++;
+
+                     break;
+                  }
+               }
+            }
+
+            if (numRegions == 2) {
+               comparison = comparison / numRegions;
+            }
+            else {
+               System.err.println("Invalid # of Regions: " + numRegions);
+               System.exit(0);
+            }
 
             mComparisonCache.put(otherObj.getName(), new Float(comparison));
-
-            Logger.debug(String.format(
-               "'%s' and '%s' => [%.05f]",
-               this.getName(), otherObj.getName(), comparison
-            ));
 
             return comparison;
          }
@@ -61,7 +79,7 @@ public class Isolate extends Clusterable<ITSRegion> {
 
    @Override
    public Clusterable<ITSRegion> deepCopy() {
-      Clusterable<ITSRegion> newIsolate = new Isolate(mName, mMetric);
+      Clusterable<ITSRegion> newIsolate = new Isolate(mName);
 
       for (ITSRegion region : mData) {
          newIsolate.getData().add(region.deepCopy());
