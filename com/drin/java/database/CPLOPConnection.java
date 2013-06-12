@@ -28,7 +28,7 @@ public class CPLOPConnection {
    private static final String DB_URL = "jdbc:mysql://localhost/CPLOP?autoReconnect=true";
    private static final String DB_USER = "";
    private static final String DB_PASS = "";
-   private static final short DEFAULT_PAGE_SIZE = 10000;
+   private static final int DEFAULT_PAGE_SIZE = 10000;
 
    private Connection mConn;
 
@@ -68,17 +68,8 @@ public class CPLOPConnection {
                         ") " +
                         */
                    //"ORDER BY i.isoID, p1.pyroID, p2.pyroID, position " +
-                   "WHERE i.test_isolate_id in (SELECT distinct t.test_isolate_id " +
-                                               "FROM test_isolates t " +
-                                                    "JOIN test_pyroprints t1 ON ( " +
-                                                        "t.name_prefix = t1.name_prefix AND " +
-                                                        "t.name_suffix = t1.name_suffix AND " +
-                                                        "t1.appliedRegion = '16-23') " +
-                                                    "JOIN test_pyroprints t2 ON ( " +
-                                                        "t.name_prefix = t2.name_prefix AND " +
-                                                        "t.name_suffix = t2.name_suffix AND " +
-                                                        "t2.appliedRegion = '23-5') " +
-                                               ") " +
+                   "WHERE i.test_isolate_id in (SELECT test_isolate_id " +
+                                               "FROM isolate_selection) " +
                    "ORDER BY i.test_isolate_id, p1.pyroID, position " +
                    "LIMIT %d OFFSET %d",
 
@@ -158,7 +149,7 @@ public class CPLOPConnection {
                          "i.isoID NOT LIKE 'ES%%' " +
                    "ORDER BY i.isoID, p1.pyroID, h1.position ",
 
-      META_QUERY = "SELECT distinct CONCAT(name_prefix, '-', name_suffix) as isoID, %s " +
+      META_QUERY = "SELECT distinct test_isolate_id, CONCAT(name_prefix, '-', name_suffix) as isoID %s " +
                    "FROM test_isolates " +
                         "JOIN test_pyroprints using (" +
                            "name_prefix, name_suffix " +
@@ -266,12 +257,12 @@ public class CPLOPConnection {
       return getIsolateData(dataSize, DEFAULT_PAGE_SIZE, isoIdList);
    }
 
-   public List<Isolate> getIsolateData(int dataSize, short pageSize, String isoIdList) throws SQLException {
+   public List<Isolate> getIsolateData(int dataSize, int pageSize, String isoIdList) throws SQLException {
       Statement statement = null;
       ResultSet results = null;
 
       byte pyroLen = 95;
-      int pyroId = -1, tmpPyroId = -1;
+      int peakDataSize = dataSize * pyroLen, pyroId = -1, tmpPyroId = -1;
       List<Isolate> isoData = new ArrayList<Isolate>(dataSize);
       String isoId = null, tmpIsoId = null, regName = null, dsName = null;
 
@@ -280,7 +271,7 @@ public class CPLOPConnection {
       Pyroprint tmpPyro = null;
 
       try {
-         for (int pageNdx = 0; pageNdx < Math.ceil((float) dataSize / pageSize); pageNdx++) {
+         for (int pageNdx = 0; pageNdx < Math.ceil((float) peakDataSize / pageSize); pageNdx++) {
             statement = mConn.createStatement();
             //3 Data Query Variables:
             //    Length of Pyroprint
@@ -289,14 +280,14 @@ public class CPLOPConnection {
 
             System.out.println(String.format(DATA_QUERY,
                pyroLen,
-               pyroLen * Math.min(pageSize, dataSize - (pageSize * pageNdx)),
-               pyroLen * (pageSize * pageNdx)
+               Math.min(pageSize, peakDataSize - (pageSize * pageNdx)),
+               (pageSize * pageNdx)
             ));
 
             results = statement.executeQuery(String.format(DATA_QUERY,
                pyroLen, 
-               pyroLen * Math.min(pageSize, dataSize - (pageSize * pageNdx)),
-               pyroLen * (pageSize * pageNdx)
+               Math.min(pageSize, peakDataSize - (pageSize * pageNdx)),
+               (pageSize * pageNdx)
             ));
 
             /*
@@ -328,6 +319,10 @@ public class CPLOPConnection {
                byte dispLen = -1;
                if (regName.equals("16-23")) { dispLen = 95; }
                else if (regName.equals("23-5")) { dispLen = 93; }
+
+               if (isoIdNum == 977) {
+                  System.out.printf("%s: %s\n", tmpIsoId, regName);
+               }
 
                if (isoId == null || !tmpIsoId.equals(isoId)) {
                   isoId = tmpIsoId;
@@ -366,7 +361,13 @@ public class CPLOPConnection {
                }
             }
 
-            if (isoIdList == null) { break; }
+            //if (isoIdList == null) { break; }
+         }
+
+         for (Isolate iso : isoData) {
+            if (iso.getIdNum() == 977) {
+               System.out.println(iso);
+            }
          }
       }
       catch (Exception err) { err.printStackTrace(); }
@@ -393,7 +394,7 @@ public class CPLOPConnection {
       String metaIDs = "", metaColumns = "", isoId = null, tmpId = null;
       int isoNdx = -1, numColumns = ont.getNumCols();
       int pageSize = DEFAULT_PAGE_SIZE;
-      byte colOffset = 2;
+      byte colOffset = 3;
 
       for (String metaCol : ont.getColumns()) { metaColumns += "," + metaCol; }
       for (int ndx = 0; ndx < isoData.size(); ndx++) {
@@ -412,7 +413,7 @@ public class CPLOPConnection {
             ));
 
             while (results.next()) {
-               tmpId = results.getString(1);
+               tmpId = results.getString(2);
 
                if (isoId == null || !tmpId.equals(isoId)) {
                   isoId = tmpId;

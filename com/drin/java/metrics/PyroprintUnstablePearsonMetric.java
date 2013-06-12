@@ -14,6 +14,7 @@ import java.util.Iterator;
 public class PyroprintUnstablePearsonMetric extends DataMetric<Pyroprint> {
    private static final int DEFAULT_LEN = 104;
 
+   public int numDiffProtocol;
    private int mPeakCount, mPyroLen;
    private float mPyro_A_sum, mPyro_B_sum, mProduct_AB,
                   mPyro_A_squared_sum, mPyro_B_squared_sum;
@@ -23,6 +24,7 @@ public class PyroprintUnstablePearsonMetric extends DataMetric<Pyroprint> {
 
       Integer pyro_len = Configuration.getInt("PyroprintLength");
       mPyroLen = pyro_len == null ? DEFAULT_LEN : pyro_len.intValue();
+      numDiffProtocol = 0;
    }
 
    public void reset() {
@@ -52,6 +54,7 @@ public class PyroprintUnstablePearsonMetric extends DataMetric<Pyroprint> {
 
    public void apply(Pyroprint elem_A, Pyroprint elem_B) {
       if (!elem_A.hasSameProtocol(elem_B)) {
+         numDiffProtocol++;
          Logger.debug(String.format("%s and %s have different protocols",
                                     elem_A.getName(), elem_B.getName()));
          return;
