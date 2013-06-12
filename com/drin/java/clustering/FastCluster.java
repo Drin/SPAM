@@ -53,11 +53,11 @@ public class FastCluster {
 
    private void computeStatistics () {
       float total_sim = 0, diameter = Float.MAX_VALUE;
-      short num_sim = 0, count = 0;
+      int num_sim = 0, count = 0;
       float clustSim = 0.0f;
 
       for (int ndxA = 0; ndxA < mTail; ndxA++) {
-         for (int ndxB = (short) (ndxA + 1); ndxB < mTail; ndxB++) {
+         for (int ndxB = ndxA + 1; ndxB < mTail; ndxB++) {
             clustSim = mSimMatrix[mSimMapping[mElements[ndxA]][
                mElements[ndxB] % (mNumIsolates - mElements[ndxA])]
             ];
@@ -216,7 +216,7 @@ public class FastCluster {
          mElements = newArr;
       }
 
-      for (short otherNdx = 0; otherNdx < other.mTail; otherNdx++) {
+      for (int otherNdx = 0; otherNdx < other.mTail; otherNdx++) {
          mElements[mTail++] = other.mElements[otherNdx];
       }
    }

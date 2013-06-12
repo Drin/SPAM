@@ -272,7 +272,7 @@ public class CPLOPConnection {
       String insertQuery = String.format(
          "INSERT IGNORE INTO test_runs (test_run_id, run_date, run_time, cluster_algorithm, " +
                                        "average_strain_similarity, use_transform, ontology) " +
-         "VALUES (%d, ?, '%s', '%s', %.04f, %d, %s)",
+         "VALUES (%d, ?, '%s', '%s', %.04f, %d, '%s')",
          runID, getElapsedTime(runTime), algorith, interStrainSim,
          use_transform, ontName
       );

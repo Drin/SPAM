@@ -35,17 +35,17 @@ public class FastHierarchicalClusterer {
    public void clusterData(FastOntology clustOnt) { throw new UnsupportedOperationException(); }
 
    protected void clusterDataSet(List<FastCluster> clusters, float threshold) {
-      short closeA = -1, closeB = -1;
+      int closeA = -1, closeB = -1;
       float maxSim = 0;
 
       do {
          closeA = closeB = -1;
          maxSim = 0;
 
-         for (short ndxA = 0; ndxA < clusters.size(); ndxA++) {
+         for (int ndxA = 0; ndxA < clusters.size(); ndxA++) {
             FastCluster clustA = clusters.get(ndxA);
 
-            for (short ndxB = (short) (ndxA + 1); ndxB < clusters.size(); ndxB++) {
+            for (int ndxB = (ndxA + 1); ndxB < clusters.size(); ndxB++) {
                FastCluster clustB = clusters.get(ndxB);
 
                float clustSim = clustA.compareTo(clustB);

@@ -5,7 +5,7 @@ CREATE PROCEDURE updateRunSize()
 BEGIN
    UPDATE test_runs t1 join (SELECT test_run_id, SUM(update_size) AS total_size
                              FROM test_run_performance
-                             GROUP BY test_run_id) t2 USING (test_run_id)
+                             GROUP BY test_run_id, update_id) t2 USING (test_run_id)
    SET t1.total_size = t2.total_size;
 END$$
 
@@ -15,6 +15,7 @@ BEGIN
    UPDATE test_run_strain_link s1 JOIN (SELECT test_run_id, cluster_id,
                                                count(*) as clust_size
                                         FROM test_isolate_strains
+                                        WHERE update_id = 10
                                         GROUP BY test_run_id, cluster_id) t1 USING (test_run_id, cluster_id)
                                   JOIN (SELECT test_run_id, SUM(update_size) AS total_size
                                         FROM test_run_performance

@@ -25,7 +25,7 @@ public class FastSPAMEvaluationCPU {
    private CPLOPConnection mConn;
    private FastHierarchicalClusterer mClusterer;
    
-   private static int TEST_RUN_ID = 340;
+   private static int TEST_RUN_ID = 525;
    private static final short ISOLATE_LEN = 188;
    private static final byte LEN_23S     = 93,
                              LEN_16S     = 95;
@@ -41,9 +41,9 @@ public class FastSPAMEvaluationCPU {
       "ontologies_build_down/medium.ont",
       "ontologies_build_down/large.ont",
       "ontology_partitions/full_3_3_3.ont",
-      "ontology_partitions/full_4_5_4.ont",
-      "ontology_partitions/full_5_6_5.ont",
-      "ontology_partitions/full_6_7_6.ont"
+      "ontology_partitions/full_4_4_4.ont",
+      "ontology_partitions/full_5_5_5.ont",
+      "ontology_partitions/full_6_6_6.ont"
    };
 
    private static final boolean INSERT_RESULTS = true,
@@ -60,42 +60,41 @@ public class FastSPAMEvaluationCPU {
    }
 
    public static void main(String[] args) {
-      short initSizes[] = new short[] { 500, 1000, 2500, 5000, 7500, 10000 };
+      short initSizes[] = new short[] { 500, 750, 1000, 1250, 1500 };
       float upSizes[] = new float[] { 0.10f };
       byte numUps[] = new byte[] { 10 };
-      int maxSize = 20000;
-      boolean shouldTransform = true;
+      int maxSize = 3000;
       int totalSize = 0;
 
-      //prepare ontology and class
-      for (String ontFile : ONTOLOGIES) {
-         FastOntology clustOnt = FastOntology.createFastOntology(new File(ontFile));
-         FastSPAMEvaluationCPU runner = new FastSPAMEvaluationCPU(maxSize);
+      //iterate on configurations
+      for (byte numUp : numUps) {
+         for (float upSize : upSizes) {
+            for (short initSize : initSizes) {
+               //prepare ontology and class
+               for (String ontFile : ONTOLOGIES) {
+                  FastOntology clustOnt = FastOntology.createFastOntology(new File(ontFile));
+                  FastSPAMEvaluationCPU runner = new FastSPAMEvaluationCPU(maxSize);
 
-         //get the data
-         long dataFetchTime = System.currentTimeMillis();
-         System.out.println("HAVE YOU CHANGED TEST RUN ID!?");
-         System.out.println("fetching data...");
-         IsolateDataContainer data = runner.getIsolateData(clustOnt, maxSize);
-         System.out.printf("finished fetching data in %ds!\n",
-            (System.currentTimeMillis() - dataFetchTime) / 1000
-         );
+                  //get the data
+                  long dataFetchTime = System.currentTimeMillis();
+                  System.out.println("HAVE YOU CHANGED TEST RUN ID!?");
+                  System.out.println("fetching data...");
+                  IsolateDataContainer data = runner.getIsolateData(clustOnt, maxSize);
+                  System.out.printf("finished fetching data in %ds!\n",
+                     (System.currentTimeMillis() - dataFetchTime) / 1000
+                  );
 
-         //populate the packed similarity matrix
-         float simMatrix[] = runner.calculateSimMatrix(data.isoIDs, data.isoData);
-         int[][] simMapping = runner.getSimMapping(data.isoIDs.length);
+                  //populate the packed similarity matrix
+                  float simMatrix[] = runner.calculateSimMatrix(data.isoIDs, data.isoData);
+                  int[][] simMapping = runner.getSimMapping(data.isoIDs.length);
 
-         //set static data for lookups
-         FastOntologyTerm.mIsoLabels = data.isoMeta;
-         FastCluster.mNumIsolates = maxSize;
-         FastCluster.mSimMatrix = simMatrix;
-         FastCluster.mSimMapping = simMapping;
-         FastCluster.mTransform = shouldTransform;
+                  //set static data for lookups
+                  FastOntologyTerm.mIsoLabels = data.isoMeta;
+                  FastCluster.mNumIsolates = maxSize;
+                  FastCluster.mSimMatrix = simMatrix;
+                  FastCluster.mSimMapping = simMapping;
+                  FastCluster.mTransform = USE_TRANSFORM;
 
-         //iterate on configurations
-         for (byte numUp : numUps) {
-            for (float upSize : upSizes) {
-               for (short initSize : initSizes) {
                   totalSize = Math.round(initSize + ((initSize * upSize) * numUp));
 
                   System.out.printf("initial: %d\nupdate size: %.02f\nnum ups: %d\n",
@@ -108,7 +107,7 @@ public class FastSPAMEvaluationCPU {
                      /*
                      runner.testAgglom(initSize, upSize, numUp, totalSize,
                                        simMapping, simMatrix, data);
-                     */
+                                       */
 
                      runner.testOHClust(initSize, upSize, numUp, totalSize,
                                         new FastOntology(clustOnt),
@@ -211,7 +210,7 @@ public class FastSPAMEvaluationCPU {
          isoEnd += Math.round(initSize * upSize);
       }
 
-      persistResults("Agglomerative", null, mClusterer, mClusterer.getClusters(),
+      persistResults("Agglomerative", "none", mClusterer, mClusterer.getClusters(),
                      runTimes, System.currentTimeMillis() - fullTime, initSize, upSize,
                      data);
    }

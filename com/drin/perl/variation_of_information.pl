@@ -6,7 +6,7 @@ use DBI;
 use TestRun;
 use Cluster;
 
-my $dbi_handle = DBI->connect(q{dbi:mysql:localhost}, q{}, q{});
+my $dbi_handle = DBI->connect(q{dbi:mysql:CPLOP:localhost}, q{}, q{});
 
 my $CLUSTER_META_QUERY = q{
    SELECT cluster_id, count(*) as clustCount
@@ -90,13 +90,13 @@ sub log_2 {
 }
 
 sub get_variation_of_information {
-   my $cluster_partitions = get_clust_meta_info(3, 4);
+   my ($run_1, $run_2) = (@_);
+
+   my $cluster_partitions = get_clust_meta_info($run_1, $run_2);
    get_clust_isolate_info($cluster_partitions);
 
-   my @run_ids = (keys %{$cluster_partitions});
-
-   my $test_run_1 = $cluster_partitions->{$run_ids[0]};
-   my $test_run_2 = $cluster_partitions->{$run_ids[1]};
+   my $test_run_1 = $cluster_partitions->{$run_1};
+   my $test_run_2 = $cluster_partitions->{$run_2};
 
    my ($p_ij, $p_i, $p_j);
    my ($entropy_1, $entropy_2, $mutual_info) = (0, 0, 0);
@@ -107,8 +107,6 @@ sub get_variation_of_information {
          $p_ij = $clust_A->get_overlap($clust_B);
          $p_i = $test_run_1->calc_clust_prob($clust_A);
          $p_j = $test_run_2->calc_clust_prob($clust_B);
-
-         print({*STDOUT} "P_i: $p_i\tP_j: $p_j\tP_ij: $p_ij\n");
 
          $mutual_info += $p_ij * log_2($p_ij / ($p_i * $p_j));
 
@@ -126,7 +124,7 @@ sub get_variation_of_information {
    return ($entropy_1, $entropy_2, $mutual_info, $variation_of_info);
 }
 
-my $comparisons = [[1, 2], [2, 3], [3, 1]];
+my $comparisons = [[130, 131], [132, 133], [134, 135]];
 my ($H_c, $H_c2, $I_c, $V_c);
 
 for my $id_pair (@{$comparisons}) {

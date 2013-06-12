@@ -14,7 +14,7 @@ import java.util.Map;
 public class FastOHClusterer extends FastHierarchicalClusterer {
    private float mAlphaThresh;
 
-   public FastOHClusterer(short dataSize, float alphaThresh, float betaThresh) {
+   public FastOHClusterer(int dataSize, float alphaThresh, float betaThresh) {
       super(dataSize, betaThresh);
       mAlphaThresh = alphaThresh;
    }

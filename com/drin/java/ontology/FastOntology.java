@@ -35,6 +35,7 @@ public class FastOntology {
       mPartitionTail = oldOnt.mPartitionTail;
       
       mRoot = new FastOntologyTerm(oldOnt.mRoot);
+      mName = oldOnt.mName;
    }
 
    public FastOntologyTerm getRoot() {

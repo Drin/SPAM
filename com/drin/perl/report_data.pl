@@ -3,8 +3,8 @@ use warnings;
 
 use DBI;
 
-use constant DB_USER => q{amontana};
-use constant DB_PASS => q{4ldr1n*(};
+use constant DB_USER => q{};
+use constant DB_PASS => q{};
 
 use constant PERF_FILE => q{performance.csv};
 use constant SIM_FILE  => q{similarities.csv};
@@ -60,7 +60,7 @@ my $RUN_TIMES = $db_handle->prepare(q{
 });
 
 sub get_cluster_info {
-   my ($clust_info_map, $clust_comp_map) = (@_);
+   my ($clust_info_map, $clust_comp_map, $run_id_filter) = (@_);
    my ($run_id, $tmp_clust_map);
 
    $CLUSTER_METRICS->execute();
@@ -112,7 +112,7 @@ sub get_cluster_sizes {
 }
 
 sub get_performance {
-   my ($run_id, $clust_info_map) = (-1, @_);
+   my ($run_id, $clust_info_map, $id_filter) = (-1, @_);
 
    $RUN_TIMES->execute();
    for my $perf_record (@{$RUN_TIMES->fetchall_arrayref({})}) {
@@ -227,9 +227,9 @@ sub write_output {
 sub main {
    my ($clust_info_map, $clust_comp_map) = ({}, {});
 
-   get_cluster_info($clust_info_map, $clust_comp_map);
-   get_cluster_sizes($clust_info_map);
-   get_performance($clust_info_map);
+   get_cluster_info($clust_info_map, $clust_comp_map, [95, 96]);
+   get_cluster_sizes($clust_info_map, [95, 96]);
+   get_performance($clust_info_map, [95, 96]);
 
    write_output($clust_info_map, $clust_comp_map);
 }

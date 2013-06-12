@@ -1,0 +1,3 @@
+test_isolates.hostID(): unk, 1, 15, EN, 11, 12;
+test_isolates.commonName(): Sheep, Pigeon, Human, Chicken, Cow, Dog;
+test_isolates.userName(): Luke Westaby, Jon N., CA Dept Fish and Game, Mitch Lienemann, Vanessa C. & Jena L., Collin Bufano;
