@@ -6,7 +6,7 @@ SPAM_MAIN=com.drin.java.test.FastSPAMEvaluationCPU
 SPAM_GUI_MAIN=com.drin.java.gui.dialogs.InputDialog
 
 CC = javac
-ENGINE = java
+ENGINE = java -Xmx4g -Xms2g
 JFLAGS = -deprecation -Xlint
 
 compile: clean spam
