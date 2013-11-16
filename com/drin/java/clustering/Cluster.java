@@ -62,6 +62,7 @@ public abstract class Cluster {
 
    public int getId() { return mId; }
    public int size() { return mSize; }
+   public String getName() { return mElements.get(0).getName(); }
 
    public List<Clusterable<?>> getElements() { return mElements; }
 

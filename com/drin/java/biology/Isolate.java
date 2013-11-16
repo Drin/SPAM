@@ -23,6 +23,8 @@ public class Isolate extends Clusterable<ITSRegion> {
 
    private int mIdNum;
 
+   private String mHost, mSource, mLocation, mDate;
+
    public Isolate(String isoId) {
       this(isoId, 2);
    }
@@ -34,8 +36,22 @@ public class Isolate extends Clusterable<ITSRegion> {
       mComparisonCache = new HashMap<String, Float>();
    }
 
-   public void setIdNum(int idNum) { mIdNum = idNum; }
    public int getIdNum() { return mIdNum; }
+   public void setIdNum(int idNum) { mIdNum = idNum; }
+
+   public void setHost(String host) { mHost = host; }
+   public String getHost() { return mHost; }
+
+   public void setSource(String src) { mSource = src; }
+   public String getSource() { return mSource; }
+
+   public void setLoc(String loc) { mLocation = loc; }
+   public String getLoc() { return mLocation; }
+
+   public void setDate(String date) { mDate = date; }
+   public String getDate() { return mDate; }
+
+   public void setCache(Map<String, Float> cache) { mComparisonCache = cache; }
 
    @Override
    public float compareTo(Clusterable<?> otherObj) {
@@ -44,13 +60,25 @@ public class Isolate extends Clusterable<ITSRegion> {
       byte numRegions = 0;
 
       if (otherObj instanceof Isolate) {
-         if (!mComparisonCache.containsKey(otherObj.getName())) {
+         Isolate otherIso = (Isolate) otherObj;
+
+         if (mComparisonCache.containsKey(otherIso.getName())) {
+            Float compVal = mComparisonCache.get(otherIso.getName());
+            if (compVal != null) { return compVal.floatValue(); }
+         }
+
+         else if (otherIso.mComparisonCache.containsKey(this.getName())) {
+            Float compVal = otherIso.mComparisonCache.get(this.getName());
+            if (compVal != null) { return compVal.floatValue(); }
+         }
+
+         else {
             itrA = mData.iterator();
 
             while (itrA.hasNext()) {
                ITSRegion regionA = itrA.next();
 
-               itrB = ((Isolate) otherObj).getData().iterator();
+               itrB = ((Isolate) otherIso).getData().iterator();
                while (itrB.hasNext()) {
                   ITSRegion regionB = itrB.next();
 
@@ -71,21 +99,23 @@ public class Isolate extends Clusterable<ITSRegion> {
                System.exit(0);
             }
 
-            mComparisonCache.put(otherObj.getName(), new Float(comparison));
+            mComparisonCache.put(otherIso.getName(), new Float(comparison));
 
             return comparison;
          }
-
-         Float compVal = mComparisonCache.get(otherObj.getName());
-         if (compVal != null) { return compVal.floatValue(); }
       }
 
       return -2;
    }
 
    @Override
-   public Clusterable<ITSRegion> deepCopy() {
-      Clusterable<ITSRegion> newIsolate = new Isolate(mName);
+   public Isolate deepCopy() {
+      Isolate newIsolate = new Isolate(mName);
+
+      newIsolate.setHost(mHost);
+      newIsolate.setSource(mSource);
+      newIsolate.setLoc(mLocation);
+      newIsolate.setDate(mDate);
 
       for (ITSRegion region : mData) {
          newIsolate.getData().add(region.deepCopy());

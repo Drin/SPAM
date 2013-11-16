@@ -14,15 +14,12 @@ import java.util.Iterator;
 public class PyroprintUnstablePearsonMetric extends DataMetric<Pyroprint> {
    private static final int DEFAULT_LEN = 104;
 
-   private int mPeakCount, mPyroLen;
+   private int mPeakCount;
    private float mPyro_A_sum, mPyro_B_sum, mProduct_AB,
                   mPyro_A_squared_sum, mPyro_B_squared_sum;
 
    public PyroprintUnstablePearsonMetric() {
       super();
-
-      Integer pyro_len = Configuration.getInt("PyroprintLength");
-      mPyroLen = pyro_len == null ? DEFAULT_LEN : pyro_len.intValue();
    }
 
    public void reset() {

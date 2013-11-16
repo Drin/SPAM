@@ -13,10 +13,10 @@ public class ClusterWriter {
    private static final String DEFAULT_DIR = "ClusterResults",
                                FILE_SEP = System.getProperty("file.separator");
 
-   private Map<Double, List<Cluster>> mClusterData;
+   private Map<Float, List<Cluster>> mClusterData;
    private String mClustInfo;
 
-   public ClusterWriter(Map<Double, List<Cluster>> clusterData) {
+   public ClusterWriter(Map<Float, List<Cluster>> clusterData) {
       mClusterData = clusterData;
       mClustInfo = null;
    }
@@ -37,7 +37,7 @@ public class ClusterWriter {
 
       mClustInfo = "";
 
-      for (Map.Entry<Double, List<Cluster>> clusterData : mClusterData.entrySet()) {
+      for (Map.Entry<Float, List<Cluster>> clusterData : mClusterData.entrySet()) {
          mClustInfo += String.format("\nThreshold: %.04f\nNumber of Result Clusters, %d\n",
                                      clusterData.getKey(), clusterData.getValue().size());
 
@@ -47,11 +47,11 @@ public class ClusterWriter {
              */
             if (cluster.size() > biggestClust) {
                biggestClust = cluster.size();
-               bigClustName = String.format("\"Cluster %s\"", cluster.getName());
+               bigClustName = String.format("\"Cluster %d\"", cluster.getId());
             }
 
             for (Clusterable<?> elem : cluster.getElements()) {
-               clustContents += String.format("Cluster %s, %s\n", cluster.getName(), elem.getName());
+               clustContents += String.format("Cluster %d, %s\n", cluster.getId(), elem.getName());
             }
          }
 

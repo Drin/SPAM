@@ -8,6 +8,8 @@ import com.drin.java.ontology.OntologyTerm;
 import com.drin.java.clustering.Cluster;
 import com.drin.java.clustering.HCluster;
 
+import com.drin.java.output.ProgressWriter;
+
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -15,54 +17,39 @@ import java.util.Map;
 public class OHClusterer extends AgglomerativeClusterer {
    private float mAlphaThresh;
 
-   public OHClusterer(int dataSize, float alphaThresh, float betaThresh) {
-      super(dataSize, betaThresh);
-      mAlphaThresh = alphaThresh;
-
+   public OHClusterer(int dataSize, float alphaThresh, float betaThresh,
+                      ProgressWriter writer) {
+      super(dataSize, betaThresh, writer);
       mName = "OHClust!";
+      mAlphaThresh = alphaThresh;
    }
 
    @Override
    public void clusterData(Ontology clustOnt) {
+      mResultClusters.clear();
+
       if (clustOnt == null || clustOnt.getRoot() == null ||
          !clustOnt.getRoot().hasNewData()) {
          return;
       }
 
+      System.err.println("Beginning ontological cluster");
       ontologicalCluster(clustOnt.getRoot(), mAlphaThresh);
-      
-      if (clustOnt.getRoot().getClusters() != null) {
-         List<Cluster> clusters = copyClusters(clustOnt.getRoot().getClusters());
-         mResultClusters.put(mAlphaThresh, clusters);
-         
-         //mThresh is the beta threshold, based on the "super(dataSize,
-         //betaThresh)" statement in the constructor
-         clusters = copyClusters(clusters);
-         super.clusterDataSet(clusters, mThresh);
-         mResultClusters.put(mThresh, clusters);
-      }
 
-      else {
-         System.err.println("No clusters formed!?");
+      if (clustOnt.getRoot().getClusters() == null) {
+         System.err.printf("No clusters formed. Possible Error.\n");
          return;
       }
-   }
-
-   private List<Cluster> copyClusters(List<Cluster> clusters) {
-      List<Cluster> clusterCopies = new ArrayList<Cluster>(clusters.size());
       
-      for (Cluster clust : clusters) {
-         if (clust instanceof HCluster) {
-            clusterCopies.add(new HCluster((HCluster) clust));
-         }
-      }
-
-      return clusterCopies;
-   }
-
-   @Override
-   public void clusterData(List<Cluster> clusters) {
-      throw new UnsupportedOperationException();
+      List<Cluster> clusters = copyClusters(clustOnt.getRoot().getClusters());
+      mResultClusters.put(mAlphaThresh, clusters);
+      System.err.println("finished clustering using alpha threshold: " + mAlphaThresh);
+      
+      //mThresh is the beta threshold
+      clusters = copyClusters(clusters);
+      super.clusterDataSet(clusters, mThresh);
+      mResultClusters.put(mThresh, clusters);
+      System.err.println("finished clustering using beta threshold: " + mThresh);
    }
 
    private void ontologicalCluster(OntologyTerm root, float threshold) {
@@ -85,7 +72,6 @@ public class OHClusterer extends AgglomerativeClusterer {
                   clusters.add(new HCluster((HCluster) clust));
                }
             }
-            //partition.getValue().getClusters().clear();
             
             if (unclusteredData && root.isTimeSensitive()) {
                clusterDataSet(clusters, threshold);
@@ -108,5 +94,17 @@ public class OHClusterer extends AgglomerativeClusterer {
       }
       
       root.setClusters(clusters);
+   }
+
+   private List<Cluster> copyClusters(List<Cluster> clusters) {
+      List<Cluster> clusterCopies = new ArrayList<Cluster>(clusters.size());
+      
+      for (Cluster clust : clusters) {
+         if (clust instanceof HCluster) {
+            clusterCopies.add(new HCluster((HCluster) clust));
+         }
+      }
+
+      return clusterCopies;
    }
 }

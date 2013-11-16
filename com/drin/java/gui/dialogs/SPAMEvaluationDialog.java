@@ -381,7 +381,7 @@ public class SPAMEvaluationDialog extends JDialog {
                                   "average_strain_similarity, use_transform) " +
             "VALUES (?, '%s', '%s', %.04f, %d)",
             getElapsedTime(result.mElapsedTime), clusterer.getName(),
-            clusterer.getInterClusterSimilarity(), use_transform
+            clusterer.getInterStrainSimilarity(), use_transform
          ));
 
          int runID = mConn.getTestRunId();
@@ -418,6 +418,7 @@ public class SPAMEvaluationDialog extends JDialog {
       return true;
    }
 
+   /*
    private String[] getSQLInserts(int clusterRun, Map<Double, List<Cluster>> clusters) {
       String[] sqlInserts = new String[100];
       int isoId = -1, delimNdx = -1, clustNum = 0, isolateNum = 0, limit = 1000, sqlNdx = 0;
@@ -485,7 +486,9 @@ public class SPAMEvaluationDialog extends JDialog {
 
       return sqlInserts;
    }
+   */
 
+   /*
    private String getElapsedTime(long clusterTime) {
       long hours = clusterTime / 3600000;
       long minutes = (clusterTime % 3600000) / 60000;
@@ -493,6 +496,7 @@ public class SPAMEvaluationDialog extends JDialog {
 
       return String.format("%02d:%02d:%02d", hours, minutes, seconds);
    }
+   */
 
    @SuppressWarnings({ "unchecked", "rawtypes" })
    private List<Clusterable<?>> constructEntities(List<Map<String, Object>> dataList, Ontology ont) {

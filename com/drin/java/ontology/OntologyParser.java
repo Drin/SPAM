@@ -83,7 +83,9 @@ public class OntologyParser {
       Map<String, Set<String>> partitions = null;
 
       //hardcoded for Jan
-      tableName = "Isolates JOIN Samples using (hostID, commonName, sampleID) ";
+      //tableName = "Isolates JOIN Samples using (hostID, commonName, sampleID) ";
+      //hardcoded for Emily
+      tableName = "emily_meta JOIN Isolates using (isoID) ";
       ontColumns.add(getTermColName());
 
       try {

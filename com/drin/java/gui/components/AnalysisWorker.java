@@ -32,7 +32,6 @@ public class AnalysisWorker extends SwingWorker<AnalysisWorker.TaskResult, Integ
    public TaskResult doInBackground() {
       long startTime = System.currentTimeMillis();
 
-      mClusterer.setProgressCanvas(mCanvas);
       mClusterer.clusterData(mClusters);
       return new TaskResult(System.currentTimeMillis() - startTime,
                             mClusterer.getClusters());
@@ -62,7 +61,6 @@ public class AnalysisWorker extends SwingWorker<AnalysisWorker.TaskResult, Integ
 
          if (mOutFile != null) {
             writer.writeData(mOutFile + ClusterWriter.FileType.CSV, writer.getClustInfo());
-            writer.writeData(mOutFile + ClusterWriter.FileType.XML, writer.getDendInfo());
          }
 
          mCanvas.setText(elapsedTime + writer.getClustInfo());
@@ -81,9 +79,9 @@ public class AnalysisWorker extends SwingWorker<AnalysisWorker.TaskResult, Integ
 
    public class TaskResult {
       public long mElapsedTime;
-      public Map<Double, List<Cluster>> mClusterData;
+      public Map<Float, List<Cluster>> mClusterData;
 
-      public TaskResult(long time, Map<Double, List<Cluster>> clusters) {
+      public TaskResult(long time, Map<Float, List<Cluster>> clusters) {
          mElapsedTime = time;
          mClusterData = clusters;
       }

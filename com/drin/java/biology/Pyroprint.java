@@ -8,6 +8,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ArrayList;
 
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
+
 /**
  * A Pyroprint is the result of pyrosequencing each replicate of a specified
  * ITS Region for a given genome. The genome is PCR'd for amplification, then
@@ -50,7 +53,11 @@ public class Pyroprint extends Clusterable<Float> {
     * protocol parameters match the other pyroprint's protocol parameters.
     */
    public boolean hasSameProtocol(Pyroprint other) {
-      return mPyroLen == other.mPyroLen && mDisp.equals(other.mDisp);
+      boolean sameDisp = expandDisp(mDisp).substring(0, mPyroLen).equals(
+         expandDisp(other.mDisp).substring(0, mPyroLen)
+      );
+
+      return mPyroLen == other.mPyroLen && sameDisp;
    }
 
    public boolean addDispensation(byte position, float pHeight) {
@@ -126,4 +133,24 @@ public class Pyroprint extends Clusterable<Float> {
                            peaks.substring(2));
    }
 
+   private String expandDisp(String disp) {
+      String expandedDisp = "";
+
+      Pattern dispCompPat = Pattern.compile("\\d+\\([ATCG]+\\)|[ATCG]+");
+      Matcher dispCompMatch = dispCompPat.matcher(disp);
+
+      Pattern repPat = Pattern.compile("(\\d+)\\(([ATCG]+)\\)");
+      while (dispCompMatch.find()) {
+         Matcher repeatMatch = repPat.matcher(dispCompMatch.group());
+
+         if (repeatMatch.matches()) {
+            for (int repNdx = 0; repNdx < Integer.parseInt(repeatMatch.group(1)); repNdx++) {
+               expandedDisp += repeatMatch.group(2);
+            }
+         }
+         else { expandedDisp += dispCompMatch.group(); }
+      }
+
+      return expandedDisp;
+   }
 }

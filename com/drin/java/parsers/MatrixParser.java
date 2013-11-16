@@ -27,10 +27,10 @@ public class MatrixParser {
       if (args[0].endsWith(".csv")) {
          MatrixParser parser = new MatrixParser(args[0]);
 
-         Map<String, Map<String, Double>> data = parser.parseData();
+         Map<String, Map<String, Float>> data = parser.parseData();
 
          for (String iso_A : data.keySet()) {
-            Map<String, Double> isoCorrMap = data.get(iso_A);
+            Map<String, Float> isoCorrMap = data.get(iso_A);
             
             for (String iso_B : isoCorrMap.keySet()) {
                System.out.printf("%s:%s -> %.04f\n", iso_A, iso_B, isoCorrMap.get(iso_B));
@@ -39,8 +39,8 @@ public class MatrixParser {
       }
    }
 
-   public Map<String, Map<String, Double>> parseData() {
-      Map<String, Map<String, Double>> tupleMap = new LinkedHashMap<String, Map<String, Double>>();
+   public Map<String, Map<String, Float>> parseData() {
+      Map<String, Map<String, Float>> tupleMap = new LinkedHashMap<String, Map<String, Float>>();
       Map<Integer, String> tupleColMap = null;
       Scanner fileScanner = null;
 
@@ -79,15 +79,15 @@ public class MatrixParser {
       return tupleColMap;
    }
 
-   private Map<String, Map<String, Double>> constructTuple(Map<Integer, String> colMap,
+   private Map<String, Map<String, Float>> constructTuple(Map<Integer, String> colMap,
     String[] tupleData) {
-      Map<String, Double> tuple = new LinkedHashMap<String, Double>();
+      Map<String, Float> tuple = new LinkedHashMap<String, Float>();
 
       for (int tupleCol = 1; tupleCol < tupleData.length; tupleCol++) {
          String tupleColName = colMap.get(tupleCol);
 
          try {
-            double tmpVal = Double.parseDouble(tupleData[tupleCol]);
+            float tmpVal = Float.parseFloat(tupleData[tupleCol]);
 
             //If the given value is greater than 1, assume that the correlation
             //is a percentage instead of in decimal form
@@ -95,7 +95,7 @@ public class MatrixParser {
 
             Logger.debug(String.format("parsed correlation value [%s]", tmpVal));
 
-            tuple.put(tupleColName, new Double(tmpVal));
+            tuple.put(tupleColName, new Float(tmpVal));
          }
 
          catch (NumberFormatException numErr) {
@@ -105,7 +105,7 @@ public class MatrixParser {
          }
       }
 
-      Map<String, Map<String, Double>> tupleMap = new LinkedHashMap<String, Map<String, Double>>();
+      Map<String, Map<String, Float>> tupleMap = new LinkedHashMap<String, Map<String, Float>>();
 
       if (tupleData.length > 0) {
          tupleMap.put(tupleData[0], tuple);

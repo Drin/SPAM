@@ -1,19 +1,17 @@
 package com.drin.java.analysis.clustering;
 
 import com.drin.java.clustering.Cluster;
-
-import javax.swing.JTextArea;
+import com.drin.java.ontology.Ontology;
 
 import java.util.Map;
 import java.util.List;
 
 public interface Clusterer {
-
-   public Map<Float, List<Cluster>> getClusters();
    public String getName();
-   public float getInterClusterSimilarity();
+   public float getThreshold();
+   public float getInterStrainSim();
+   public Map<Float, List<Cluster>> getClusters();
 
    public void clusterData(List<Cluster> clusters);
-   public void setProgressCanvas(JTextArea canvas);
-   public void writeProgress();
+   public void clusterData(Ontology clustOnt);
 }

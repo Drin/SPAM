@@ -25,9 +25,14 @@ import java.sql.SQLException;
 
 public class CPLOPConnection {
    private static final String DB_DRIVER = "com.mysql.jdbc.Driver";
-   private static final String DB_URL = "jdbc:mysql://localhost/CPLOP?autoReconnect=true";
-   private static final String DB_USER = "";
+   private static final String DB_URL = "jdbc:mysql://localhost:8906/CPLOP?autoReconnect=true";
+   private static final String DB_USER = "drin";
    private static final String DB_PASS = "";
+   /*
+   private static final String DB_URL = "jdbc:mysql://cslvm96.csc.calpoly.edu/CPLOP?autoReconnect=true";
+   private static final String DB_USER = "amontana";
+   private static final String DB_PASS = "ILoveData#";
+   */
    private static final short DEFAULT_PAGE_SIZE = 10000;
 
    private Connection mConn;
@@ -38,16 +43,20 @@ public class CPLOPConnection {
                      "%s " +
                      "ORDER BY %s",
 
+      ISOLATE_TABLE_QUERY = "SELECT %s " +
+                            "FROM Isolates join Pyroprints using (isoID) " +
+                                          "join Samples using (commonName, hostID, sampleID)",
+
       //DATA_QUERY = "SELECT i.isoID, p1.pyroID, p2.pyroID, h1.pHeight, " +
       //                    "h2.pHeight, h1.position " +
-      DATA_QUERY = "SELECT i.test_isolate_id, " +
-                          "CONCAT(i.name_prefix, '-', i.name_suffix) AS isoID, " +
+      DATA_QUERY = "SELECT i.isoID, " +
                           "p1.pyroID, p1.appliedRegion, p1.dsName, " +
                           "h1.pHeight, h1.position " +
-                   "FROM test_isolates i " +
-                        "JOIN test_pyroprints p1 ON ( " +
-                           "i.name_prefix = p1.name_prefix AND " +
-                           "i.name_suffix = p1.name_suffix " +
+                   "FROM Isolates i " +
+                        "JOIN Pyroprints p1 ON ( " +
+                           "i.isoID = p1.isoID " +
+                           //"i.name_prefix = p1.name_prefix AND " +
+                           //"i.name_suffix = p1.name_suffix " +
                            //"p1.appliedRegion = '23-5'" +
                         ") " +
                         /*
@@ -56,7 +65,7 @@ public class CPLOPConnection {
                            "p2.appliedRegion != p1.appliedRegion" +
                         ") " +
                         */
-                        "JOIN test_histograms h1 ON ( " +
+                        "JOIN Histograms h1 ON ( " +
                            "p1.pyroID = h1.pyroID AND " +
                            "h1.position < %d" +
                         ") " +
@@ -68,27 +77,35 @@ public class CPLOPConnection {
                         ") " +
                         */
                    //"ORDER BY i.isoID, p1.pyroID, p2.pyroID, position " +
-                   "WHERE i.test_isolate_id in (SELECT distinct t.test_isolate_id " +
-                                               "FROM test_isolates t " +
-                                                    "JOIN test_pyroprints t1 ON ( " +
-                                                        "t.name_prefix = t1.name_prefix AND " +
-                                                        "t.name_suffix = t1.name_suffix AND " +
+                   "WHERE i.isoID in (SELECT distinct t.isoID " +
+                                               "FROM Isolates t " +
+                                                    "JOIN Pyroprints t1 ON ( " +
+                                                        "t.isoID = t1.isoID AND " +
+                                                        //"t.name_prefix = t1.name_prefix AND " +
+                                                        //"t.name_suffix = t1.name_suffix AND " +
                                                         "t1.appliedRegion = '16-23') " +
-                                                    "JOIN test_pyroprints t2 ON ( " +
-                                                        "t.name_prefix = t2.name_prefix AND " +
-                                                        "t.name_suffix = t2.name_suffix AND " +
+                                                    "JOIN Pyroprints t2 ON ( " +
+                                                        "t.isoID = t2.isoID AND " +
+                                                        //"t.name_prefix = t2.name_prefix AND " +
+                                                        //"t.name_suffix = t2.name_suffix AND " +
                                                         "t2.appliedRegion = '23-5') " +
                                                ") " +
-                   "ORDER BY i.test_isolate_id, p1.pyroID, position " +
+                   "ORDER BY i.isoID, p1.pyroID, position " +
                    "LIMIT %d OFFSET %d",
 
       DIRECTED_DATA_QUERY = 
                    "SELECT i.isoID, p1.pyroID, p1.appliedRegion, p1.dsName, " +
-                          "h1.pHeight, h1.position " +
+                          "h1.pHeight, h1.position, i.hostID, i.userName, " +
+                          "s.location, s.dateCollected " +
                    "FROM Isolates i " +
                         "JOIN Pyroprints p1 ON ( " +
                            "i.isoID = p1.isoID " +
                            //"p1.appliedRegion = '23-5'" +
+                        ") " +
+                        "JOIN Samples s ON ( " +
+                           "s.hostID = i.hostID AND " +
+                           "s.sampleID = i.sampleID AND " +
+                           "s.commonName = i.commonName " +
                         ") " +
                         /*
                         "JOIN Pyroprints p2 ON ( " +
@@ -109,18 +126,23 @@ public class CPLOPConnection {
                         */
                    //"ORDER BY i.isoID, p1.pyroID, p2.pyroID, position " +
                    "WHERE i.isoID in (%s) " +
-                   "ORDER BY i.isoID, p1.pyroID, position " +
-                   "LIMIT %d OFFSET %d",
+                   "ORDER BY i.isoID, p1.pyroID, position ",
 
       //The join with samples is necessary because there are some isolates that
       //don't have an entry in the samples table
       FULL_DATA_QUERY = 
                    "SELECT i.isoID, p1.pyroID, p1.appliedRegion, p1.dsName, " +
-                          "h1.pHeight, h1.position " +
+                          "h1.pHeight, h1.position, i.hostID, i.userName, " +
+                          "s.location, s.dateCollected " +
                    "FROM Isolates i join Samples using (hostID, commonName, sampleID) " +
                         "JOIN Pyroprints p1 ON ( " +
                            "i.isoID = p1.isoID " +
                            //"p1.appliedRegion = '23-5'" +
+                        ") " +
+                        "JOIN Samples s ON ( " +
+                           "s.hostID = i.hostID AND " +
+                           "s.sampleID = i.sampleID AND " +
+                           "s.commonName = i.commonName " +
                         ") " +
                         /*
                         "JOIN Pyroprints p2 ON ( " +
@@ -155,7 +177,15 @@ public class CPLOPConnection {
                                              "t2.pyroID = t4.pyroID" +
                                           ") " +
                                      ") AND " +
-                         "i.isoID NOT LIKE 'ES%%' " +
+                         "i.isoID not LIKE 'ES-%%' AND " +
+                         "i.isoID not LIKE 'STEC%%' " +
+                         "AND i.isoID not LIKE 'Pp-%%' " +
+                         /*
+                         "i.isoID not in (SELECT t.isoID " +
+                                         "FROM Isolates t " +
+                                         "WHERE t.isoID LIKE 'ES-%%' AND " +
+                                               "right(t.isoID, 3) <= 448) " +
+                         */
                    "ORDER BY i.isoID, p1.pyroID, h1.position ",
 
       META_QUERY = "SELECT distinct CONCAT(name_prefix, '-', name_suffix) as isoID, %s " +
@@ -168,8 +198,14 @@ public class CPLOPConnection {
                         ") " +
                         "JOIN test_histograms using (pyroID) " +
                    "WHERE test_isolate_id in (%s) " +
-                   "ORDER BY test_isolate_id";
+                   "ORDER BY test_isolate_id",
                    //"ORDER BY isoID ";
+
+      EMILY_META_QUERY = "SELECT isoID, %s " +
+                         "FROM emily_meta " +
+                         "JOIN Isolates using (isoID) " +
+                         "WHERE isoID in (%s) ";
+
 
    public CPLOPConnection() throws SQLException, DriverException {
       try {
@@ -211,7 +247,7 @@ public class CPLOPConnection {
          colNameString.substring(1)
       );
 
-      //System.out.println(query);
+      System.out.println(query);
 
       try {
          statement = mConn.createStatement();
@@ -219,24 +255,30 @@ public class CPLOPConnection {
 
          while (results.next()) {
             if (colNames.size() == 1) {
-               String colName = results.getString(1).trim();
-               distinctValues.put(colName, null);
+               if (results.getString(1) != null) {
+                  String colName = results.getString(1).trim();
+                  distinctValues.put(colName, null);
+               }
             }
 
             for (int colNdx = 1; colNdx < colNames.size(); colNdx++) {
                String colName = "";
                
                for (int prevCol = 1; prevCol <= colNdx; prevCol++) {
-                  colName += ":" + results.getString(prevCol).trim();
+                  if (results.getString(prevCol) != null) {
+                     colName += ":" + results.getString(prevCol).trim();
+                  }
                }
 
-               String subColName = results.getString(colNdx + 1).trim();
+               if (results.getString(colNdx + 1) != null && colName.length() > 1) {
+                  String subColName = results.getString(colNdx + 1).trim();
 
-               if (!distinctValues.containsKey(colName.substring(1))) {
-                  distinctValues.put(colName.substring(1), new HashSet<String>());
+                  if (!distinctValues.containsKey(colName.substring(1))) {
+                     distinctValues.put(colName.substring(1), new HashSet<String>());
+                  }
+
+                  distinctValues.get(colName.substring(1)).add(subColName);
                }
-
-               distinctValues.get(colName.substring(1)).add(subColName);
             }
          }
       }
@@ -262,6 +304,48 @@ public class CPLOPConnection {
       return distinctValues;
    }
 
+   public Object[][] getIsolateDataTableView(String[] colList) throws SQLException {
+      ArrayList<Object[]> dataTable = new ArrayList<Object[]>();
+      Object[] tmpDataRow = null;
+
+      Statement statement = null;
+      ResultSet results = null;
+
+      String concatColList = null;
+      if (colList != null) {
+         for (String colName : colList) {
+            if (colName != null) { concatColList += colName; }
+         }
+      }
+
+      if (concatColList == null) { return null; }
+
+      try {
+         statement = mConn.createStatement();
+         results = statement.executeQuery(
+            String.format(ISOLATE_TABLE_QUERY, concatColList)
+         );
+
+         while (results.next()) {
+            tmpDataRow = new Object[colList.length];
+
+            for (int colNdx = 0; colNdx < colList.length; colNdx++) {
+               tmpDataRow[colNdx] = results.getObject(colNdx + 1);
+            }
+
+            dataTable.add(tmpDataRow);
+         }
+      }
+      catch (Exception err) { err.printStackTrace(); }
+      finally {
+         if (statement != null) { statement.close(); }
+         if (results != null) { results.close(); }
+      }
+
+      Object[][] isoDataTable = null;
+      return dataTable.toArray(isoDataTable);
+   }
+
    public List<Isolate> getIsolateData(int dataSize, String isoIdList) throws SQLException {
       return getIsolateData(dataSize, DEFAULT_PAGE_SIZE, isoIdList);
    }
@@ -274,19 +358,23 @@ public class CPLOPConnection {
       int pyroId = -1, tmpPyroId = -1;
       List<Isolate> isoData = new ArrayList<Isolate>(dataSize);
       String isoId = null, tmpIsoId = null, regName = null, dsName = null;
+      //Extra metadata
+      String hostId = null, source = null, location = null, date = null;
 
       Isolate tmpIso = null;
       ITSRegion tmpRegion = null;
       Pyroprint tmpPyro = null;
 
       try {
-         for (int pageNdx = 0; pageNdx < Math.ceil((float) dataSize / pageSize); pageNdx++) {
+         //for (int pageNdx = 0; pageNdx < Math.ceil((float) dataSize / pageSize); pageNdx++) {
+         for (int pageNdx = 0; pageNdx < 1; pageNdx++) {
             statement = mConn.createStatement();
             //3 Data Query Variables:
             //    Length of Pyroprint
             //    Page size
             //    Page offset
 
+            /*
             System.out.println(String.format(DATA_QUERY,
                pyroLen,
                pyroLen * Math.min(pageSize, dataSize - (pageSize * pageNdx)),
@@ -298,51 +386,71 @@ public class CPLOPConnection {
                pyroLen * Math.min(pageSize, dataSize - (pageSize * pageNdx)),
                pyroLen * (pageSize * pageNdx)
             ));
-
-            /*
-            if (isoIdList != null) {
-               System.out.println("Executing directed data query");
-               results = statement.executeQuery(String.format(DIRECTED_DATA_QUERY,
-                  pyroLen, isoIdList,
-                  Math.min(pageSize, peakDataSize - (pageSize * pageNdx)),
-                  (pageSize * pageNdx)
-               ));
-            }
-            else {
-               System.out.println("Executing full data query:");
-               System.out.println(String.format(FULL_DATA_QUERY, pyroLen));
-
-               results = statement.executeQuery(String.format(FULL_DATA_QUERY, pyroLen));
-            }
             */
 
+            if (isoIdList != null) {
+               System.out.println("Executing directed data query");
+               System.out.println(String.format(DIRECTED_DATA_QUERY,
+                  pyroLen, isoIdList
+               ));
+               results = statement.executeQuery(String.format(DIRECTED_DATA_QUERY,
+                  pyroLen, isoIdList
+               ));
+            }
+            else if (isoIdList == null) {
+               System.out.println("Executing full data query");
+               System.out.println(String.format(FULL_DATA_QUERY,
+                  pyroLen
+               ));
+               results = statement.executeQuery(String.format(FULL_DATA_QUERY,
+                  pyroLen
+               ));
+            }
+
             while (results.next()) {
-               int isoIdNum = results.getInt(1);
-               tmpIsoId = results.getString(2);
-               tmpPyroId = results.getInt(3);
-               regName = results.getString(4);
-               dsName = results.getString(5);
-               float pHeight = results.getFloat(6);
-               byte position = results.getByte(7);
+               //int isoIdNum = results.getInt(1);
+               tmpIsoId = results.getString(1);
+               tmpPyroId = results.getInt(2);
+               regName = results.getString(3);
+               dsName = results.getString(4);
+               float pHeight = results.getFloat(5);
+               byte position = results.getByte(6);
+
+               /*
+                * Extra metadata
+                */
+               hostId = results.getString(7);
+               source = results.getString(8);
+               location = results.getString(9);
+               date = results.getString(10);
 
                byte dispLen = -1;
-               if (regName.equals("16-23")) { dispLen = 95; }
-               else if (regName.equals("23-5")) { dispLen = 93; }
+               if (regName.equals("16-23")) { dispLen = 96; }
+               else if (regName.equals("23-5")) { dispLen = 94; }
 
                if (isoId == null || !tmpIsoId.equals(isoId)) {
                   isoId = tmpIsoId;
+                  //System.err.println("new Isolate: " + isoId);
 
                   tmpIso = new Isolate(isoId);
                   tmpRegion = new ITSRegion(regName);
 
-                  tmpIso.setIdNum(isoIdNum);
+                  //System.err.println("first region: " + regName);
+
                   tmpIso.getData().add(tmpRegion);
 
                   isoData.add(tmpIso);
+
+                  //Extra metadata
+                  tmpIso.setHost(hostId);
+                  tmpIso.setSource(source);
+                  tmpIso.setLoc(location);
+                  tmpIso.setDate(date);
                }
 
                if (tmpRegion == null || !tmpRegion.getName().equals(regName)) {
                   tmpRegion = new ITSRegion(regName);
+                  //System.err.println("new Region: " + regName);
 
                   if (tmpIso != null) { tmpIso.getData().add(tmpRegion); }
                }
@@ -375,16 +483,22 @@ public class CPLOPConnection {
          if (results != null) { results.close(); }
       }
 
+      List<Isolate> finalIsoData = new ArrayList<Isolate>(isoData.size());
+
       for (Isolate iso : isoData) {
          if (iso.getData().size() != 2) {
             System.err.printf("Isolate %s has %d regions\n",
                iso.getName(), iso.getData().size());
          }
+         else if (iso.getData().size() >= 2) {
+            finalIsoData.add(iso);
+         }
       }
 
-      return isoData;
+      return finalIsoData;
    }
 
+   //TODO
    public void getIsolateMetaData(List<Isolate> isoData, Ontology ont, int dataSize) {
       Statement statement = null;
       ResultSet results = null;
@@ -397,18 +511,31 @@ public class CPLOPConnection {
 
       for (String metaCol : ont.getColumns()) { metaColumns += "," + metaCol; }
       for (int ndx = 0; ndx < isoData.size(); ndx++) {
-         metaIDs += "," + isoData.get(ndx).getIdNum();
-         //metaIDs += ",'" + isoData.get(ndx).getName() + "'";
+         //when using test_isolate_id
+         //metaIDs += "," + isoData.get(ndx).getIdNum();
+
+         //when using isoID
+         metaIDs += ",'" + isoData.get(ndx).getName() + "'";
       }
 
       try {
          for (int pageNdx = 0; pageNdx < Math.ceil((float) dataSize / pageSize); pageNdx++) {
+            /*
             System.out.println(String.format(META_QUERY,
                metaColumns, metaIDs.substring(1)
             ));
+            */
+            System.out.println(String.format(EMILY_META_QUERY,
+               metaColumns.substring(1), metaIDs.substring(1)
+            ));
             statement = mConn.createStatement();
+            /*
             results = statement.executeQuery(String.format(META_QUERY,
                metaColumns, metaIDs.substring(1)
+            ));
+            */
+            results = statement.executeQuery(String.format(EMILY_META_QUERY,
+               metaColumns.substring(1), metaIDs.substring(1)
             ));
 
             while (results.next()) {

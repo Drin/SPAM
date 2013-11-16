@@ -23,21 +23,21 @@ public class OntologyTerm {
                                SQUISHY_OPTION_KEY = "SquishyCorr",
                                SIMILAR_OPTION_KEY = "SimilarCorr";
 
+   private boolean mHasNewData;
    private String mColName;
    private Map<String, Boolean> mOptions;
    private Map<String, OntologyTerm> mPartitions;
    private List<Cluster> mData, mClusters;
-   private boolean mHasNewData;
 
    public OntologyTerm(String colName) {
       if (colName.equals("")) { mColName = null; }
       else { mColName = colName; }
 
-      mOptions = new HashMap<String, Boolean>();
-      mPartitions = new LinkedHashMap<String, OntologyTerm>();
+      mHasNewData = false;
       mData = null;
       mClusters = null;
-      mHasNewData = false;
+      mOptions = new HashMap<String, Boolean>();
+      mPartitions = new LinkedHashMap<String, OntologyTerm>();
    }
 
    public OntologyTerm(String colName, Map<String, Boolean> options) {
@@ -66,9 +66,9 @@ public class OntologyTerm {
    public OntologyTerm(Cluster element) {
       this("");
 
+      mHasNewData = true;
       mData = new ArrayList<Cluster>();
       mData.add(element);
-      mHasNewData = true;
    }
 
    public int size() {
@@ -81,16 +81,15 @@ public class OntologyTerm {
          else { size += 1; }
       }
 
-      /*
-      if (mData != null) {
-         return size + mData.size();
-      }
-      */
-
       return size;
    }
 
    public void clearDataFlag() { mHasNewData = false; }
+
+   public void setPartitions(Map<String, OntologyTerm> partitions) {
+      mPartitions = partitions;
+   }
+
    public void setClusters(List<Cluster> clusters) {
       mClusters = clusters;
       mHasNewData = false;
@@ -99,8 +98,6 @@ public class OntologyTerm {
    public String getColName() { return mColName; }
    public List<Cluster> getData() { return mData; }
    public List<Cluster> getClusters() { return mClusters; }
-
-   public void setPartitions(Map<String, OntologyTerm> partitions) { mPartitions = partitions; }
    public Map<String, OntologyTerm> getPartitions() { return mPartitions; }
    public OntologyTerm getPartition(String partitionName) {
       return mPartitions.get(partitionName);
@@ -141,7 +138,6 @@ public class OntologyTerm {
 
       if (!dataAdded) {
          if (mData == null) { mData = new ArrayList<Cluster>(); }
-
          if (!mData.contains(element)) {
             mData.add(element);
             dataAdded = true;
@@ -149,7 +145,6 @@ public class OntologyTerm {
       }
 
       mHasNewData = dataAdded;
-
       return dataAdded;
    }
 

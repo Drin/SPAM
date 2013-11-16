@@ -25,47 +25,38 @@ public class Ontology {
 
    public Ontology() {
       mRoot = null;
-      
       mColumns = new ArrayList<String>(2);
    }
    
    public Ontology(Ontology oldOnt) {
       this();
       
-      mColumns = new ArrayList<String>(oldOnt.mColumns);
-      
-      mRoot = new OntologyTerm(oldOnt.mRoot);
       mName = oldOnt.mName;
+      mColumns = new ArrayList<String>(oldOnt.mColumns);
+      mRoot = new OntologyTerm(oldOnt.mRoot);
    }
 
-   public OntologyTerm getRoot() {
-      return mRoot;
-   }
+   public OntologyTerm getRoot() { return mRoot; }
 
    public int size() { return mRoot.size(); }
-   public void setName(String name) { mName = name; }
+   public int getNumCols() { return mColumns.size(); }
    public String getName() { return mName; }
+   public List<String> getColumns() { return mColumns; }
+
+   public void setName(String name) { mName = name; }
 
    @Override
    public String toString() {
       return Ontology.printOntology(mRoot, "root", "");
    }
 
-   public int getNumCols() { return mColumns.size(); }
    public void addColumn(String colName) { mColumns.add(colName); }
-   public List<String> getColumns() { return mColumns; }
-
    public boolean addData(Cluster element) { return mRoot.addData(element, (byte) 0); }
 
    public void addTerm(Map<String, Set<String>> partitions, OntologyTerm newTerm) {
       addColumn(newTerm.getColName());
 
-      System.out.println("adding term...");
-
-      if (mRoot != null) {
-         System.out.println("mRoot not null...");
-         Ontology.addTerm(partitions, mRoot, newTerm);
-      }
+      if (mRoot != null) { Ontology.addTerm(partitions, mRoot, newTerm); }
       else {
          Map<String, OntologyTerm> termPartitions = new LinkedHashMap<String, OntologyTerm>();
 
@@ -107,7 +98,7 @@ public class Ontology {
       if (term != null) {
          if (term.getData() != null) {
             for (Cluster element : term.getData()) {
-               ontologyStr += String.format("%s%s,", prefix + "   ", element.getId());
+               ontologyStr += String.format("%s%s,", prefix + "   ", element.getName());
             }
 
             ontologyStr += "\n";

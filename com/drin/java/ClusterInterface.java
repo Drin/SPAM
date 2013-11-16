@@ -6,12 +6,8 @@ import com.drin.java.biology.Isolate;
 import com.drin.java.biology.ITSRegion;
 import com.drin.java.biology.Pyroprint;
 
-import com.drin.java.metrics.ClusterAverageMetric;
-import com.drin.java.metrics.IsolateAverageMetric;
-import com.drin.java.metrics.ITSRegionAverageMetric;
-import com.drin.java.metrics.PyroprintUnstablePearsonMetric;
-
 import com.drin.java.ontology.Ontology;
+import com.drin.java.clustering.Clusterable;
 import com.drin.java.clustering.Cluster;
 import com.drin.java.clustering.HCluster;
 import com.drin.java.clustering.ClusterResults;
@@ -19,7 +15,10 @@ import com.drin.java.analysis.clustering.Clusterer;
 import com.drin.java.analysis.clustering.AgglomerativeClusterer;
 import com.drin.java.analysis.clustering.OHClusterer;
 
+import com.drin.java.parsers.MatrixParser;
+
 import com.drin.java.util.Logger;
+import com.drin.java.util.Configuration;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -27,6 +26,9 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Scanner;
+
+import java.io.File;
 
 public class ClusterInterface {
    private final String[] DATA_TYPE_VALUES = new String[] {"Isolates",
@@ -37,227 +39,362 @@ public class ClusterInterface {
    private long startTime;
 
    public ClusterInterface() {
-      mConn = CPLOPConnection.getConnection();
+      try { mConn = new CPLOPConnection(); }
+      catch (Exception err) { err.printStackTrace(); }
+
+      Configuration.loadConfig("config.cfg");
    }
 
-   /*
-    * TODO: a more specified ontology
-    * "Isolates.commonName(): human, cow;",
-    * "Isolates.hostID(): Winnie,       Collin;",
-    * "Pyroprints.pyroPrintedDate(TimeSensitive): \t;"
-    */
    public static void main(String[] args) {
       ClusterInterface testInterface = new ClusterInterface();
 
-      //This is really basic for now so that I can debug the actual algorithm.
-      //Initial evaluations should be on full database anyways to have the
-      //least biased characterization
-      String testOntology = String.format("%s\n%s\n%s",
-         "Isolates.commonName():;",
-         "Isolates.hostID(): ;",
-         "Pyroprints.pyroPrintedDate(TimeSensitive): \t;"
+      String testOntology = "emilyOntology.ont";
+      /*
+      String.format("%s\n%s\n%s",
+         //"Isolates.commonName():;",
+         //"Pyroprints.pyroPrintedDate(TimeSensitive): \t;"
+         "Samples.dateCollected():;",
+         "Isolates.userName():;",
+         "Samples.location():;",
+         "Isolates.hostID(): ;"
+      );
+      */
+      //testOntology = null;
+
+      float tmp_alpha = 0.995f, tmp_beta = 0.99f;
+
+      String matchSet = null;
+      /* Parse ID file */
+      //these are pp IDs not pidgeon IDs
+      //matchSet = testInterface.parseIsoIdFile("ppIDs");
+
+      /* Parse STEC IDs */
+      //matchSet = testInterface.parseIsoIdFile("stecIDs");
+
+      /* Parse ES IDs */
+      //matchSet = testInterface.parseIsoIdFile("esIDs");
+      //
+      /* Eric Colilert and Direct Isolates */
+      //matchSet = testInterface.parseIsoIdFile("ericColilertAndDirectIDs");
+
+      /* Prepare samples and clusters for matching */
+      boolean matchIsolatesAgainstDB = false;
+      List<Isolate> matchSamples = null;
+      List<Cluster> matchClusters = null;
+
+      if (matchIsolatesAgainstDB) {
+         matchSamples = testInterface.getIsolateData(matchSet);
+         matchClusters = new ArrayList<Cluster>();
+
+         for (Isolate sample : matchSamples) {
+            matchClusters.add(new HCluster(sample));
+         }
+      }
+
+      String testDataSet = null;
+
+      /* Parse pigeon IDs */
+      //testDataSet = testInterface.parseIsoIdFile("pgIDs");
+
+      /* Parse 2011 Bull Isolates */
+      //testDataSet = testInterface.parseIsoIdFile("2011Bulls");
+
+      /* Parse 2012 Bull Isolates */
+      //testDataSet = testInterface.parseIsoIdFile("2012Bulls");
+
+      /* Parse 2012 Bull and Squirrel Isolates */
+      //testDataSet = testInterface.parseIsoIdFile("2012BullsAndSquirrels");
+
+      //testDataSet = testInterface.parseIsoIdFile("AllBulls");
+
+      /* Parse All of Josh's Isolates */
+      //testDataSet = testInterface.parseIsoIdFile("allJoshIsolates");
+
+      /* Parse all of the isolates in the Direct Plated Creek Isolates dataset */
+      testDataSet = testInterface.parseIsoIdFile("oliviaDirectIDs");
+
+      /* Parse all of the isolates in the Colilert Environmental Samples dataset */
+      //testDataSet = testInterface.parseIsoIdFile("oliviaColilertIDs");
+
+      //testDataSet = testInterface.parseIsoIdFile("ppIDs");
+      //testDataSet = testInterface.parseIsoIdFile("dog165_172");
+      //testDataSet = testInterface.parseIsoIdFile("human1786_1792");
+      //testDataSet = testInterface.parseIsoIdFile("cow1159_1550");
+
+      //testDataSet = testInterface.parseIsoIdFile("emilyIsoIDs");
+
+      //Comment out if clustering pigeon isolates before matching ES samples
+      //testDataSet += "," + environmentalSet;
+
+      /* Cluster execution if getting data from database */
+      Map<Float, List<Cluster>> results = testInterface.clusterData(
+         testOntology, testDataSet, "Isolates", tmp_alpha, tmp_beta
       );
 
-      double tmp_alpha = .995, tmp_beta = .99;
-      String testDataSet = "'Sw-029', 'Sw-030', 'Sw-018', 'Sw-019', 'Sw-020," +
-                           "'Sw-021', 'Sw-033', 'Sw-032'";
+      /* Data Prep from CSV */
+      /*
+      MatrixParser csvParser = new MatrixParser(
+         "/home/drin/programming/spam/data/black_1108/16-23trimmed95.csv"
+         //"/home/drin/programming/spam/data/jason_and_patrick/080813 16-23 Pp experiment.csv"
+      );
 
-      ClusterResults results = testInterface.clusterData(testOntology, testDataSet,
-                                                         "Isolates", tmp_alpha, tmp_beta);
+      Map<String, Map<String, Float>> corrMatrix = csvParser.parseData();
 
-      System.out.println(results);
+      csvParser = new MatrixParser(
+         "/home/drin/programming/spam/data/black_1108/23-5trimmed.csv"
+         //"/home/drin/programming/spam/data/jason_and_patrick/080813 23-5 Pp experiment.csv"
+      );
+      */
+
+      /*
+      Map<String, Map<String, Float>> tmpMatrix = csvParser.parseData();
+
+      for (Map.Entry<String, Map<String, Float>> isoMap : corrMatrix.entrySet()) {
+         Map<String, Float> tmpIsoMap = tmpMatrix.get(isoMap.getKey());
+
+         for (Map.Entry<String, Float> corrMapping : isoMap.getValue().entrySet()) {
+            if (corrMapping.getValue().floatValue() < tmp_beta ||
+                tmpIsoMap.get(corrMapping.getKey()).floatValue() < tmp_beta) {
+               corrMapping.setValue(0.0f);
+            }
+            else {
+               corrMapping.setValue(
+                  (corrMapping.getValue().floatValue() +
+                   tmpIsoMap.get(corrMapping.getKey()).floatValue())
+                  / 2
+               );
+            }
+
+            /* Debugging
+            System.out.printf("%s, %s, %.04f\n",
+               isoMap.getKey(), corrMapping.getKey(), corrMapping.getValue()
+            );
+         }
+      }
+
+      tmpMatrix.clear();
+      tmpMatrix = null;
+
+      /* Cluster execution if getting data from CSV 
+      Map<Float, List<Cluster>> results = testInterface.clusterData(
+         corrMatrix.keySet(), corrMatrix, tmp_alpha, tmp_beta
+      );
+      */
+
+      /*
+       * Retrieve samples for matching against clusters
+       */
+      Set<Cluster> matchClustersA = new HashSet<Cluster>();
+      Set<Cluster> matchClustersB = new HashSet<Cluster>();
+
+      //Match samples against clusters here
+
+      float maxSimA, maxSimB, comparison = 0.0f;
+      Cluster closeClustA, closeClustB;
+
+      if (matchIsolatesAgainstDB) {
+         for (Cluster matchClust : matchClusters) {
+            maxSimA = maxSimB = 0.0f;
+            closeClustA = null;
+            closeClustB = null;
+
+            //Match at upper threshold
+            if (results.containsKey(new Float(tmp_alpha))) {
+               for (Cluster clustA : results.get(new Float(tmp_alpha))) {
+                  comparison = matchClust.compareTo(clustA);
+                  if (comparison > maxSimA && comparison >= tmp_alpha) {
+                     maxSimA = comparison;
+                     closeClustA = clustA;
+                  }
+               }
+            }
+
+            if (closeClustA != null) {
+               closeClustA.join(new HCluster((HCluster) matchClust));
+               matchClustersA.add(closeClustA);
+            }
+
+            //Match at lower threshold
+            for (Cluster clustB : results.get(new Float(tmp_beta))) {
+               comparison = matchClust.compareTo(clustB);
+               if (comparison > maxSimB && comparison >= tmp_beta) {
+                  maxSimB = comparison;
+                  closeClustB = clustB;
+               }
+            }
+            if (closeClustB != null) {
+               closeClustB.join(new HCluster((HCluster) matchClust));
+               matchClustersB.add(closeClustB);
+            }
+         }
+      }
+
+
+      /*
+      System.out.println("ES samples that did not match any clusters at the upper threshold:");
+      for (Cluster tmpESClust : loneESClustersA) {
+         for (Clusterable<?> elem : tmpESClust.getElements()) {
+            System.out.println(String.format(
+               "%s, %s, %s, %s, %s", elem.getName(),
+               ((Isolate) elem).getHost(), ((Isolate) elem).getSource(),
+               ((Isolate) elem).getLoc(), ((Isolate) elem).getDate()
+            ));
+         }
+      }
+
+      System.out.println("ES samples that did not match any clusters at the lower threshold:");
+      for (Cluster tmpESClust : loneESClustersB) {
+         for (Clusterable<?> elem : tmpESClust.getElements()) {
+            System.out.println(String.format(
+               "%s, %s, %s, %s, %s", elem.getName(),
+               ((Isolate) elem).getHost(), ((Isolate) elem).getSource(),
+               ((Isolate) elem).getLoc(), ((Isolate) elem).getDate()
+            ));
+         }
+      }
+      */
+      /*
+      Map<Float, List<Cluster>> ESClusterMap = new HashMap<Float, List<Cluster>>();
+      ESClusterMap.put(new Float(tmp_alpha), new ArrayList<Cluster>(ESClustersA));
+      ESClusterMap.put(new Float(tmp_beta), new ArrayList<Cluster>(ESClustersB));
+
+      System.out.println(new ClusterResults(ESClusterMap));
+      */
+
+      /* 
+       * Matching cluster results
+       */
+      if (matchIsolatesAgainstDB) {
+         Map<Float, List<Cluster>> matchClusterMap = new HashMap<Float, List<Cluster>>();
+         matchClusterMap.put(new Float(tmp_alpha), new ArrayList<Cluster>(matchClustersA));
+         matchClusterMap.put(new Float(tmp_beta), new ArrayList<Cluster>(matchClustersB));
+
+         System.out.println(new ClusterResults(matchClusterMap));
+      }
    }
 
-   public ClusterResults clusterData(String ontologyStr, String selectedData,
-                                     String tableName, double alphaThresh, double betaThresh) {
-      Ontology ontology = null;
+   private String parseIsoIdFile(String fileName) {
+      Scanner fileScanner = null;
+      try { fileScanner = new Scanner(new File(fileName)); }
+      catch (Exception err) {
+         err.printStackTrace();
+         System.exit(1);
+      }
+
+      String isoIds = fileScanner.nextLine();
+      fileScanner.close();
+
+      return isoIds;
+   }
+
+   public Map<Float, List<Cluster>> clusterData(Set<String> isoSet,
+                                                Map<String, Map<String, Float>> corrMap,
+                                                float alphaThresh, float betaThresh) {
+      System.err.println("wrong clustering method");
+      Map<Float, List<Cluster>> clusterResults = new HashMap<Float, List<Cluster>>();
+      List<Cluster> clusters1 = new ArrayList<Cluster>();
+      List<Cluster> clusters2 = new ArrayList<Cluster>();
+
       Clusterer clusterer = null;
-      List<Cluster> clusters = new ArrayList<Cluster>();
 
-      if (ontologyStr != null) {
-         ontology = Ontology.constructOntology(ontologyStr);
-      }
+      for (String isoName : isoSet) {
+         Isolate tmpIso = new Isolate(isoName);
 
-      Map<String, Isolate> isoMap = constructIsolates(queryData(selectedData, tableName),
-                                                      alphaThresh, betaThresh);
-      
-      ClusterAverageMetric clustMetric = new ClusterAverageMetric();
-
-      for (Map.Entry<String, Isolate> isoEntry : isoMap.entrySet()) {
-         Cluster tmpClust = new HCluster(clustMetric, isoEntry.getValue());
-         clusters.add(tmpClust);
-
-         if (ontology != null) { ontology.addData(tmpClust); }
-      }
-
-      List<Double> thresholds = new ArrayList<Double>();
-      thresholds.add(new Double(alphaThresh));
-      thresholds.add(new Double(betaThresh));
-
-      if (ontology != null) {
-         List<Cluster> coreClusters = new ArrayList<Cluster>();
-         List<Cluster> boundaryClusters = new ArrayList<Cluster>();
-         Map<Integer, String> promotedClusters = new HashMap<Integer, String>();
-
-         for (int ndx_A = 0; ndx_A < clusters.size(); ndx_A++) {
-            Cluster clust_A = clusters.get(ndx_A);
-
-            for (int ndx_B = ndx_A + 1; ndx_B < clusters.size(); ndx_B++) {
-               Cluster clust_B = clusters.get(ndx_B);
-
-               if (clust_A.compareTo(clust_B) > alphaThresh) {
-                  if (!promotedClusters.containsKey(new Integer(ndx_A))) {
-                     coreClusters.add(clust_A);
-                     promotedClusters.put(ndx_A, clust_A.getName());
-                  }
-
-                  if (!promotedClusters.containsKey(new Integer(ndx_B))) {
-                     coreClusters.add(clust_B);
-                     promotedClusters.put(ndx_B, clust_B.getName());
-                  }
-               }
-            }
+         if (corrMap.containsKey(isoName)) {
+            tmpIso.setCache(corrMap.get(isoName));
          }
 
-         for (int clustNdx = 0; clustNdx < clusters.size(); clustNdx++) {
-            if (!promotedClusters.containsKey(clustNdx)) {
-               boundaryClusters.add(clusters.get(clustNdx));
-            }
+         clusters1.add(new HCluster(tmpIso));
+      }
+
+      Cluster.resetClusterIDs();
+
+      for (String isoName : isoSet) {
+         Isolate tmpIso = new Isolate(isoName);
+
+         if (corrMap.containsKey(isoName)) {
+            tmpIso.setCache(corrMap.get(isoName));
          }
 
-         clusters = null;
-         clusterer = new OHClusterer(coreClusters, boundaryClusters,
-                                     ontology, thresholds);
-      }
-      else if (ontology == null) {
-         clusterer = new AgglomerativeClusterer(clusters, thresholds);
+         clusters2.add(new HCluster(tmpIso));
       }
 
-      clusterer.clusterData(null);
+      //no ontology given so hardcode it to just hierarchical cluster
+      clusterer = new AgglomerativeClusterer(clusters1.size(), alphaThresh, null);
+      clusterer.clusterData(clusters1);
+      clusterResults.put(new Float(alphaThresh), clusters1);
 
-      return new ClusterResults(clusterer.getClusters());
+      //System.out.println(new ClusterResults(clusterer.getClusters()));
+
+      //no ontology given so hardcode it to just hierarchical cluster
+      clusterer = new AgglomerativeClusterer(clusters2.size(), betaThresh, null);
+      clusterer.clusterData(clusters2);
+      clusterResults.put(new Float(betaThresh), clusters2);
+
+      //System.out.println(new ClusterResults(clusterer.getClusters()));
+
+      return clusterResults;
    }
 
-   private List<Map<String, Object>> queryData(String dataSet, String tableName) {
-      List<Map<String, Object>> dataList = null;
+   public Map<Float, List<Cluster>> clusterData(String ontologyFile, String selectedData,
+                                                String tableName, float alphaThresh,
+                                                float betaThresh) {
+      Map<Float, List<Cluster>> clusterResults = new HashMap<Float, List<Cluster>>();
+      List<Cluster> clusters1 = new ArrayList<Cluster>();
 
-      if (tableName.equals(DATA_TYPE_VALUES[0])) {
-         try {
-            dataList = mConn.getDataByIsoID(dataSet);
-         }
-         catch (java.sql.SQLException sqlErr) {
-            System.out.println("SQLException:\nExiting...");
-            sqlErr.printStackTrace();
-            System.exit(1);
-         }
+      List<Isolate> isolateDataList = getIsolateData(selectedData);
+      Ontology clusterOnt = null;
+      Clusterer clusterer = null;
+
+      boolean useOHClust = false;
+
+      if (useOHClust) {
+         clusterOnt = Ontology.createOntology(new File(ontologyFile));
+         mConn.getIsolateMetaData(isolateDataList, clusterOnt, isolateDataList.size());
       }
 
-      else if (tableName.equals(DATA_TYPE_VALUES[1])) {
-         try {
-            dataList = mConn.getDataByPyroID(dataSet);
-         }
-         catch (java.sql.SQLException sqlErr) {
-            System.out.println("SQLException:\nExiting...");
-            sqlErr.printStackTrace();
-            System.exit(1);
-         }
+      for (Isolate isolate : isolateDataList) {
+         if (useOHClust) { clusterOnt.addData(new HCluster(isolate)); }
+         else { clusters1.add(new HCluster(isolate)); }
       }
 
-      return dataList;
+      //For debugging ontology content
+      //System.out.println(clusterOnt);
+
+      //no ontology given so hardcode it to just hierarchical cluster
+      if (useOHClust) {
+         System.err.println("OHClustering!");
+         clusterer = new OHClusterer(clusters1.size(), alphaThresh, betaThresh, null);
+         clusterer.clusterData(clusterOnt);
+         System.out.println(new ClusterResults(clusterer.getClusters()));
+         return clusterer.getClusters();
+      }
+      else {
+         clusterer = new AgglomerativeClusterer(clusters1.size(), betaThresh, null);
+         clusterer.clusterData(clusters1);
+         clusterResults.put(new Float(betaThresh), clusters1);
+         System.out.println(new ClusterResults(clusterResults));
+         return clusterResults;
+      }
    }
 
-   private Map<String, Isolate> constructIsolates(List<Map<String, Object>> dataList,
-                                                  double alphaThresh, double betaThresh) {
-      Map<String, Isolate> isoMap = new HashMap<String, Isolate>();
-      Map<String, Map<Integer, Object[]>> pyroDataMap =
-         new HashMap<String, Map<Integer, Object[]>>();
+   public List<Isolate> getIsolateData(String dataSet) {
+      List<Isolate> isoData = null;
+      int dataSize = 0;
 
-      //First pass over the data where ITSRegions and Isolates are constructed.
-      String pyroList = "";
-      for (Map<String, Object> dataMap : dataList) {
-         String isoID = String.valueOf(dataMap.get("isolate"));
-         String regName = String.valueOf(dataMap.get("region"));
-         String wellID = String.valueOf(dataMap.get("well"));
-         Integer pyroID = new Integer(String.valueOf(dataMap.get("pyroprint")));
-         double peakHeight = Double.parseDouble(String.valueOf(dataMap.get("pHeight")));
-         String nucleotide = String.valueOf(dataMap.get("nucleotide"));
-
-         //Retrieve Isolate
-         if (!isoMap.containsKey(isoID)) {
-            isoMap.put(isoID, new Isolate(isoID, new HashSet<ITSRegion>(),
-                                          new IsolateAverageMetric()));
+      try {
+         if (dataSet != null) {
+            String[] idList = dataSet.split(",");
+            System.out.println(dataSet);
+            System.out.println(idList.length);
+            dataSize = idList.length;
          }
 
-         isoMap.get(isoID).getData().add(new ITSRegion(regName, alphaThresh, betaThresh,
-                                         new ITSRegionAverageMetric(alphaThresh, betaThresh)));
-
-         if (!pyroDataMap.containsKey(isoID)) {
-            pyroDataMap.put(isoID, new HashMap<Integer, Object[]>());
-         }
-
-         Map<Integer, Object[]> pyroMap = pyroDataMap.get(isoID);
-
-         if (!pyroMap.containsKey(pyroID)) {
-            pyroMap.put(pyroID, new Object[] {pyroID, wellID, "",
-                                              new ArrayList<Double>(),
-                                              regName});
-         }
-
-         Object[] pyroData = pyroMap.get(pyroID);
-
-         if (pyroData[2] instanceof String) {
-            pyroData[2] = String.valueOf(pyroData[2]).concat(nucleotide);
-         }
-         if (pyroData[3] instanceof List<?>) {
-            @SuppressWarnings("unchecked")
-            List<Double> peakList = (List<Double>) pyroData[3];
-            peakList.add(new Double(peakHeight));
-         }
+         isoData = mConn.getIsolateData(dataSize, dataSet);
       }
+      catch (java.sql.SQLException sqlErr) { sqlErr.printStackTrace(); }
+      catch (Exception err) { err.printStackTrace(); }
 
-      for (Map.Entry<String, Map<Integer, Object[]>> pyroDataEntry : pyroDataMap.entrySet()) {
-
-         for (Map.Entry<Integer, Object[]> pyroEntry : pyroDataEntry.getValue().entrySet()) {
-            Object[] pyroData = pyroEntry.getValue();
-
-            @SuppressWarnings("unchecked")
-            Pyroprint newPyro = new Pyroprint(Integer.parseInt(String.valueOf(pyroData[0])),
-                                              String.valueOf(pyroData[1]),
-                                              String.valueOf(pyroData[2]),
-                                              (List<Double>) pyroData[3],
-                                              new PyroprintUnstablePearsonMetric());
-
-            for (ITSRegion region : isoMap.get(pyroDataEntry.getKey()).getData()) {
-               if (region.getName().equals(pyroData[4])) {
-                  region.getData().add(newPyro);
-               }
-            }
-         }
-      }
-
-      Map<String, Isolate> finalIsoMap = new HashMap<String, Isolate>();
-
-      Logger.debug("Isolates retrieved from CPLOP:");
-      for (Map.Entry<String, Isolate> isoEntry : isoMap.entrySet()) {
-         Logger.debug(String.format("%s: %s\n", isoEntry.getKey(),
-                                    isoEntry.getValue().toString()));
-
-         boolean isCompleteIsolate = true;
-
-         for (ITSRegion region : isoEntry.getValue().getData()) {
-            if (region.getData().isEmpty()) {
-               Logger.debug(String.format("%s[%s] has no pyroprints\n",
-                                          isoEntry.getValue().getName(),
-                                          region.getName()));
-               isCompleteIsolate = false;
-            }
-         }
-
-         if (isCompleteIsolate) {
-            finalIsoMap.put(isoEntry.getKey(), isoEntry.getValue());
-         }
-      }
-
-      return isoMap;
+      return isoData;
    }
 }

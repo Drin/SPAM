@@ -122,6 +122,7 @@ public class DataQueryButtonListener implements ActionListener {
       return cancelButton;
    }
 
+   /*
    private JScrollPane preparePyroprintDataView() {
       List<Map<String, Object>> pyroprints = null;
 
@@ -159,14 +160,16 @@ public class DataQueryButtonListener implements ActionListener {
 
       return pyroprintScrollPane;
    }
+   */
    
    private JScrollPane prepareIsolateDataView() {
-      List<Map<String, Object>> isolates = null;
+      mTableData = null;
+      mTableDataColumns = new Object[] {"isoID", "commonName",
+                                        "hostID", "sampleID",
+                                        "wellID"};
 
       try {
-         //TODO
-         //isolates = mConn.getIsolateDataSet();
-         isolates = mConn.getIsolateDataSetWithBothRegions();
+         mTableData = mConn.getIsolateDataTableView((String[]) mTableDataColumns);
       }
 
       catch (java.sql.SQLException sqlErr) {
@@ -175,30 +178,20 @@ public class DataQueryButtonListener implements ActionListener {
          System.exit(1);
       }
 
-      mTableData = new Object[isolates.size()][];
-      mTableDataColumns = new Object[] {"id", "name", "host", "sample",
-                                       "stored", "pyroprinted"};
+      if (mTableData != null) {
+         mTable = new JTable(mTableData, mTableDataColumns);
+         JScrollPane isolateScrollPane = new JScrollPane(mTable);
 
-      for (int rowNdx = 0; rowNdx < isolates.size(); rowNdx++) {
-         Map<String, Object> isoTuple = isolates.get(rowNdx);
-         Object[] tupleData = new Object[isoTuple.size()];
+         mTable.setAutoCreateRowSorter(true);
+         mTable.setFillsViewportHeight(true);
 
-         for (int colNdx = 0; colNdx < mTableDataColumns.length; colNdx++) {
-            tupleData[colNdx] = isoTuple.get((String) mTableDataColumns[colNdx]);
-         }
-
-         mTableData[rowNdx] = tupleData;
+         return isolateScrollPane;
       }
 
-      mTable = new JTable(mTableData, mTableDataColumns);
-      JScrollPane isolateScrollPane = new JScrollPane(mTable);
-
-      mTable.setAutoCreateRowSorter(true);
-      mTable.setFillsViewportHeight(true);
-
-      return isolateScrollPane;
+      return null;
    }
 
+   /*
    private JScrollPane prepareExperimentDataView() {
       List<Map<String, Object>> experiments = null;
 
@@ -234,4 +227,5 @@ public class DataQueryButtonListener implements ActionListener {
 
       return isolateScrollPane;
    }
+   */
 }

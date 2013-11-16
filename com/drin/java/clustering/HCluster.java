@@ -22,13 +22,6 @@ public class HCluster extends Cluster {
    public void join(Cluster otherClust) {
       if (otherClust instanceof HCluster) {
          mElements.addAll(otherClust.mElements);
-
-         /*
-         for (int labelNdx = 0; labelNdx < otherClust.mMetaLabels.length; labelNdx++) {
-            mMetaLabels[labelNdx] += (", " + otherClust.mMetaLabels[labelNdx]);
-         }
-         */
-
          mSize = mElements.size();
       }
       else {

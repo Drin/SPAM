@@ -29,8 +29,7 @@ public class IsolateSimpleMetric extends DataMetric<Isolate> {
                            corrMap.containsKey(elem_B.getName()));
          */
 
-         if (corrMap.containsKey(elem_A.getName()) &&
-             corrMap.get(elem_A.getName()).containsKey(elem_B.getName())) {
+         if (corrMap.containsKey(elem_A.getName())) {
             Map<String, Float> tmp_map = corrMap.get(elem_A.getName());
 
             //System.out.printf("%s\n", elem_A.getName());
@@ -45,8 +44,7 @@ public class IsolateSimpleMetric extends DataMetric<Isolate> {
             }
          }
 
-         else if (corrMap.containsKey(elem_B.getName()) &&
-                  corrMap.get(elem_B.getName()).containsKey(elem_A.getName())) {
+         else if (corrMap.containsKey(elem_B.getName())) {
             Map<String, Float> tmp_map = corrMap.get(elem_B.getName());
 
             //System.out.printf("else %s\n", elem_B.getName());
