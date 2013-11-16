@@ -53,8 +53,8 @@ public class Pyroprint extends Clusterable<Float> {
     * protocol parameters match the other pyroprint's protocol parameters.
     */
    public boolean hasSameProtocol(Pyroprint other) {
-      boolean sameDisp = expandDisp(mDisp).substring(0, mPyroLen).equals(
-         expandDisp(other.mDisp).substring(0, mPyroLen)
+      boolean sameDisp = expandDisp(mDisp).substring(0, mPyroLen - 1).equals(
+         expandDisp(other.mDisp).substring(0, mPyroLen - 1)
       );
 
       return mPyroLen == other.mPyroLen && sameDisp;

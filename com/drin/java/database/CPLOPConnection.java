@@ -26,8 +26,8 @@ import java.sql.SQLException;
 public class CPLOPConnection {
    private static final String DB_DRIVER = "com.mysql.jdbc.Driver";
    //TODO figure out how to connect to database now
-   private static final String DB_URL = "jdbc:mysql://localhost/CPLOP?autoReconnect=true";
-   private static final String DB_USER = "";
+   private static final String DB_URL = "jdbc:mysql://localhost:8906/CPLOP?autoReconnect=true";
+   private static final String DB_USER = "drin";
    private static final String DB_PASS = "";
    /*
    private static final String DB_URL = "jdbc:mysql://cslvm96.csc.calpoly.edu/CPLOP?autoReconnect=true";
@@ -116,7 +116,8 @@ public class CPLOPConnection {
                         */
                    //"ORDER BY i.isoID, p1.pyroID, p2.pyroID, position " +
                    "WHERE i.isoID in (%s) " +
-                   "ORDER BY i.isoID, p1.pyroID, position ",
+                   "ORDER BY i.isoID, p1.pyroID, position " +
+                   "LIMIT %d OFFSET %d",
 
       //The join with samples is necessary because there are some isolates that
       //don't have an entry in the samples table
@@ -176,7 +177,8 @@ public class CPLOPConnection {
                                          "WHERE t.isoID LIKE 'ES-%%' AND " +
                                                "right(t.isoID, 3) <= 448) " +
                          */
-                   "ORDER BY i.isoID, p1.pyroID, h1.position ",
+                   "ORDER BY i.isoID, p1.pyroID, h1.position " +
+                   "LIMIT %d OFFSET %d",
 
       META_QUERY = "SELECT distinct test_isolate_id, CONCAT(name_prefix, '-', name_suffix) as isoID %s " +
                    "FROM test_isolates " +
@@ -344,8 +346,8 @@ public class CPLOPConnection {
       Statement statement = null;
       ResultSet results = null;
 
-      byte pyroLen = 95;
-      int peakDataSize = dataSize * pyroLen, pyroId = -1, tmpPyroId = -1;
+      byte pyroLen = 96;
+      int pyroId = -1, tmpPyroId = -1;
       List<Isolate> isoData = new ArrayList<Isolate>(dataSize);
       String isoId = null, tmpIsoId = null, regName = null, dsName = null;
       //Extra metadata
@@ -355,8 +357,12 @@ public class CPLOPConnection {
       ITSRegion tmpRegion = null;
       Pyroprint tmpPyro = null;
 
+      int pageNdx = 0;
+      boolean hasMoreData;
+
       try {
-         for (int pageNdx = 0; pageNdx < Math.ceil((float) peakDataSize / pageSize); pageNdx++) {
+         do {
+            hasMoreData = false;
             statement = mConn.createStatement();
             //3 Data Query Variables:
             //    Length of Pyroprint
@@ -380,20 +386,30 @@ public class CPLOPConnection {
             if (isoIdList != null) {
                System.out.println("Executing directed data query");
                System.out.println(String.format(DIRECTED_DATA_QUERY,
-                  pyroLen, isoIdList
+                  pyroLen, isoIdList, pageSize,
+                  (pageSize * pageNdx)
                ));
                results = statement.executeQuery(String.format(DIRECTED_DATA_QUERY,
-                  pyroLen, isoIdList
+                  pyroLen, isoIdList, pageSize,
+                  (pageSize * pageNdx)
                ));
             }
             else if (isoIdList == null) {
                System.out.println("Executing full data query");
                System.out.println(String.format(FULL_DATA_QUERY,
-                  pyroLen
+                  pyroLen, pageSize,
+                  (pageSize * pageNdx)
                ));
                results = statement.executeQuery(String.format(FULL_DATA_QUERY,
-                  pyroLen
+                  pyroLen, pageSize,
+                  (pageSize * pageNdx)
                ));
+            }
+
+            if (results.next()) {
+               hasMoreData = true;
+               pageNdx++;
+               results.previous();
             }
 
             while (results.next()) {
@@ -417,13 +433,9 @@ public class CPLOPConnection {
                if (regName.equals("16-23")) { dispLen = 96; }
                else if (regName.equals("23-5")) { dispLen = 94; }
 
-               if (isoIdNum == 977) {
-                  System.out.printf("%s: %s\n", tmpIsoId, regName);
-               }
-
                if (isoId == null || !tmpIsoId.equals(isoId)) {
                   isoId = tmpIsoId;
-                  //System.err.println("new Isolate: " + isoId);
+                  //System.out.println("new Isolate: " + isoId);
 
                   tmpIso = new Isolate(isoId);
                   tmpRegion = new ITSRegion(regName);
@@ -468,13 +480,8 @@ public class CPLOPConnection {
             }
 
             //if (isoIdList == null) { break; }
-         }
+         } while (hasMoreData);
 
-         for (Isolate iso : isoData) {
-            if (iso.getIdNum() == 977) {
-               System.out.println(iso);
-            }
-         }
       }
       catch (Exception err) { err.printStackTrace(); }
       finally {

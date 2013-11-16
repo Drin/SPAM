@@ -52,6 +52,7 @@ public class Isolate extends Clusterable<ITSRegion> {
    public String getDate() { return mDate; }
 
    public void setCache(Map<String, Float> cache) { mComparisonCache = cache; }
+   public Map<String, Float> getCache() { return mComparisonCache; }
 
    @Override
    public float compareTo(Clusterable<?> otherObj) {

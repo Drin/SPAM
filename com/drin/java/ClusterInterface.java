@@ -76,6 +76,7 @@ public class ClusterInterface {
       //
       /* Eric Colilert and Direct Isolates */
       //matchSet = testInterface.parseIsoIdFile("ericColilertAndDirectIDs");
+      //matchSet = testInterface.parseIsoIdFile("oliviaAllIDs");
 
       /* Prepare samples and clusters for matching */
       boolean matchIsolatesAgainstDB = false;
@@ -105,16 +106,20 @@ public class ClusterInterface {
       /* Parse 2012 Bull and Squirrel Isolates */
       //testDataSet = testInterface.parseIsoIdFile("2012BullsAndSquirrels");
 
-      //testDataSet = testInterface.parseIsoIdFile("AllBulls");
+      testDataSet = testInterface.parseIsoIdFile("AllBulls");
 
       /* Parse All of Josh's Isolates */
       //testDataSet = testInterface.parseIsoIdFile("allJoshIsolates");
 
       /* Parse all of the isolates in the Direct Plated Creek Isolates dataset */
-      testDataSet = testInterface.parseIsoIdFile("oliviaDirectIDs");
+      //testDataSet = testInterface.parseIsoIdFile("oliviaDirectIDs");
 
       /* Parse all of the isolates in the Colilert Environmental Samples dataset */
       //testDataSet = testInterface.parseIsoIdFile("oliviaColilertIDs");
+
+      /* Parse all of the isolates in the Direct Plated and
+       * Colilert Environmental Samples datasets */
+      //testDataSet = testInterface.parseIsoIdFile("oliviaAllIDs");
 
       //testDataSet = testInterface.parseIsoIdFile("ppIDs");
       //testDataSet = testInterface.parseIsoIdFile("dog165_172");
