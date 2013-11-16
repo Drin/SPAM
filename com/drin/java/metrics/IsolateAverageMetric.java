@@ -32,19 +32,17 @@ public class IsolateAverageMetric extends DataMetric<Isolate> {
             if (region_A.getName().equals(region_B.getName())) {
                float comparison = region_A.compareTo(region_B);
 
-               Logger.debug(String.format("Isolate Average Metric:\n\tregion " +
-                                          "comparison is %.04f for region %s",
-                                          comparison, region_A.getName()));
-
                total += comparison;
                regionCount++;
-
-               if (regionCount > 2) { setError(1); }
 
                break;
             }
 
          }
+      }
+
+      if (regionCount != 2) {
+         System.err.println("wtf number of regions that is not 2!");
       }
 
       if (regionCount > 0) {
