@@ -35,14 +35,17 @@ public class ClusterInterface {
                                                            "Pyroprints",
                                                            "Experiments"};
 
+   private final static String PARAM_SECTION = "parameters",
+                               CACHE_SIMS_OPTION = "cache similarities";
+
    private CPLOPConnection mConn;
    private long startTime;
 
    public ClusterInterface() {
+      Configuration.loadConfig("config.cfg");
+
       try { mConn = new CPLOPConnection(); }
       catch (Exception err) { err.printStackTrace(); }
-
-      Configuration.loadConfig("config.cfg");
    }
 
    public static void main(String[] args) {
@@ -62,24 +65,22 @@ public class ClusterInterface {
       //testOntology = null;
 
       float tmp_alpha = 0.995f, tmp_beta = 0.99f;
+      boolean cacheSimilarities = Configuration.getBoolean(PARAM_SECTION, CACHE_SIMS_OPTION),
+              matchIsolatesAgainstDB = false;
 
-      String matchSet = null;
-      /* Parse ID file */
-      //these are pp IDs not pidgeon IDs
-      //matchSet = testInterface.parseIsoIdFile("ppIDs");
+      String matchSet = null, testDataSet = null;
 
-      /* Parse STEC IDs */
-      //matchSet = testInterface.parseIsoIdFile("stecIDs");
+      if (args.length == 1) {
+         testDataSet = testInterface.parseIsoIdFile(args[0]);
+      }
+      else if (args.length == 2) {
+         matchIsolatesAgainstDB = true;
 
-      /* Parse ES IDs */
-      //matchSet = testInterface.parseIsoIdFile("esIDs");
-      //
-      /* Eric Colilert and Direct Isolates */
-      //matchSet = testInterface.parseIsoIdFile("ericColilertAndDirectIDs");
-      //matchSet = testInterface.parseIsoIdFile("oliviaAllIDs");
+         matchSet = testInterface.parseIsoIdFile(args[0]);
+         testDataSet = testInterface.parseIsoIdFile(args[1]);
+      }
 
       /* Prepare samples and clusters for matching */
-      boolean matchIsolatesAgainstDB = false;
       List<Isolate> matchSamples = null;
       List<Cluster> matchClusters = null;
 
@@ -88,48 +89,44 @@ public class ClusterInterface {
          matchClusters = new ArrayList<Cluster>();
 
          for (Isolate sample : matchSamples) {
-            matchClusters.add(new HCluster(sample));
+            matchClusters.add(new HCluster(cacheSimilarities, sample));
          }
       }
 
-      String testDataSet = null;
-
-      /* Parse pigeon IDs */
-      //testDataSet = testInterface.parseIsoIdFile("pgIDs");
-
-      /* Parse 2011 Bull Isolates */
-      //testDataSet = testInterface.parseIsoIdFile("2011Bulls");
-
-      /* Parse 2012 Bull Isolates */
-      //testDataSet = testInterface.parseIsoIdFile("2012Bulls");
-
-      /* Parse 2012 Bull and Squirrel Isolates */
-      //testDataSet = testInterface.parseIsoIdFile("2012BullsAndSquirrels");
-
+      /*
+      // Parse STEC IDs
+      matchSet = testInterface.parseIsoIdFile("stecIDs");
+      // Parse ES IDs
+      matchSet = testInterface.parseIsoIdFile("esIDs");
+      // Eric Colilert and Direct Isolates
+      matchSet = testInterface.parseIsoIdFile("ericColilertAndDirectIDs");
+      matchSet = testInterface.parseIsoIdFile("oliviaAllIDs");
+      //these are pp IDs not pidgeon IDs
+      matchSet = testInterface.parseIsoIdFile("ppIDs");
+      // Parse pigeon IDs
+      testDataSet = testInterface.parseIsoIdFile("pgIDs");
+      // Parse 2011 Bull Isolates
+      testDataSet = testInterface.parseIsoIdFile("2011Bulls");
+      // Parse 2012 Bull Isolates
+      testDataSet = testInterface.parseIsoIdFile("2012Bulls");
+      // Parse 2012 Bull and Squirrel Isolates
+      testDataSet = testInterface.parseIsoIdFile("2012BullsAndSquirrels");
       testDataSet = testInterface.parseIsoIdFile("AllBulls");
-
-      /* Parse All of Josh's Isolates */
-      //testDataSet = testInterface.parseIsoIdFile("allJoshIsolates");
-
-      /* Parse all of the isolates in the Direct Plated Creek Isolates dataset */
-      //testDataSet = testInterface.parseIsoIdFile("oliviaDirectIDs");
-
-      /* Parse all of the isolates in the Colilert Environmental Samples dataset */
-      //testDataSet = testInterface.parseIsoIdFile("oliviaColilertIDs");
-
-      /* Parse all of the isolates in the Direct Plated and
-       * Colilert Environmental Samples datasets */
-      //testDataSet = testInterface.parseIsoIdFile("oliviaAllIDs");
-
-      //testDataSet = testInterface.parseIsoIdFile("ppIDs");
-      //testDataSet = testInterface.parseIsoIdFile("dog165_172");
-      //testDataSet = testInterface.parseIsoIdFile("human1786_1792");
-      //testDataSet = testInterface.parseIsoIdFile("cow1159_1550");
-
-      //testDataSet = testInterface.parseIsoIdFile("emilyIsoIDs");
-
-      //Comment out if clustering pigeon isolates before matching ES samples
-      //testDataSet += "," + environmentalSet;
+      // Parse All of Josh's Isolates
+      testDataSet = testInterface.parseIsoIdFile("allJoshIsolates");
+      // Parse all of the isolates in the Direct Plated Creek Isolates dataset
+      testDataSet = testInterface.parseIsoIdFile("oliviaDirectIDs");
+      // Parse all of the isolates in the Colilert Environmental Samples dataset
+      testDataSet = testInterface.parseIsoIdFile("oliviaColilertIDs");
+      // Parse all of the isolates in the Direct Plated and
+      // Colilert Environmental Samples datasets
+      testDataSet = testInterface.parseIsoIdFile("oliviaAllIDs");
+      testDataSet = testInterface.parseIsoIdFile("ppIDs");
+      testDataSet = testInterface.parseIsoIdFile("dog165_172");
+      testDataSet = testInterface.parseIsoIdFile("human1786_1792");
+      testDataSet = testInterface.parseIsoIdFile("cow1159_1550");
+      testDataSet = testInterface.parseIsoIdFile("emilyIsoIDs");
+      */
 
       /* Cluster execution if getting data from database */
       Map<Float, List<Cluster>> results = testInterface.clusterData(
@@ -276,6 +273,10 @@ public class ClusterInterface {
 
          System.out.println(new ClusterResults(matchClusterMap));
       }
+
+      //TODO remove this after debugWriter has been removed from Pyroprint.java
+      Pyroprint.closeWriter();
+      Isolate.closeWriter();
    }
 
    private String parseIsoIdFile(String fileName) {

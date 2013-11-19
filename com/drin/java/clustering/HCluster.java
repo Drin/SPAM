@@ -4,17 +4,17 @@ import com.drin.java.clustering.Clusterable;
 import com.drin.java.clustering.Cluster;
 
 public class HCluster extends Cluster {
-   public HCluster(int clustSize) {
-      super(clustSize);
-   }
-
-   public HCluster(Clusterable<?> elem) {
-      super(1);
+   public HCluster(boolean cacheSims, Clusterable<?> elem) {
+      super(cacheSims, 1);
 
       mSize = 1;
       mElements.add(elem);
       mMetaLabels = elem.getMetaData();
    }
+
+   public HCluster(int clustSize) { super(clustSize); }
+
+   public HCluster(Clusterable<?> elem) { this(false, elem); }
 
    public HCluster(HCluster oldCluster) { super(oldCluster); }
 

@@ -11,6 +11,7 @@ import java.util.concurrent.Callable;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public abstract class Cluster {
    //private static final ExecutorService mThreadPool = Executors.newFixedThreadPool(64);
@@ -19,23 +20,33 @@ public abstract class Cluster {
    protected int mId, mSize;
 
    protected List<Clusterable<?>> mElements;
+   protected Map<Integer, Float> mSimCache;
 
    protected String[] mMetaLabels;
    protected float mDiameter, mMean;
+   protected boolean mCacheSimilarities;
 
    public Cluster(int clustId, int clustSize) {
       mId = clustId;
 
       mElements = new ArrayList<Clusterable<?>>(clustSize);
+      mSimCache = new HashMap<Integer, Float>();
       mMetaLabels = null;
 
       mSize = 0;
       mDiameter = -2.0f;
       mMean = -2.0f;
+      mCacheSimilarities = false;
    }
 
    public Cluster(int clustSize) {
       this(CLUST_ID++, clustSize);
+   }
+
+   public Cluster(boolean cacheSims, int clustSize) {
+      this(clustSize);
+
+      mCacheSimilarities = cacheSims;
    }
 
    public Cluster(Cluster oldCluster) {
@@ -120,7 +131,14 @@ public abstract class Cluster {
          }
       }
 
-      if (count > 0) { return comparison / count; }
+      if (count > 0) {
+         if (mCacheSimilarities) {
+            mSimCache.put(new Integer(otherClust.getId()),
+                           new Float(comparison / count));
+         }
+
+         return comparison / count;
+      }
       return -2;
    }
 

@@ -6,6 +6,8 @@ import com.drin.java.biology.Pyroprint;
 import com.drin.java.biology.ITSRegion;
 import com.drin.java.biology.Isolate;
 
+import com.drin.java.util.Configuration;
+
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -34,9 +36,15 @@ public class CPLOPConnection {
    private static final String DB_USER = "amontana";
    private static final String DB_PASS = "ILoveData#";
    */
-   private static final int DEFAULT_PAGE_SIZE = 10000;
+   private static final int DEFAULT_PAGE_SIZE = 50000;
+   private static final String REGION_16_23 = "16-23",
+                               REGION_23_5  = "23-5",
+                               PYRO_LEN     = "pyroprint length";
 
    private Connection mConn;
+
+   private static final int m16sDispLen = Configuration.getInt(REGION_16_23, PYRO_LEN),
+                            m23sDispLen = Configuration.getInt(REGION_23_5, PYRO_LEN);
 
    private static final String
       SCHEMA_QUERY = "SELECT distinct %s " +
@@ -430,8 +438,8 @@ public class CPLOPConnection {
                date = results.getString(10);
 
                byte dispLen = -1;
-               if (regName.equals("16-23")) { dispLen = 96; }
-               else if (regName.equals("23-5")) { dispLen = 94; }
+               if (regName.equals("16-23")) { dispLen = (byte) m16sDispLen; }
+               else if (regName.equals("23-5")) { dispLen = (byte) m23sDispLen; }
 
                if (isoId == null || !tmpIsoId.equals(isoId)) {
                   isoId = tmpIsoId;

@@ -11,6 +11,10 @@ import java.util.ArrayList;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
+//TODO remove this after verifying issues with protocol comparisons
+import java.io.File;
+import java.io.FileWriter;
+
 /**
  * A Pyroprint is the result of pyrosequencing each replicate of a specified
  * ITS Region for a given genome. The genome is PCR'd for amplification, then
@@ -27,6 +31,20 @@ public class Pyroprint extends Clusterable<Float> {
    private int mPeakCount;
    private float mPyroASum, mPyroBSum, mProductAB,
                   mPyroASquaredSum, mPyroBSquaredSum;
+
+   //TODO temporary
+   private static FileWriter debugWriter = null;
+   
+   static {
+      try {
+         debugWriter = new FileWriter(new File("protocol info.csv"));
+         debugWriter.write("Pyro Id 1, Pyro Id 2, Short Disp 1, Short Disp 2, Long Disp 1, Long Disp 2, Match?\n");
+      }
+      catch (Exception err) {
+         err.printStackTrace();
+         System.exit(1);
+      }
+   }
 
    public Pyroprint(String pyroId, byte pyroLen, String disp) {
       super(pyroId, new ArrayList<Float>(pyroLen));
@@ -53,11 +71,29 @@ public class Pyroprint extends Clusterable<Float> {
     * protocol parameters match the other pyroprint's protocol parameters.
     */
    public boolean hasSameProtocol(Pyroprint other) {
-      boolean sameDisp = expandDisp(mDisp).substring(0, mPyroLen - 1).equals(
-         expandDisp(other.mDisp).substring(0, mPyroLen - 1)
+      boolean sameDisp = expandDisp(mDisp).substring(0, mPyroLen).equals(
+         expandDisp(other.mDisp).substring(0, mPyroLen)
       );
 
+      try {
+         debugWriter.write(String.format(
+            "%s, %s, %s, %s, %s, %s, %s\n",
+            this.getName(), mDisp, expandDisp(mDisp).substring(0, mPyroLen - 1),
+            other.getName(), other.mDisp, expandDisp(other.mDisp).substring(0, mPyroLen - 1),
+            String.valueOf(mPyroLen == other.mPyroLen && sameDisp)
+         ));
+      }
+      catch (Exception err) {
+         err.printStackTrace();
+         System.exit(1);
+      }
+
       return mPyroLen == other.mPyroLen && sameDisp;
+   }
+
+   public static void closeWriter() {
+      try { debugWriter.close(); }
+      catch (Exception err) { err.printStackTrace(); System.exit(1); }
    }
 
    public boolean addDispensation(byte position, float pHeight) {
@@ -93,6 +129,24 @@ public class Pyroprint extends Clusterable<Float> {
             
             mProductAB += peakA * peakB;
             mPeakCount++;
+
+            if (this.getName().equals("8522") &&
+                (otherObj.getName().equals("6188") || 
+                 otherObj.getName().equals("7516") || 
+                 otherObj.getName().equals("7517"))) {
+
+               System.out.printf("Pyroprint A (%s), Pyroprint B (%s)\n" +
+                  "Peak Heights: %.04f, %.04f\n" +
+                  "Peak Height Sums: %.04f, %.04f\n" +
+                  "Peak Height Squared Sums: %.04f, %.04f\n" +
+                  "Peak Height Product: %.04f\n" +
+                  "Peak count: %d\n",
+                  this.getName(), otherObj.getName(),
+                  peakA, peakB, mPyroASum, mPyroBSum,
+                  mPyroASquaredSum, mPyroBSquaredSum,
+                  mProductAB, mPeakCount
+               );
+            }
          }
 
          if (mPeakCount > 0) {
@@ -101,6 +155,17 @@ public class Pyroprint extends Clusterable<Float> {
                 (((mPeakCount * mPyroASquaredSum) - (mPyroASum * mPyroASum)) *
                  ((mPeakCount * mPyroBSquaredSum) - (mPyroBSum * mPyroBSum)))
             );
+
+            if (this.getName().equals("8522") &&
+                (otherObj.getName().equals("6188") || 
+                 otherObj.getName().equals("7516") || 
+                 otherObj.getName().equals("7517"))) {
+
+               System.out.printf("Pyroprint A (%s), Pyroprint B (%s)\n" +
+                  "Pearson Correlation: %.04f\n",
+                  this.getName(), otherObj.getName(), pearson
+               );
+            }
 
             if (pearson > 1) {
                System.err.println("Pearson greater than 1?!");

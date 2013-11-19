@@ -13,6 +13,11 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.HashSet;
 
+
+//TODO temporary
+import java.io.File;
+import java.io.FileWriter;
+
 /**
  * Isolate represents a bacterial isolate collected by a biologist.
  *
@@ -24,6 +29,23 @@ public class Isolate extends Clusterable<ITSRegion> {
    private int mIdNum;
 
    private String mHost, mSource, mLocation, mDate;
+
+   //TODO temporary
+   private static FileWriter debugWriter = null, regionWriter = null;
+   
+   static {
+      try {
+         debugWriter = new FileWriter(new File("isolate info.csv"));
+         regionWriter = new FileWriter(new File("its Region info.csv"));
+
+         debugWriter.write("Iso Id 1, Iso Id 2, Correlation\n");
+         regionWriter.write("Iso Id 1, Iso Id 2, ITS Region, Correlation\n");
+      }
+      catch (Exception err) {
+         err.printStackTrace();
+         System.exit(1);
+      }
+   }
 
    public Isolate(String isoId) {
       this(isoId, 2);
@@ -84,8 +106,22 @@ public class Isolate extends Clusterable<ITSRegion> {
                   ITSRegion regionB = itrB.next();
 
                   if (regionA.equals(regionB)) {
-                     comparison += regionA.compareTo(regionB);
+                     float regionComparison = regionA.compareTo(regionB);
+
+                     comparison += regionComparison;
                      numRegions++;
+
+                     try {
+                        regionWriter.write(String.format(
+                           "%s, %s, %s, %.04f\n",
+                           this.getName(), otherObj.getName(), regionA.getName(),
+                           regionComparison
+                        ));
+                     }
+                     catch (Exception err) {
+                        err.printStackTrace();
+                        System.exit(1);
+                     }
 
                      break;
                   }
@@ -102,11 +138,26 @@ public class Isolate extends Clusterable<ITSRegion> {
 
             mComparisonCache.put(otherIso.getName(), new Float(comparison));
 
+            try {
+               debugWriter.write(String.format(
+                  "%s, %s, %.04f\n", this.getName(), otherObj.getName(), comparison
+               ));
+            }
+            catch (Exception err) {
+               err.printStackTrace();
+               System.exit(1);
+            }
+
             return comparison;
          }
       }
 
       return -2;
+   }
+
+   public static void closeWriter() {
+      try { debugWriter.close(); regionWriter.close(); }
+      catch (Exception err) { err.printStackTrace(); System.exit(1); }
    }
 
    @Override
