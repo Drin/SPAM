@@ -4,8 +4,6 @@ import com.drin.java.clustering.Clusterable;
 import com.drin.java.biology.ITSRegion;
 import com.drin.java.biology.Pyroprint;
 
-import com.drin.java.util.Logger;
-
 import java.util.Iterator;
 
 import java.util.Map;

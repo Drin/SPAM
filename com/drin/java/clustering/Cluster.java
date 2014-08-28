@@ -2,8 +2,6 @@ package com.drin.java.clustering;
 
 import com.drin.java.clustering.Clusterable;
 
-import com.drin.java.util.Logger;
-
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Callable;

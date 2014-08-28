@@ -3,7 +3,6 @@ package com.drin.java.biology;
 import com.drin.java.clustering.Clusterable;
 import com.drin.java.biology.Pyroprint;
 
-import com.drin.java.util.Logger;
 import com.drin.java.util.Configuration;
 
 import java.util.HashSet;

@@ -5,7 +5,6 @@ import com.drin.java.analysis.clustering.HierarchicalClusterer;
 import com.drin.java.analysis.clustering.HierarchicalClusterer.ClusterPair;
 
 import com.drin.java.output.ProgressWriter;
-import com.drin.java.util.Logger;
 
 import java.util.List;
 
@@ -52,7 +51,7 @@ public class AgglomerativeClusterer extends HierarchicalClusterer {
          clusters.remove(clustPair.mClustBNdx);
          success = true;
       }
-      else { Logger.error(-1, "Invalid clusters to combine.\n"); }
+      else { System.err.println("Invalid clusters to combine."); }
 
       return success;
    }
