@@ -1,0 +1,54 @@
+apply plugin: 'base'
+
+buildscript {
+   repositories {
+      jcenter()
+   }
+
+   dependencies {
+      classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:0.5'
+   }
+}
+
+apply plugin: 'java'
+apply plugin: 'com.jfrog.bintray'
+
+repositories {
+   jcenter()
+}
+
+dependencies {
+   compile 'org.apache.logging.log4j:log4j-api:2.5'
+   compile 'org.mariadb.jdbc:mariadb-java-client:1.1.7'
+
+   testCompile 'junit:junit:4.12'
+
+   //runtime dependency for logging implementation
+   runtime 'org.apache.logging.log4j:log4j-core:2.5'
+}
+
+bintray {
+   user = 'drinmontana'
+   key  = 'b03b8679d56fed3287bec6216030a6e36dfe106e'
+
+   dryRun  = false
+   publish = true
+
+   pkg {
+      repo = 'compbio'
+      name = 'pyroAnalysis'
+      desc = 'Package for analyzing pyroprints'
+      websiteUrl = 'https://github.com/Drin/spam'
+      issueTrackerUrl = 'https://github.com/Drin/spam/issues'
+      vcsUrl = 'https://github.com/Drin/spam.git'
+      publicDownloadNumbers = true
+      //attributes = 
+
+      version {
+         name = '0.1'
+         desc = 'first published version, very buggy and in need of changes'
+         vcsTag = '0.1'
+         //attributes = 
+      }
+   }
+}
