@@ -1,0 +1,39 @@
+apply plugin: 'base'
+
+buildscript {
+   repositories {
+      jcenter()
+   }
+
+   dependencies {
+      classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:0.5'
+   }
+}
+
+apply plugin: 'java'
+apply plugin: 'com.jfrog.bintray'
+
+bintray {
+   user = 'drinmontana'
+
+   dryRun  = false
+   publish = true
+
+   pkg {
+      repo                  = 'compbio'
+      name                  = 'pyroAnalysis'
+      desc                  = 'Package for analyzing pyroprints'
+      websiteUrl            = 'https://github.com/Drin/spam'
+      issueTrackerUrl       = 'https://github.com/Drin/spam/issues'
+      vcsUrl                = 'https://github.com/Drin/spam.git'
+      publicDownloadNumbers = true
+      //attributes = 
+
+      version {
+         name   = '0.1'
+         desc   = 'first published version, very buggy and in need of changes'
+         vcsTag = '0.1'
+         //attributes = 
+      }
+   }
+}
