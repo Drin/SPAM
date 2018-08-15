@@ -1,7 +1,5 @@
 package com.drin.java.parsers;
 
-import com.drin.java.util.Logger;
-
 import java.io.File;
 import java.util.Scanner;
 import java.util.Map;
@@ -60,7 +58,7 @@ public class MatrixParser {
       while (fileScanner.hasNextLine()) {
          String tupleStr = fileScanner.nextLine();
 
-         Logger.debug(String.format("read line '%s'", tupleStr));
+         //System.out.println(String.format("read line '%s'", tupleStr));
 
          tupleMap.putAll(constructTuple(tupleColMap,
           tupleStr.replace("\"","").split(mTokenDelim)));
@@ -93,14 +91,16 @@ public class MatrixParser {
             //is a percentage instead of in decimal form
             if (tmpVal > 1) { tmpVal = tmpVal / 100; }
 
-            Logger.debug(String.format("parsed correlation value [%s]", tmpVal));
+            //System.out.println(String.format("parsed correlation value [%s]", tmpVal));
 
             tuple.put(tupleColName, new Float(tmpVal));
          }
 
          catch (NumberFormatException numErr) {
-            Logger.error(-1, String.format("Matrix contains invalid value '%s'",
-                                           tupleData[tupleCol]));
+            System.err.println(String.format(
+               "Matrix contains invalid value '%s'", tupleData[tupleCol]
+            ));
+
             System.exit(1);
          }
       }

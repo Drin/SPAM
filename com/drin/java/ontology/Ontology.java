@@ -25,7 +25,7 @@ public class Ontology {
 
    public Ontology() {
       mRoot = null;
-      mColumns = new ArrayList<String>(2);
+      mColumns = new ArrayList<String>(1);
    }
    
    public Ontology(Ontology oldOnt) {

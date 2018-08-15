@@ -26,9 +26,9 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 public class CPLOPConnection {
-   private static final String DB_DRIVER = "com.mysql.jdbc.Driver";
+   private static final String DB_DRIVER = "java.sql.Driver";
    //TODO figure out how to connect to database now
-   private static final String DB_URL = "jdbc:mysql://localhost:8906/CPLOP?autoReconnect=true";
+   private static final String DB_URL = "jdbc:mysql://localhost:9906/CPLOP?autoReconnect=true";
    private static final String DB_USER = "drin";
    private static final String DB_PASS = "";
    /*
@@ -46,7 +46,7 @@ public class CPLOPConnection {
    private static final int m16sDispLen = Configuration.getInt(REGION_16_23, PYRO_LEN),
                             m23sDispLen = Configuration.getInt(REGION_23_5, PYRO_LEN);
 
-   private static final String
+   private String
       SCHEMA_QUERY = "SELECT distinct %s " +
                      "FROM %s " +
                      "%s " +
@@ -200,6 +200,17 @@ public class CPLOPConnection {
                    "WHERE test_isolate_id in (%s) " +
                    "ORDER BY test_isolate_id",
                    //"ORDER BY isoID ";
+                   //
+      JOSH_META_QUERY = "SELECT isoID, %s " +
+                        "FROM Samples JOIN Isolates using (hostID, commonName, sampleID) " +
+                        "WHERE isoID in (%s) " +
+                        "ORDER BY isoID ",
+
+      CREEK_META_QUERY = "SELECT isoID, %s " +
+                         "FROM Samples JOIN Isolates using (hostID, commonName, sampleID) " +
+                                      "JOIN creek_meta using (isoID) " +
+                         "WHERE isoID in (%s) " +
+                         "ORDER BY isoID ",
 
       EMILY_META_QUERY = "SELECT isoID, %s " +
                          "FROM emily_meta " +
@@ -521,7 +532,9 @@ public class CPLOPConnection {
       String metaIDs = "", metaColumns = "", isoId = null, tmpId = null;
       int isoNdx = -1, numColumns = ont.getNumCols();
       int pageSize = DEFAULT_PAGE_SIZE;
-      byte colOffset = 3;
+      //TODO also leftover from thesis testing
+      //byte colOffset = 3;
+      byte colOffset = 2;
 
       for (String metaCol : ont.getColumns()) { metaColumns += "," + metaCol; }
       for (int ndx = 0; ndx < isoData.size(); ndx++) {
@@ -538,8 +551,15 @@ public class CPLOPConnection {
             System.out.println(String.format(META_QUERY,
                metaColumns, metaIDs.substring(1)
             ));
-            */
+            System.out.println("using emily query!");
             System.out.println(String.format(EMILY_META_QUERY,
+               metaColumns.substring(1), metaIDs.substring(1)
+            ));
+            System.out.println(String.format(CREEK_META_QUERY,
+               metaColumns.substring(1), metaIDs.substring(1)
+            ));
+            */
+            System.out.println(String.format(JOSH_META_QUERY,
                metaColumns.substring(1), metaIDs.substring(1)
             ));
             statement = mConn.createStatement();
@@ -547,13 +567,22 @@ public class CPLOPConnection {
             results = statement.executeQuery(String.format(META_QUERY,
                metaColumns, metaIDs.substring(1)
             ));
-            */
             results = statement.executeQuery(String.format(EMILY_META_QUERY,
+               metaColumns.substring(1), metaIDs.substring(1)
+            ));
+            results = statement.executeQuery(String.format(CREEK_META_QUERY,
+               metaColumns.substring(1), metaIDs.substring(1)
+            ));
+            */
+            results = statement.executeQuery(String.format(JOSH_META_QUERY,
                metaColumns.substring(1), metaIDs.substring(1)
             ));
 
             while (results.next()) {
-               tmpId = results.getString(2);
+               //TODO wtf why was this ever 2? maybe because i used to have
+               //the auto incrememnt id when doing tests?
+               //tmpId = results.getString(2);
+               tmpId = results.getString(1);
 
                if (isoId == null || !tmpId.equals(isoId)) {
                   isoId = tmpId;
@@ -561,7 +590,7 @@ public class CPLOPConnection {
 
                   if (!isoData.get(isoNdx).getName().equals(isoId)) {
                      System.err.printf("meta data mismatch:\n");
-                     System.err.printf("expected '%s' found '%s'\n", isoId,
+                     System.err.printf("found '%s' expected '%s'\n", isoId,
                                        isoData.get(isoNdx).getName());
                      continue;
                   }

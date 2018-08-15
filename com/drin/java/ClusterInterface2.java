@@ -29,7 +29,7 @@ import java.util.Scanner;
 
 import java.io.File;
 
-public class ClusterInterface {
+public class ClusterInterface2 {
    private final String[] DATA_TYPE_VALUES = new String[] {"Isolates",
                                                            "Pyroprints",
                                                            "Experiments"};
@@ -40,7 +40,7 @@ public class ClusterInterface {
    private CPLOPConnection mConn;
    private long startTime;
 
-   public ClusterInterface() {
+   public ClusterInterface2() {
       Configuration.loadConfig("config.cfg");
 
       try { mConn = new CPLOPConnection(); }
@@ -48,12 +48,12 @@ public class ClusterInterface {
    }
 
    public static void main(String[] args) {
-      ClusterInterface testInterface = new ClusterInterface();
+      ClusterInterface2 testInterface = new ClusterInterface2();
 
       //TODO
       String testOntology = "joshOntology.ont";
       //String testOntology = "emilyOntology.ont";
-      testOntology = null;
+      //testOntology = null;
       /*
       String.format("%s\n%s\n%s",
          //"Isolates.commonName():;",
@@ -65,7 +65,8 @@ public class ClusterInterface {
       );
       */
 
-      float tmp_alpha = 0.995f, tmp_beta = 0.99f;
+      //float tmp_alpha = 0.995f, tmp_beta = 0.99f;
+      float tmp_alpha = 0.99f, tmp_beta = 0.99f;
       boolean cacheSimilarities = Configuration.getBoolean(PARAM_SECTION, CACHE_SIMS_OPTION),
               matchIsolatesAgainstDB = false;
 
@@ -130,14 +131,9 @@ public class ClusterInterface {
       */
 
       /* Cluster execution if getting data from database */
-      long clusterStartTime = System.currentTimeMillis();
-
       Map<Float, List<Cluster>> results = testInterface.clusterData(
          testOntology, testDataSet, "Isolates", tmp_alpha, tmp_beta
       );
-
-      long clusterEndTime = System.currentTimeMillis();
-      System.out.println("Time to cluster: " + (clusterEndTime - clusterStartTime) + "ms");
 
       /* Data Prep from CSV */
       /*
@@ -201,8 +197,6 @@ public class ClusterInterface {
       Cluster closeClustA, closeClustB;
 
       if (matchIsolatesAgainstDB) {
-         long matchStartTime = System.currentTimeMillis();
-
          for (Cluster matchClust : matchClusters) {
             maxSimA = maxSimB = 0.0f;
             closeClustA = null;
@@ -237,9 +231,6 @@ public class ClusterInterface {
                matchClustersB.add(closeClustB);
             }
          }
-
-         long matchEndTime = System.currentTimeMillis();
-         System.out.println("Time to match isolates against clusters: " + (matchEndTime - matchStartTime) + "ms");
       }
 
 
@@ -284,9 +275,6 @@ public class ClusterInterface {
 
          System.out.println("isolates matched against clustered isolates!");
          System.out.println(new ClusterResults(matchClusterMap));
-      }
-      else {
-         System.out.println(new ClusterResults(results));
       }
 
       //TODO remove this after debugWriter has been removed from Pyroprint.java
@@ -389,7 +377,7 @@ public class ClusterInterface {
       //no ontology given so hardcode it to just hierarchical cluster
       if (useOHClust) {
          System.err.println("OHClustering!");
-         clusterer = new OHClusterer(clusters1.size(), alphaThresh, betaThresh, null);
+         clusterer = new OHClusterer(isolateDataList.size(), alphaThresh, betaThresh, null);
          clusterer.clusterData(clusterOnt);
          System.out.println(new ClusterResults(clusterer.getClusters()));
          return clusterer.getClusters();

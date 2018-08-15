@@ -2,8 +2,6 @@ package com.drin.java.biology;
 
 import com.drin.java.clustering.Clusterable;
 
-import com.drin.java.util.Logger;
-
 import java.util.Iterator;
 import java.util.List;
 import java.util.ArrayList;
@@ -130,6 +128,7 @@ public class Pyroprint extends Clusterable<Float> {
             mProductAB += peakA * peakB;
             mPeakCount++;
 
+            /*
             if (this.getName().equals("8522") &&
                 (otherObj.getName().equals("6188") || 
                  otherObj.getName().equals("7516") || 
@@ -147,6 +146,7 @@ public class Pyroprint extends Clusterable<Float> {
                   mProductAB, mPeakCount
                );
             }
+            */
          }
 
          if (mPeakCount > 0) {
@@ -156,6 +156,7 @@ public class Pyroprint extends Clusterable<Float> {
                  ((mPeakCount * mPyroBSquaredSum) - (mPyroBSum * mPyroBSum)))
             );
 
+            /*
             if (this.getName().equals("8522") &&
                 (otherObj.getName().equals("6188") || 
                  otherObj.getName().equals("7516") || 
@@ -166,6 +167,7 @@ public class Pyroprint extends Clusterable<Float> {
                   this.getName(), otherObj.getName(), pearson
                );
             }
+            */
 
             if (pearson > 1) {
                System.err.println("Pearson greater than 1?!");

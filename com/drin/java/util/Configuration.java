@@ -1,7 +1,5 @@
 package com.drin.java.util;
 
-import com.drin.java.util.InvalidPropertyException;
-
 import java.io.File;
 
 import java.util.regex.Matcher;

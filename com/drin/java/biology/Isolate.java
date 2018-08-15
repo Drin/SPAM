@@ -99,7 +99,7 @@ public class Isolate extends Clusterable<ITSRegion> {
             while (itrA.hasNext()) {
                ITSRegion regionA = itrA.next();
 
-               itrB = ((Isolate) otherIso).getData().iterator();
+               itrB = (otherIso).getData().iterator();
                while (itrB.hasNext()) {
                   ITSRegion regionB = itrB.next();
 

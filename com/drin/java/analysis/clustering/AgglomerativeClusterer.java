@@ -51,7 +51,7 @@ public class AgglomerativeClusterer extends HierarchicalClusterer {
          clusters.remove(clustPair.mClustBNdx);
          success = true;
       }
-      else { System.err.println("Invalid clusters to combine."); }
+      //else { System.err.println("Invalid clusters to combine."); }
 
       return success;
    }
